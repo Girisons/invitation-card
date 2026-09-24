@@ -110,6 +110,86 @@ body {
   flex-direction: column;
 }
 
+/* =============================================
+   MOBILE FULL SCREEN — Real Device Experience
+   ============================================= */
+@media (max-width: 480px) {
+
+  /* Hide desktop simulator header */
+  .sim-header {
+    display: none !important;
+  }
+
+  /* Body fills full screen */
+  body {
+    background-image: none;
+    background-color: #000;
+  }
+
+  /* Remove padding/margin */
+  .main-wrapper {
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Phone mockup becomes full screen */
+  .phone-mockup {
+    width: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  /* Each screen fills full viewport */
+  .screen-view {
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+
+  /* Intro screen adjustments */
+  #screen-intro {
+    padding: 24px 20px 40px;
+  }
+
+  /* Larger button text on mobile */
+  .btn-play-trailer {
+    font-size: 1rem;
+    padding: 18px 24px;
+  }
+
+  /* Video fills full screen */
+  .video-container {
+    height: 100dvh;
+  }
+
+  /* Skip button above safe area */
+  .skip-video-btn {
+    bottom: 40px;
+  }
+
+  /* Card screen scrollable */
+  #screen-card {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px 16px 60px;
+  }
+
+  /* Bigger touch targets */
+  .action-btn-primary,
+  .action-btn-secondary {
+    padding: 18px;
+    font-size: 1rem;
+  }
+}
+
+
 /* Phone Screen Views */
 .screen-view {
   width: 100%;

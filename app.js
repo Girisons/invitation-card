@@ -105,15 +105,26 @@ async function saveRSVP(linkId, response) {
 // =============================================
 // APP INIT
 // =============================================
+// =============================================
+// MOBILE SPEECH UNLOCK
+// iOS & Android block speech without user gesture
+// =============================================
+function unlockSpeechOnMobile() {
+  if ('speechSynthesis' in window) {
+    // iOS fix: must call speak() with empty utterance first on user gesture
+    const unlock = new SpeechSynthesisUtterance('');
+    unlock.volume = 0;
+    window.speechSynthesis.speak(unlock);
+    window.speechSynthesis.cancel();
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
-  // URL se guest ID detect karo (WhatsApp link format: ?id=guest_001)
   const urlParams = new URLSearchParams(window.location.search);
   const urlGuestId = urlParams.get('id');
-  
   const guestSelect = document.getElementById("guest-select");
   const initialId = urlGuestId || guestSelect.value || 'guest_001';
 
-  // Agar URL se ID mili toh dropdown hide karo (real guest experience)
   if (urlGuestId) {
     const header = document.querySelector('.sim-header');
     if (header) header.style.display = 'none';
@@ -127,9 +138,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateGuestUI();
   });
 
+  // Unlock speech on first ANY touch/click (mobile requirement)
+  document.addEventListener('touchstart', unlockSpeechOnMobile, { once: true });
+  document.addEventListener('click', unlockSpeechOnMobile, { once: true });
+
   document.getElementById("btn-start-teaser").addEventListener("click", () => {
+    unlockSpeechOnMobile(); // ensure speech unlocked on this exact gesture
     switchScreen("screen-video");
-    playVipulMovieScene();
+    // Small delay lets screen transition complete before speech starts
+    setTimeout(() => playVipulMovieScene(), 300);
   });
 
   document.getElementById("btn-skip-video").addEventListener("click", () => {
@@ -142,7 +159,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     btn.innerHTML = "✨ RSVP Confirmed! See you Oct 23! 🎉";
     btn.style.background = "linear-gradient(135deg, #00b09b, #96c93d)";
     btn.style.color = "#fff";
-    await saveRSVP(currentGuest.link_id || guestSelect.value, 'attending');
+    await saveRSVP(currentGuest?.link_id || guestSelect.value, 'attending');
   });
 
   document.getElementById("btn-add-calendar").addEventListener("click", () => {
