@@ -1,9 +1,8 @@
 // =============================================
 // SUPABASE CONFIG
-// Apni Supabase project ki values yahan daalo
 // =============================================
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';         // e.g. https://xyzabc.supabase.co
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Settings > API > anon public key
+const SUPABASE_URL = 'https://dytnhiwxjmmfcolfnyo.supabase.co';
+const SUPABASE_ANON_KEY = 'PASTE_YOUR_ANON_KEY_HERE'; // anon public key jo abhi copy kiya
 
 // Supabase lightweight client (no npm needed, browser fetch)
 const supabase = {
