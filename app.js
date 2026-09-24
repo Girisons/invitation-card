@@ -187,14 +187,14 @@ function playVipulMovieScene() {
     walkingFrame.style.display = "block";
     if (partyLocTag) partyLocTag.style.display = "block";
 
-    walkingFrame.src = "assets/vipul_walk_1.jpg";
+    walkingFrame.src = "vipul_walk_1.jpg";
     if (partyLocTag) partyLocTag.innerText = "📍 VIP LOUNGE • WALKING TO STAGE";
 
     clearTimeout(walkSceneTimer);
     walkSceneTimer = setTimeout(() => {
       walkingFrame.style.opacity = "0.4";
       setTimeout(() => {
-        walkingFrame.src = "assets/vipul_walk_2.jpg";
+        walkingFrame.src = "vipul_walk_2.jpg";
         walkingFrame.style.opacity = "1";
         if (partyLocTag) partyLocTag.innerText = "📍 MAIN PARTY STAGE • INVITING GUEST";
       }, 400);

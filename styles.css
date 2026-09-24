@@ -132,7 +132,7 @@ body {
 /* Intro Screen */
 #screen-intro {
   background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(10,10,14,0.96) 100%),
-              url('assets/vipul_movie_scene.jpg') center/cover no-repeat;
+              url('vipul_movie_scene.jpg') center/cover no-repeat;
   justify-content: flex-end;
   padding: 30px 24px;
 }
