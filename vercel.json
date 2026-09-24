@@ -1,10 +1,9 @@
 {
   "version": 2,
-  "name": "arpit-40th-birthday-invite",
-  "public": true,
+  "name": "khandelwal-invitation",
   "builds": [
     {
-      "src": "index.html",
+      "src": "**/*",
       "use": "@vercel/static"
     }
   ],
@@ -16,26 +15,6 @@
     {
       "src": "/(.*)",
       "dest": "/$1"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400"
-        }
-      ]
-    },
-    {
-      "source": "/assets/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=604800"
-        }
-      ]
     }
   ]
 }
