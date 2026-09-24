@@ -219,13 +219,67 @@ function playVipulMovieScene() {
 
     if ('speechSynthesis' in window) {
       speechSynthUtterance = new SpeechSynthesisUtterance(currentGuest.script);
-      speechSynthUtterance.rate = 0.95;
-      speechSynthUtterance.pitch = 1.0;
+      speechSynthUtterance.rate = 0.92;
+      speechSynthUtterance.pitch = 0.85;   // Lower pitch = deeper male voice
+      speechSynthUtterance.volume = 1.0;
       speechSynthUtterance.lang = 'en-US';
+
+      // Select best available MALE voice
+      const setMaleVoice = () => {
+        const voices = window.speechSynthesis.getVoices();
+
+        // Priority list of known male voices across browsers/devices
+        const maleVoiceNames = [
+          'Google UK English Male',      // Chrome desktop
+          'Microsoft David',             // Windows Edge/Chrome
+          'Microsoft Mark',              // Windows
+          'Daniel',                      // iOS/macOS UK male
+          'Alex',                        // macOS US male
+          'Aaron',                       // macOS US male
+          'Fred',                        // macOS
+          'Google US English',           // Sometimes male on Android
+          'en-US-Wavenet-D',             // Google WaveNet male
+          'en-US-Standard-D',            // Google Standard male
+          'en-IN-Wavenet-C',             // Indian English male
+          'Rishi',                       // iOS Indian English male
+        ];
+
+        let selectedVoice = null;
+
+        // Try exact name match first
+        for (const name of maleVoiceNames) {
+          selectedVoice = voices.find(v => v.name.includes(name));
+          if (selectedVoice) break;
+        }
+
+        // Fallback: any voice with 'male' in the name
+        if (!selectedVoice) {
+          selectedVoice = voices.find(v => v.name.toLowerCase().includes('male'));
+        }
+
+        // Fallback: any English male-sounding voice
+        if (!selectedVoice) {
+          selectedVoice = voices.find(v => v.lang.startsWith('en') && !v.name.toLowerCase().includes('female'));
+        }
+
+        if (selectedVoice) {
+          speechSynthUtterance.voice = selectedVoice;
+          console.log('🎙️ Using voice:', selectedVoice.name);
+        }
+      };
+
+      // Voices may load async — handle both cases
+      if (window.speechSynthesis.getVoices().length > 0) {
+        setMaleVoice();
+      } else {
+        window.speechSynthesis.onvoiceschanged = setMaleVoice;
+      }
+
       speechSynthUtterance.onend = () => {
         clearTimeout(walkSceneTimer);
         setTimeout(() => switchScreen("screen-card"), 1200);
       };
+
       window.speechSynthesis.speak(speechSynthUtterance);
     }
   });
