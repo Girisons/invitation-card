@@ -44,7 +44,8 @@ export default function InvitationClient({ guest, inviteCode }: Props) {
     setScreen('confirmation')
   }
 
-  const guestDisplayName = guest.partner_name
+  // Show combined name only when send_together=true, even if partner_name is set
+  const guestDisplayName = (guest.send_together && guest.partner_name)
     ? `${guest.first_name} & ${guest.partner_name}`
     : guest.first_name
 

@@ -258,17 +258,19 @@ export default function AdminPage() {
 
     const nowTogether = !g.send_together
 
-    if (nowTogether) {
-      // Switch to Together: set partner_name on each from the other
-      const myFullName = `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`
-      const linkedFullName = `${linked.first_name}${linked.last_name ? ' ' + linked.last_name : ''}`
-      await supabase.from('guests').update({ send_together: true, partner_name: linkedFullName }).eq('id', g.id)
-      await supabase.from('guests').update({ send_together: true, partner_name: myFullName }).eq('id', linked.id)
-    } else {
-      // Switch to Separate: clear partner_name on both
-      await supabase.from('guests').update({ send_together: false, partner_name: null }).eq('id', g.id)
-      await supabase.from('guests').update({ send_together: false, partner_name: null }).eq('id', linked.id)
-    }
+    // Always keep partner_name set — only send_together controls invitation display
+    const myFullName = `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`
+    const linkedFullName = `${linked.first_name}${linked.last_name ? ' ' + linked.last_name : ''}`
+
+    await supabase.from('guests').update({
+      send_together: nowTogether,
+      partner_name: linkedFullName  // always keep partner name
+    }).eq('id', g.id)
+    await supabase.from('guests').update({
+      send_together: nowTogether,
+      partner_name: myFullName  // always keep partner name
+    }).eq('id', linked.id)
+
     fetchGuests()
   }
 
