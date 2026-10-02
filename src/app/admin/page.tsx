@@ -176,101 +176,108 @@ export default function AdminPage() {
     if (!form.primary.first_name.trim()) return alert('Primary guest first name required')
     setSaving(true)
 
-    const sharedDetails = {
-      guest_of: form.guest_of.trim(),
-      relationship_group: form.relationship_group,
-    }
-
-    if (!form.has_spouse) {
-      // Single guest — one row
-      await supabase.from('guests').insert({
-        ...sharedDetails,
-        first_name: form.primary.first_name.trim(),
-        last_name: form.primary.last_name.trim(),
-        nickname: form.primary.nickname.trim(),
-        mobile: form.primary.mobile.trim(),
-        food_preference: form.primary.food_preference || null,
-        liquor_preference: form.primary.liquor_preference || null,
-        invite_code: form.primary.invite_code,
-        invited_count: 1,
-      })
-    } else if (form.send_together) {
-      // Together — primary row has partner_name, spouse is separate row linked
-      const partnerName = `${form.spouse.first_name.trim()}${form.spouse.last_name.trim() ? ' ' + form.spouse.last_name.trim() : ''}`
-
-      // Insert primary
-      const { data: primaryRow } = await supabase.from('guests').insert({
-        ...sharedDetails,
-        first_name: form.primary.first_name.trim(),
-        last_name: form.primary.last_name.trim(),
-        nickname: form.primary.nickname.trim(),
-        mobile: form.primary.mobile.trim(),
-        food_preference: form.primary.food_preference || null,
-        liquor_preference: form.primary.liquor_preference || null,
-        partner_name: partnerName,
-        partner_mobile: form.spouse.mobile.trim(),
-        invite_code: form.primary.invite_code,
-        invited_count: 2,
-        send_together: true,
-      }).select().single()
-
-      // Insert spouse as separate row (linked)
-      const { data: spouseRow } = await supabase.from('guests').insert({
-        ...sharedDetails,
-        first_name: form.spouse.first_name.trim(),
-        last_name: form.spouse.last_name.trim(),
-        nickname: form.spouse.nickname.trim(),
-        mobile: form.spouse.mobile.trim(),
-        food_preference: form.spouse.food_preference || null,
-        liquor_preference: form.spouse.liquor_preference || null,
-        invite_code: form.spouse.invite_code,
-        invited_count: 1,
-        send_together: true,
-      }).select().single()
-
-      // Link them
-      if (primaryRow && spouseRow) {
-        await supabase.from('guests').update({ linked_guest_id: spouseRow.id }).eq('id', primaryRow.id)
-        await supabase.from('guests').update({ linked_guest_id: primaryRow.id }).eq('id', spouseRow.id)
+    try {
+      const sharedDetails = {
+        guest_of: form.guest_of.trim(),
+        relationship_group: form.relationship_group,
       }
-    } else {
-      // Separate invites — two independent rows, linked
-      const { data: primaryRow } = await supabase.from('guests').insert({
-        ...sharedDetails,
-        first_name: form.primary.first_name.trim(),
-        last_name: form.primary.last_name.trim(),
-        nickname: form.primary.nickname.trim(),
-        mobile: form.primary.mobile.trim(),
-        food_preference: form.primary.food_preference || null,
-        liquor_preference: form.primary.liquor_preference || null,
-        invite_code: form.primary.invite_code,
-        invited_count: 1,
-        send_together: false,
-      }).select().single()
 
-      const { data: spouseRow } = await supabase.from('guests').insert({
-        ...sharedDetails,
-        first_name: form.spouse.first_name.trim(),
-        last_name: form.spouse.last_name.trim(),
-        nickname: form.spouse.nickname.trim(),
-        mobile: form.spouse.mobile.trim(),
-        food_preference: form.spouse.food_preference || null,
-        liquor_preference: form.spouse.liquor_preference || null,
-        invite_code: form.spouse.invite_code,
-        invited_count: 1,
-        send_together: false,
-      }).select().single()
+      if (!form.has_spouse) {
+        const { error } = await supabase.from('guests').insert({
+          ...sharedDetails,
+          first_name: form.primary.first_name.trim(),
+          last_name: form.primary.last_name.trim(),
+          nickname: form.primary.nickname.trim() || null,
+          mobile: form.primary.mobile.trim(),
+          food_preference: form.primary.food_preference || null,
+          liquor_preference: form.primary.liquor_preference || null,
+          invite_code: form.primary.invite_code,
+          invited_count: 1,
+        })
+        if (error) throw error
 
-      if (primaryRow && spouseRow) {
-        await supabase.from('guests').update({ linked_guest_id: spouseRow.id }).eq('id', primaryRow.id)
-        await supabase.from('guests').update({ linked_guest_id: primaryRow.id }).eq('id', spouseRow.id)
+      } else if (form.send_together) {
+        const partnerName = `${form.spouse.first_name.trim()}${form.spouse.last_name.trim() ? ' ' + form.spouse.last_name.trim() : ''}`
+
+        const { data: primaryRow, error: e1 } = await supabase.from('guests').insert({
+          ...sharedDetails,
+          first_name: form.primary.first_name.trim(),
+          last_name: form.primary.last_name.trim(),
+          nickname: form.primary.nickname.trim() || null,
+          mobile: form.primary.mobile.trim(),
+          food_preference: form.primary.food_preference || null,
+          liquor_preference: form.primary.liquor_preference || null,
+          partner_name: partnerName,
+          partner_mobile: form.spouse.mobile.trim() || null,
+          invite_code: form.primary.invite_code,
+          invited_count: 2,
+          send_together: true,
+        }).select().single()
+        if (e1) throw e1
+
+        const { data: spouseRow, error: e2 } = await supabase.from('guests').insert({
+          ...sharedDetails,
+          first_name: form.spouse.first_name.trim(),
+          last_name: form.spouse.last_name.trim(),
+          nickname: form.spouse.nickname.trim() || null,
+          mobile: form.spouse.mobile.trim(),
+          food_preference: form.spouse.food_preference || null,
+          liquor_preference: form.spouse.liquor_preference || null,
+          invite_code: form.spouse.invite_code,
+          invited_count: 1,
+          send_together: true,
+        }).select().single()
+        if (e2) throw e2
+
+        if (primaryRow && spouseRow) {
+          await supabase.from('guests').update({ linked_guest_id: spouseRow.id }).eq('id', primaryRow.id)
+          await supabase.from('guests').update({ linked_guest_id: primaryRow.id }).eq('id', spouseRow.id)
+        }
+
+      } else {
+        const { data: primaryRow, error: e1 } = await supabase.from('guests').insert({
+          ...sharedDetails,
+          first_name: form.primary.first_name.trim(),
+          last_name: form.primary.last_name.trim(),
+          nickname: form.primary.nickname.trim() || null,
+          mobile: form.primary.mobile.trim(),
+          food_preference: form.primary.food_preference || null,
+          liquor_preference: form.primary.liquor_preference || null,
+          invite_code: form.primary.invite_code,
+          invited_count: 1,
+          send_together: false,
+        }).select().single()
+        if (e1) throw e1
+
+        const { data: spouseRow, error: e2 } = await supabase.from('guests').insert({
+          ...sharedDetails,
+          first_name: form.spouse.first_name.trim(),
+          last_name: form.spouse.last_name.trim(),
+          nickname: form.spouse.nickname.trim() || null,
+          mobile: form.spouse.mobile.trim(),
+          food_preference: form.spouse.food_preference || null,
+          liquor_preference: form.spouse.liquor_preference || null,
+          invite_code: form.spouse.invite_code,
+          invited_count: 1,
+          send_together: false,
+        }).select().single()
+        if (e2) throw e2
+
+        if (primaryRow && spouseRow) {
+          await supabase.from('guests').update({ linked_guest_id: spouseRow.id }).eq('id', primaryRow.id)
+          await supabase.from('guests').update({ linked_guest_id: primaryRow.id }).eq('id', spouseRow.id)
+        }
       }
-    }
 
-    setSaving(false)
-    setForm(emptyForm())
-    setShowForm(false)
-    fetchGuests()
+      setForm(emptyForm())
+      setShowForm(false)
+      fetchGuests()
+
+    } catch (err: any) {
+      alert('Error saving guest: ' + (err?.message || 'Unknown error. Check Supabase SQL columns are added!'))
+    } finally {
+      setSaving(false)
+    }
   }
 
   const copyLink = (code: string) => {
