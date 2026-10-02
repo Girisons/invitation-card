@@ -250,6 +250,28 @@ export default function AdminPage() {
     if (fileRef.current) fileRef.current.value = ''
   }
 
+  // ── TOGGLE TOGETHER / SEPARATE ──
+  const toggleTogether = async (g: Guest) => {
+    if (!g.linked_guest_id) return
+    const linked = guests.find(x => x.id === g.linked_guest_id)
+    if (!linked) return
+
+    const nowTogether = !g.send_together
+
+    if (nowTogether) {
+      // Switch to Together: set partner_name on each from the other
+      const myFullName = `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`
+      const linkedFullName = `${linked.first_name}${linked.last_name ? ' ' + linked.last_name : ''}`
+      await supabase.from('guests').update({ send_together: true, partner_name: linkedFullName }).eq('id', g.id)
+      await supabase.from('guests').update({ send_together: true, partner_name: myFullName }).eq('id', linked.id)
+    } else {
+      // Switch to Separate: clear partner_name on both
+      await supabase.from('guests').update({ send_together: false, partner_name: null }).eq('id', g.id)
+      await supabase.from('guests').update({ send_together: false, partner_name: null }).eq('id', linked.id)
+    }
+    fetchGuests()
+  }
+
   const filtered = guests.filter(g =>
     `${g.first_name} ${g.last_name} ${g.partner_name} ${g.mobile} ${g.nickname}`.toLowerCase().includes(search.toLowerCase())
   )
@@ -334,6 +356,7 @@ export default function AdminPage() {
               <th className="px-4 py-3 text-left">Via</th>
               <th className="px-4 py-3 text-left">Group</th>
               <th className="px-4 py-3 text-left">Status</th>
+              <th className="px-4 py-3 text-left">Send As</th>
               <th className="px-4 py-3 text-left">Code</th>
               <th className="px-4 py-3 text-left">Actions</th>
             </tr>
@@ -377,6 +400,14 @@ export default function AdminPage() {
                   <td className="px-4 py-3 text-white/40 text-xs capitalize">{g.relationship_group || '—'}</td>
                   <td className={`px-4 py-3 text-[10px] uppercase tracking-wider whitespace-nowrap ${statusColor[g.invitation_status] || 'text-white/30'}`}>
                     {g.invitation_status}
+                  </td>
+                  <td className="px-4 py-3">
+                    {g.linked_guest_id ? (
+                      <button onClick={() => toggleTogether(g)} title={g.send_together ? 'Click to send separately' : 'Click to send together'}
+                        className={`px-2 py-1 border rounded-sm text-[10px] whitespace-nowrap transition-all ${g.send_together ? 'border-[#C9A84C]/50 text-[#C9A84C] bg-[#C9A84C]/5' : 'border-white/15 text-white/35 hover:border-[#C9A84C]/30'}`}>
+                        {g.send_together ? '👫 Together' : '👤 Separate'}
+                      </button>
+                    ) : <span className="text-white/15 text-[10px]">—</span>}
                   </td>
                   <td className="px-4 py-3 font-mono text-[11px] text-[#C9A84C]/60">{g.invite_code}</td>
                   <td className="px-4 py-3">
