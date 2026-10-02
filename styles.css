@@ -2,6 +2,10 @@
   --primary-gold: #f5d061;
   --secondary-gold: #e5a93b;
   --gold-gradient: linear-gradient(135deg, #ffe082 0%, #f5d061 50%, #b8860b 100%);
+  --diwali-orange: #ff6b2b;
+  --diwali-saffron: #ff9933;
+  --diwali-gradient: linear-gradient(135deg, #ff6b2b 0%, #ff9933 50%, #f5d061 100%);
+  --double-gradient: linear-gradient(135deg, #b8860b 0%, #f5d061 40%, #ff9933 70%, #ff6b2b 100%);
   --bg-dark: #0a0a0e;
   --card-bg: rgba(20, 20, 28, 0.85);
   --glass-border: rgba(245, 208, 97, 0.25);
@@ -110,6 +114,86 @@ body {
   flex-direction: column;
 }
 
+/* =============================================
+   MOBILE FULL SCREEN — Real Device Experience
+   ============================================= */
+@media (max-width: 480px) {
+
+  /* Hide desktop simulator header */
+  .sim-header {
+    display: none !important;
+  }
+
+  /* Body fills full screen */
+  body {
+    background-image: none;
+    background-color: #000;
+  }
+
+  /* Remove padding/margin */
+  .main-wrapper {
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Phone mockup becomes full screen */
+  .phone-mockup {
+    width: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  /* Each screen fills full viewport */
+  .screen-view {
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+
+  /* Intro screen adjustments */
+  #screen-intro {
+    padding: 24px 20px 40px;
+  }
+
+  /* Larger button text on mobile */
+  .btn-play-trailer {
+    font-size: 1rem;
+    padding: 18px 24px;
+  }
+
+  /* Video fills full screen */
+  .video-container {
+    height: 100dvh;
+  }
+
+  /* Skip button above safe area */
+  .skip-video-btn {
+    bottom: 40px;
+  }
+
+  /* Card screen scrollable */
+  #screen-card {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px 16px 60px;
+  }
+
+  /* Bigger touch targets */
+  .action-btn-primary,
+  .action-btn-secondary {
+    padding: 18px;
+    font-size: 1rem;
+  }
+}
+
+
 /* Phone Screen Views */
 .screen-view {
   width: 100%;
@@ -129,64 +213,144 @@ body {
   pointer-events: all;
 }
 
-/* Intro Screen */
+/* ═══════════════════════════════════════
+   INTRO SCREEN — Premium Redesign
+   ═══════════════════════════════════════ */
 #screen-intro {
-  background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(10,10,14,0.96) 100%),
-              url('assets/vipul_movie_scene.jpg') center/cover no-repeat;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.05)   0%,
+      rgba(0,0,0,0.15)  30%,
+      rgba(5,3,0,0.65)  58%,
+      rgba(5,3,0,0.93)  75%,
+      rgba(5,3,0,1.00) 100%
+    ),
+    url('diwali_venue_bg.jpg') center top / cover no-repeat;
   justify-content: flex-end;
-  padding: 30px 24px;
+  padding: 0 0 36px;
+  position: relative;
 }
 
-.movie-teaser-tag {
-  color: var(--primary-gold);
-  font-size: 0.8rem;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  font-weight: 700;
-  margin-bottom: 12px;
-  text-shadow: 0 0 10px rgba(245, 208, 97, 0.5);
+/* Bottom content container */
+#screen-intro .intro-content {
+  width: 100%;
+  padding: 0 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
+/* Top event badge — floats over image */
+.event-double-badge {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(245,208,97,0.35);
+  backdrop-filter: blur(10px);
+  border-radius: 50px;
+  padding: 7px 16px;
+  white-space: nowrap;
+}
+
+/* Greeting — left aligned, big & bold */
 .guest-greeting-title {
-  font-size: 1.8rem;
-  font-weight: 800;
-  line-height: 1.2;
-  margin-bottom: 15px;
-  background: var(--gold-gradient);
+  font-size: clamp(1.6rem, 7vw, 2.2rem);
+  font-weight: 900;
+  line-height: 1.15;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #ffe082 0%, #f5d061 50%, #ff9933 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  letter-spacing: -0.5px;
 }
 
+/* Subtitle */
 .intro-desc {
-  font-size: 0.95rem;
-  color: #ddd;
-  line-height: 1.5;
-  margin-bottom: 25px;
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.55;
+  margin-bottom: 20px;
+  font-weight: 400;
+}
+.intro-desc strong {
+  color: #fff;
+  font-weight: 700;
 }
 
+/* Date pill */
+.date-teaser-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,153,51,0.12);
+  border: 1px solid rgba(255,153,51,0.35);
+  color: #ffb347;
+  border-radius: 50px;
+  padding: 9px 18px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-bottom: 22px;
+  letter-spacing: 0.3px;
+}
+
+/* Main CTA Button */
 .btn-play-trailer {
-  background: var(--gold-gradient);
+  width: 100%;
+  background: linear-gradient(135deg, #b8860b 0%, #f5d061 45%, #ff9933 100%);
   color: #000;
   border: none;
-  padding: 16px 28px;
-  border-radius: 30px;
-  font-size: 1.05rem;
+  padding: 17px 24px;
+  border-radius: 14px;
+  font-size: 1rem;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
   cursor: pointer;
-  box-shadow: 0 8px 25px rgba(245, 208, 97, 0.4);
-  transition: transform 0.2s, box-shadow 0.2s;
-  animation: pulse-btn 2s infinite;
+  letter-spacing: 0.5px;
+  box-shadow:
+    0 4px 20px rgba(245,208,97,0.35),
+    0 1px 0 rgba(255,255,255,0.2) inset;
+  animation: pulse-btn 2.5s ease-in-out infinite;
+  margin-bottom: 14px;
 }
 
 @keyframes pulse-btn {
-  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 208, 97, 0.7); }
-  70% { transform: scale(1.03); box-shadow: 0 0 0 15px rgba(245, 208, 97, 0); }
-  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 208, 97, 0); }
+  0%,100% { box-shadow: 0 4px 20px rgba(245,208,97,0.35); }
+  50%      { box-shadow: 0 4px 30px rgba(245,208,97,0.65), 0 0 0 6px rgba(245,208,97,0.1); }
 }
+
+/* Skip link */
+.btn-skip-intro {
+  width: 100%;
+  text-align: center;
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.35);
+  font-size: 0.82rem;
+  padding: 8px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+}
+
+/* Floating deco emojis */
+.float-emoji {
+  position: absolute;
+  font-size: 2rem;
+  opacity: 0.18;
+  pointer-events: none;
+}
+.top-left  { top: 60px; left: 16px; }
+.top-right { top: 60px; right: 16px; }
+
+
 
 /* Video Stage Screen - Full Motion Video Player */
 #screen-video {
@@ -567,4 +731,191 @@ body {
 .face-teaser-desc {
   font-size: 0.78rem;
   color: #ccc;
+}
+
+/* ═══════════════════════════════════════════
+   DOUBLE CELEBRATION — Birthday + Diwali
+   ═══════════════════════════════════════════ */
+
+/* Floating emoji decorations */
+.float-emoji {
+  position: absolute;
+  font-size: 2rem;
+  opacity: 0.25;
+  animation: float-bob 3s ease-in-out infinite alternate;
+}
+.top-left  { top: 18px; left: 18px; animation-delay: 0s; }
+.top-right { top: 18px; right: 18px; animation-delay: 1.5s; }
+
+@keyframes float-bob {
+  0%   { transform: translateY(0px) rotate(-5deg); }
+  100% { transform: translateY(-10px) rotate(5deg); }
+}
+
+/* Double event badge */
+.event-double-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(245, 208, 97, 0.3);
+  border-radius: 50px;
+  padding: 8px 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.badge-birthday {
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.badge-plus {
+  color: #fff;
+  font-weight: 900;
+  font-size: 1rem;
+}
+
+.badge-diwali {
+  background: var(--diwali-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+/* Date teaser pill */
+.date-teaser-pill {
+  background: rgba(255, 107, 43, 0.15);
+  border: 1px solid rgba(255, 153, 51, 0.4);
+  color: #ff9933;
+  border-radius: 50px;
+  padding: 10px 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 16px 0 24px;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+/* Skip intro button */
+.btn-skip-intro {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 0.8rem;
+  padding: 12px;
+  cursor: pointer;
+  margin-top: 8px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── Save The Date Card ── */
+.save-date-card {
+  background: linear-gradient(160deg, #0e0e18 0%, #1a1020 50%, #0e0e18 100%);
+  border: 1px solid rgba(245, 208, 97, 0.35);
+  border-radius: 20px;
+  padding: 24px 20px;
+  margin: 16px;
+  text-align: center;
+  box-shadow:
+    0 0 30px rgba(245, 208, 97, 0.1),
+    0 0 60px rgba(255, 107, 43, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.save-date-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--double-gradient);
+}
+
+.card-deco-row {
+  font-size: 1.3rem;
+  letter-spacing: 8px;
+  margin: 8px 0;
+  opacity: 0.8;
+}
+
+.card-title-block {
+  margin: 16px 0;
+}
+
+.card-save-label {
+  font-size: 0.7rem;
+  letter-spacing: 4px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.card-main-title {
+  font-size: 2.4rem;
+  font-weight: 900;
+  background: var(--double-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1.1;
+  letter-spacing: -1px;
+}
+
+.card-double-event {
+  font-size: 0.82rem;
+  color: #ff9933;
+  font-weight: 600;
+  margin-top: 6px;
+  letter-spacing: 0.5px;
+}
+
+.card-details-block {
+  background: rgba(255,255,255,0.04);
+  border-radius: 14px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.card-date-big {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--primary-gold);
+  line-height: 1.1;
+}
+
+.card-date-big sup {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.card-detail-row {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+/* Guest personalisation tag */
+.card-guest-tag {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 12px 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.card-guest-name-text {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--primary-gold);
+  letter-spacing: 0.5px;
 }

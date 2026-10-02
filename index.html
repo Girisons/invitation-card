@@ -3,7 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Arpit's 40th Birthday - Movie Style Save the Date</title>
+  <title>Arpit's 40th Birthday & Diwali — Save The Date 🎂🪔</title>
+
+  <!-- ═══ WhatsApp / Social Media Preview ═══ -->
+  <meta property="og:type"        content="website">
+  <meta property="og:url"         content="https://khandelwalinvite.vercel.app/">
+  <meta property="og:title"       content="Arpit at 40 🎂🪔 Birthday & Diwali — 23rd October, Jaipur">
+  <meta property="og:description" content="You are personally invited to Arpit Khandelwal's 40th Birthday & Diwali Double Celebration! A legendary evening of music, lights and festivities. 23rd October 2026, Jaipur.">
+  <meta property="og:image"       content="https://khandelwalinvite.vercel.app/og_preview.jpg">
+  <meta property="og:image:width"  content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale"      content="en_IN">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card"        content="summary_large_image">
+  <meta name="twitter:title"       content="Arpit at 40 🎂🪔 — 23rd October, Jaipur">
+  <meta name="twitter:description" content="Birthday & Diwali Double Celebration. You are personally invited!">
+  <meta name="twitter:image"       content="https://khandelwalinvite.vercel.app/og_preview.jpg">
+
+  <!-- WhatsApp specific -->
+  <meta name="description" content="You are personally invited to Arpit Khandelwal's 40th Birthday & Diwali Celebration — 23rd October 2026, Jaipur.">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -11,100 +31,165 @@
 </head>
 <body>
 
-  <!-- Host / WhatsApp Simulator Header -->
+  <!-- Host / WhatsApp Simulator Header (hidden on real mobile) -->
   <header class="sim-header">
     <div class="sim-title">
-      <span class="whatsapp-badge">💬 WhatsApp Link Demo</span>
-      <span>Arpit Khandelwal's 40th Birthday Invite</span>
+      <span class="whatsapp-badge">💬 WhatsApp Preview</span>
+      <span>Arpit's 40th Birthday + Diwali Invite</span>
     </div>
     <div class="guest-selector-wrap">
       <span class="guest-selector-label">Test Guest:</span>
       <select id="guest-select" class="guest-select">
-        <option value="guest_001">Ramesh Uncle (Respectful)</option>
-        <option value="guest_002">Sunita Auntie (Respectful)</option>
-        <option value="guest_003">Vikram Ji (Friend Vibe)</option>
-        <option value="guest_004">Priya Sharma (Formal)</option>
+        <option value="uncle_formal">Ramesh Uncle (Formal)</option>
+        <option value="auntie_formal">Sunita Auntie (Formal)</option>
+        <option value="friend_close">Vikram (Close Friend)</option>
+        <option value="friend_casual">Rahul (Casual Friend)</option>
+        <option value="colleague">Priya (Colleague)</option>
       </select>
     </div>
   </header>
 
-  <!-- Mobile Device Screen Container -->
+  <!-- App Container -->
   <main class="main-wrapper">
     <div class="phone-mockup">
 
-      <!-- Screen 1: Intro Teaser Screen -->
+      <!-- ══════════════════════════════════════
+           SCREEN 1: Save The Date Intro
+           ══════════════════════════════════════ -->
       <section id="screen-intro" class="screen-view active">
-        <div class="movie-teaser-tag">🎬 EXCLUSIVE TEASER INVITATION</div>
-        <h1 id="intro-greeting" class="guest-greeting-title">Pranam Ramesh Uncle Ji! 🙏</h1>
-        <p class="intro-desc">Vipul Khandelwal has sent you a special video invitation direct from the birthday party venue!</p>
-        
-        <button id="btn-start-teaser" class="btn-play-trailer">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8 5v14l11-7z"/>
-          </svg>
-          PLAY PERSONALIZED TEASER
-        </button>
+
+        <!-- Floating emoji decorations -->
+        <div class="float-emoji top-left">🎂</div>
+        <div class="float-emoji top-right">🪔</div>
+
+        <!-- Badge — floats at top over image -->
+        <div class="event-double-badge">
+          <span class="badge-birthday">🎂 40th Birthday</span>
+          <span class="badge-plus">+</span>
+          <span class="badge-diwali">🪔 Diwali</span>
+        </div>
+
+        <!-- Bottom content block -->
+        <div class="intro-content">
+
+          <!-- Guest greeting -->
+          <h1 id="intro-greeting" class="guest-greeting-title">Pranam Ji! 🙏</h1>
+
+          <!-- Subtitle -->
+          <p class="intro-desc">
+            Vipul Khandelwal ne aapke liye ek<br>
+            <strong>personal video message</strong> bheja hai!
+          </p>
+
+          <!-- Date pill -->
+          <div class="date-teaser-pill">
+            📅 &nbsp; <strong>23rd October 2026</strong> &nbsp;·&nbsp; Save This Date!
+          </div>
+
+          <!-- Play button -->
+          <button id="btn-start-teaser" class="btn-play-trailer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+            Vipul ka Message Dekho
+          </button>
+
+          <!-- Skip -->
+          <button id="btn-skip-to-card" class="btn-skip-intro">
+            Seedha Invite Card Dekho →
+          </button>
+
+        </div>
       </section>
 
-      <!-- Screen 2: Full Motion Video Reel Screen (Vipul Walking & Inviting) -->
+
+      <!-- ══════════════════════════════════════
+           SCREEN 2: Vipul's Video
+           ══════════════════════════════════════ -->
       <section id="screen-video" class="screen-view">
         <div class="video-container" id="video-container">
-          
-          <!-- Top Video Status Bar -->
-          <div class="video-controls-overlay">
-            <div class="video-status-pill">
-              <span class="live-dot"></span>
-              <span>HD MOVIE REEL • 4K MP4 PLAYER</span>
+
+          <!-- Real MP4 (when HeyGen video is ready) -->
+          <video id="vipul-mp4-video" class="video-element" playsinline webkit-playsinline style="display:none;" controls></video>
+
+          <!-- Fallback: walking image animation -->
+          <img id="vipul-walking-frame" src="vipul_walk_1.jpg" alt="Vipul" class="walking-video-sim">
+
+          <!-- Party light overlay -->
+          <div class="party-overlay-effects"></div>
+
+          <!-- Location tag -->
+          <div id="party-loc-tag" class="party-location-tag">
+            📍 Party Venue — Vipul Speaking
+          </div>
+
+          <!-- Skip button -->
+          <button id="btn-skip-video" class="skip-video-btn">
+            Invite Card Dekho →
+          </button>
+
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════
+           SCREEN 3: Save The Date Card + RSVP
+           ══════════════════════════════════════ -->
+      <section id="screen-card" class="screen-view">
+
+        <!-- Main Event Card -->
+        <div class="save-date-card">
+
+          <!-- Top decorative row -->
+          <div class="card-deco-row">
+            <span>✨</span><span>🎂</span><span>🪔</span><span>✨</span>
+          </div>
+
+          <!-- Title block -->
+          <div class="card-title-block">
+            <div class="card-save-label">— SAVE THE DATE —</div>
+            <h2 class="card-main-title">ARPIT AT 40</h2>
+            <div class="card-double-event">
+              Birthday Celebration &amp; Diwali Festivities
             </div>
           </div>
 
-          <!-- HTML5 Video / Walking Camera Motion Simulation -->
-          <video id="vipul-mp4-video" class="video-element" playsinline webkit-playsinline style="display:none;"></video>
-
-          <!-- Walking Camera Full Motion Video View -->
-          <img id="vipul-walking-frame" src="assets/vipul_walk_1.jpg" alt="Vipul Walking Through Party" class="walking-video-sim">
-          
-          <!-- Dynamic Disco Party Overlay -->
-          <div class="party-overlay-effects"></div>
-
-          <!-- Dynamic Location Tag (Updates as Vipul walks through the party) -->
-          <div id="party-loc-tag" class="party-location-tag">
-            📍 VIP LOUNGE • WALKING TO STAGE
+          <!-- Date + details -->
+          <div class="card-details-block">
+            <div class="card-date-big">23<sup>rd</sup> October 2026</div>
+            <div class="card-detail-row">🕖 &nbsp; Evening Onwards</div>
+            <div class="card-detail-row">📍 &nbsp; Venue details coming soon</div>
           </div>
 
-          <!-- Single Clean Floating Action Button at Bottom -->
-          <button id="btn-skip-video" class="skip-video-btn">
-            View Save The Date Card →
-          </button>
-        </div>
-      </section>
+          <!-- Guest personalisation -->
+          <div class="card-guest-tag">
+            <span>🎟️ Exclusively for</span>
+            <span id="card-guest-name" class="card-guest-name-text">Our Special Guest</span>
+          </div>
 
-      <!-- Screen 3: Save the Date Card & RSVP Screen -->
-      <section id="screen-card" class="screen-view">
-        <div class="poster-preview-card">
-          <img src="assets/arpit_poster.jpg" alt="Arpit 40th Birthday Poster" class="poster-img">
-          <div class="poster-info-overlay">
-            <span class="event-date-badge">SAVE THE DATE • OCT 23, 2026</span>
-            <h2 class="card-title">ARPIT AT 40</h2>
-            <p id="card-guest-name" style="font-size:0.85rem; color:#f5d061; margin-top:4px;">Personalized for Ramesh Uncle</p>
+          <!-- Bottom deco -->
+          <div class="card-deco-row">
+            <span>🎆</span><span>🎇</span><span>🎆</span><span>🎇</span>
           </div>
         </div>
 
+        <!-- RSVP Buttons -->
         <div class="card-actions-group">
           <button id="btn-rsvp-yes" class="action-btn-primary">
-            🎉 YES! I'LL BE THERE TO CELEBRATE
+            🎉 &nbsp; Haan! Main Zaroor Aaunga / Aaungi
           </button>
-          
           <button id="btn-add-calendar" class="action-btn-secondary">
-            📅 ADD TO GOOGLE / APPLE CALENDAR
+            📅 &nbsp; Google / Apple Calendar mein Add Karo
           </button>
         </div>
 
-        <!-- Face Match Automated Feature Teaser -->
+        <!-- Party Reels Teaser -->
         <div class="face-matched-teaser">
-          <div class="face-teaser-title">📸 AUTOMATED PARTY REELS PREVIEW</div>
-          <div class="face-teaser-desc">During the party on Oct 23, our photographer's live photos will be automatically matched to your face. You will get your exclusive personal party reel here!</div>
+          <div class="face-teaser-title">📸 Party mein Aapki Personal Reel!</div>
+          <div class="face-teaser-desc">
+            23 October ki party mein hum face recognition se aapki saari photos detect karenge aur sirf aapki photos ki ek exclusive reel yahan share ki jayegi! 🎬
+          </div>
         </div>
+
       </section>
 
     </div>

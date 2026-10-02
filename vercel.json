@@ -2,19 +2,11 @@
   "version": 2,
   "name": "khandelwal-invitation",
   "builds": [
-    {
-      "src": "**/*",
-      "use": "@vercel/static"
-    }
+    { "src": "**/*", "use": "@vercel/static" }
   ],
   "routes": [
-    {
-      "src": "/invite",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
+    { "src": "/cinematic", "dest": "/cinematic.html" },
+    { "src": "/invite",    "dest": "/index.html" },
+    { "src": "/(.*)",      "dest": "/$1" }
   ]
 }
