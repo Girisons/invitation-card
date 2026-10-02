@@ -24,10 +24,10 @@ export default function VideoScreen({ onEnd, onStart, onSkip, active }: Props) {
     const videoUrl = EVENT.videoUrl
 
     if (!videoUrl) {
-      // No video configured yet — show placeholder
+      // No video — show placeholder, go to RSVP after 3s
       setVideoState('unavailable')
-      setTimeout(() => onEnd(), 4000)
-      return
+      const t = setTimeout(() => onEnd(), 3000)
+      return () => clearTimeout(t)
     }
 
     video.src = videoUrl
