@@ -1,22 +1,9 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 
-let _client: SupabaseClient | null = null
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-function getClient(): SupabaseClient {
-  if (_client) return _client
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) throw new Error('Supabase env vars missing — add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY')
-  _client = createClient(url, key)
-  return _client
-}
-
-export const supabase = new Proxy({} as SupabaseClient, {
-  get(_, prop) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (getClient() as any)[prop]
-  },
-})
+export const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Types
 export interface Guest {
