@@ -24,6 +24,7 @@ export interface Guest {
   invite_code: string
   first_name: string
   last_name?: string
+  nickname?: string
   partner_name?: string
   partner_mobile?: string
   mobile?: string
@@ -32,6 +33,10 @@ export interface Guest {
   relationship_group?: string
   invited_count: number
   invitation_status: string
+  food_preference?: string
+  liquor_preference?: string
+  linked_guest_id?: string
+  send_together?: boolean
 }
 
 export interface RSVP {
