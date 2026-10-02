@@ -116,12 +116,21 @@ export default function AdminPage() {
   const [editForm, setEditForm] = useState<Partial<Guest>>({})
   const [copied, setCopied] = useState<string | null>(null)
   const [importMsg, setImportMsg] = useState('')
+  const [guestMap, setGuestMap] = useState<Record<string, string>>({})
   const fileRef = useRef<HTMLInputElement>(null)
 
   const fetchGuests = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase.from('guests').select('*').order('created_at', { ascending: false })
-    if (data) setGuests(data)
+    if (data) {
+      setGuests(data)
+      // Build id → full name map for linked guest lookup
+      const map: Record<string, string> = {}
+      data.forEach((g: Guest) => {
+        map[g.id] = `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`
+      })
+      setGuestMap(map)
+    }
     setLoading(false)
   }, [])
 
@@ -346,7 +355,9 @@ export default function AdminPage() {
                   </td>
                   <td className="px-4 py-3 text-[#C9A84C]/60 italic text-xs">{g.nickname || '—'}</td>
                   <td className="px-4 py-3 text-white/60 whitespace-nowrap">{g.mobile || '—'}</td>
-                  <td className="px-4 py-3 text-white/50 whitespace-nowrap">{g.partner_name || '—'}</td>
+                  <td className="px-4 py-3 text-white/50 whitespace-nowrap">
+                    {g.partner_name || (g.linked_guest_id && guestMap[g.linked_guest_id]) || '—'}
+                  </td>
                   <td className="px-4 py-3 text-white/40 whitespace-nowrap">{g.partner_mobile || '—'}</td>
                   <td className="px-4 py-3">
                     {g.food_preference ? (
