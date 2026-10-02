@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase, Guest } from '@/lib/supabase'
 
 const ADMIN_PASS = process.env.NEXT_PUBLIC_ADMIN_PASS || 'arpit40'
@@ -10,71 +10,44 @@ function generateCode(): string {
   return Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
 
-const BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'https://khandelwal-invitation.vercel.app'
+const BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'https://khandelwalinvite.vercel.app'
 const VIPUL_PHONE = '919414036060'
 
 type FoodPref = 'vegetarian' | 'jain' | 'non-vegetarian' | 'other' | ''
 type LiquorPref = 'yes' | 'no' | 'maybe' | ''
 
 interface PersonForm {
-  first_name: string
-  last_name: string
-  nickname: string        // home/informal name
-  mobile: string
-  food_preference: FoodPref
-  liquor_preference: LiquorPref
-  invite_code: string
+  first_name: string; last_name: string; nickname: string; mobile: string
+  food_preference: FoodPref; liquor_preference: LiquorPref; invite_code: string
+}
+interface FormState {
+  primary: PersonForm; spouse: PersonForm; has_spouse: boolean; send_together: boolean
+  guest_of: string; relationship_group: string
 }
 
 const emptyPerson = (): PersonForm => ({
   first_name: '', last_name: '', nickname: '', mobile: '',
   food_preference: '', liquor_preference: '', invite_code: generateCode(),
 })
-
-interface FormState {
-  primary: PersonForm
-  spouse: PersonForm
-  has_spouse: boolean
-  send_together: boolean  // one link for both OR separate links
-  guest_of: string
-  relationship_group: string
-}
-
 const emptyForm = (): FormState => ({
-  primary: emptyPerson(),
-  spouse: { ...emptyPerson(), invite_code: generateCode() },
-  has_spouse: false,
-  send_together: true,
-  guest_of: '',
-  relationship_group: '',
+  primary: emptyPerson(), spouse: { ...emptyPerson(), invite_code: generateCode() },
+  has_spouse: false, send_together: true, guest_of: '', relationship_group: '',
 })
 
-// ── Preference button ──
 function PrefBtn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick}
-      className={`flex-1 py-2 border rounded-sm text-[10px] tracking-wide transition-all duration-200 ${
-        active ? 'border-[#C9A84C]/70 text-[#C9A84C] bg-[#C9A84C]/8' : 'border-white/10 text-white/40 hover:border-white/25'
-      }`}>
+      className={`flex-1 py-1.5 border rounded-sm text-[10px] transition-all ${active ? 'border-[#C9A84C]/70 text-[#C9A84C] bg-[#C9A84C]/5' : 'border-white/10 text-white/40 hover:border-white/25'}`}>
       {label}
     </button>
   )
 }
 
-// ── Person section in form ──
-function PersonSection({
-  label, person, onChange,
-}: {
-  label: string
-  person: PersonForm
-  onChange: (p: PersonForm) => void
-}) {
+function PersonSection({ label, person, onChange }: { label: string; person: PersonForm; onChange: (p: PersonForm) => void }) {
   const set = (field: keyof PersonForm, val: string) => onChange({ ...person, [field]: val })
   return (
     <div className="border border-[#C9A84C]/10 rounded-sm p-4 flex flex-col gap-3">
       <p className="text-[9px] tracking-widest uppercase text-[#C9A84C]/60">{label}</p>
-
-      {/* Names row */}
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">First Name *</label>
@@ -87,58 +60,42 @@ function PersonSection({
             className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
         </div>
       </div>
-
-      {/* Nickname */}
-      <div>
-        <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">
-          Nickname / Home Name <span className="text-white/20 normal-case">(optional — e.g. Pinky, Bhai)</span>
-        </label>
-        <input value={person.nickname} onChange={e => set('nickname', e.target.value)}
-          placeholder="Informal name used at home"
-          className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40" />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Nickname</label>
+          <input value={person.nickname} onChange={e => set('nickname', e.target.value)} placeholder="Home name"
+            className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40" />
+        </div>
+        <div>
+          <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Mobile</label>
+          <input value={person.mobile} onChange={e => set('mobile', e.target.value)} placeholder="9876543210"
+            className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40" />
+        </div>
       </div>
-
-      {/* Mobile */}
-      <div>
-        <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Mobile</label>
-        <input value={person.mobile} onChange={e => set('mobile', e.target.value)}
-          placeholder="9876543210"
-          className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40" />
-      </div>
-
-      {/* Food preference */}
       <div>
         <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Food</label>
         <div className="flex gap-1.5">
           {(['vegetarian', 'jain', 'non-vegetarian', 'other'] as FoodPref[]).map(opt => (
-            <PrefBtn key={opt} label={opt === 'non-vegetarian' ? 'Non-Veg' : opt === 'vegetarian' ? 'Veg' : opt.charAt(0).toUpperCase() + opt.slice(1)}
-              active={person.food_preference === opt}
-              onClick={() => set('food_preference', person.food_preference === opt ? '' : opt)} />
+            <PrefBtn key={opt} label={opt === 'vegetarian' ? 'Veg' : opt === 'non-vegetarian' ? 'Non-Veg' : opt.charAt(0).toUpperCase() + opt.slice(1)}
+              active={person.food_preference === opt} onClick={() => set('food_preference', person.food_preference === opt ? '' : opt)} />
           ))}
         </div>
       </div>
-
-      {/* Liquor preference */}
       <div>
-        <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Drinks / Liquor</label>
+        <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Drinks</label>
         <div className="flex gap-1.5">
           {(['yes', 'no', 'maybe'] as LiquorPref[]).map(opt => (
             <PrefBtn key={opt} label={opt.charAt(0).toUpperCase() + opt.slice(1)}
-              active={person.liquor_preference === opt}
-              onClick={() => set('liquor_preference', person.liquor_preference === opt ? '' : opt)} />
+              active={person.liquor_preference === opt} onClick={() => set('liquor_preference', person.liquor_preference === opt ? '' : opt)} />
           ))}
         </div>
       </div>
-
-      {/* Invite code */}
       <div>
         <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Invite Code</label>
         <div className="flex gap-2">
-          <input value={person.invite_code} onChange={e => set('invite_code', e.target.value.toUpperCase())}
-            maxLength={8}
+          <input value={person.invite_code} onChange={e => set('invite_code', e.target.value.toUpperCase())} maxLength={8}
             className="flex-1 bg-white/5 border border-[#C9A84C]/20 rounded-sm px-3 py-2 text-sm text-[#C9A84C] font-mono outline-none focus:border-[#C9A84C]/50" />
-          <button type="button" onClick={() => set('invite_code', generateCode())}
-            className="btn-outline px-3 py-2 text-xs">↻</button>
+          <button type="button" onClick={() => set('invite_code', generateCode())} className="btn-outline px-3 py-2 text-xs">↻</button>
         </div>
         <p className="text-[9px] text-white/20 mt-1">{BASE_URL}/i/{person.invite_code}</p>
       </div>
@@ -154,10 +111,12 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [search, setSearch] = useState('')
-  const [copied, setCopied] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm())
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null)
   const [editForm, setEditForm] = useState<Partial<Guest>>({})
+  const [copied, setCopied] = useState<string | null>(null)
+  const [importMsg, setImportMsg] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const fetchGuests = useCallback(async () => {
     setLoading(true)
@@ -173,163 +132,120 @@ export default function AdminPage() {
     else alert('Wrong password!')
   }
 
+  // ── SAVE GUEST ──
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.primary.first_name.trim()) return alert('Primary guest first name required')
+    if (!form.primary.first_name.trim()) return alert('First name required')
     setSaving(true)
-
     try {
-      const sharedDetails = {
-        guest_of: form.guest_of.trim(),
-        relationship_group: form.relationship_group,
-      }
-
+      const shared = { guest_of: form.guest_of.trim(), relationship_group: form.relationship_group }
       if (!form.has_spouse) {
-        const { error } = await supabase.from('guests').insert({
-          ...sharedDetails,
-          first_name: form.primary.first_name.trim(),
-          last_name: form.primary.last_name.trim(),
-          nickname: form.primary.nickname.trim() || null,
-          mobile: form.primary.mobile.trim(),
-          food_preference: form.primary.food_preference || null,
-          liquor_preference: form.primary.liquor_preference || null,
-          invite_code: form.primary.invite_code,
-          invited_count: 1,
-        })
+        const { error } = await supabase.from('guests').insert({ ...shared, first_name: form.primary.first_name.trim(), last_name: form.primary.last_name.trim() || null, nickname: form.primary.nickname.trim() || null, mobile: form.primary.mobile.trim(), food_preference: form.primary.food_preference || null, liquor_preference: form.primary.liquor_preference || null, invite_code: form.primary.invite_code, invited_count: 1 })
         if (error) throw error
-
       } else if (form.send_together) {
         const partnerName = `${form.spouse.first_name.trim()}${form.spouse.last_name.trim() ? ' ' + form.spouse.last_name.trim() : ''}`
-
-        const { data: primaryRow, error: e1 } = await supabase.from('guests').insert({
-          ...sharedDetails,
-          first_name: form.primary.first_name.trim(),
-          last_name: form.primary.last_name.trim(),
-          nickname: form.primary.nickname.trim() || null,
-          mobile: form.primary.mobile.trim(),
-          food_preference: form.primary.food_preference || null,
-          liquor_preference: form.primary.liquor_preference || null,
-          partner_name: partnerName,
-          partner_mobile: form.spouse.mobile.trim() || null,
-          invite_code: form.primary.invite_code,
-          invited_count: 2,
-          send_together: true,
-        }).select().single()
+        const { data: p, error: e1 } = await supabase.from('guests').insert({ ...shared, first_name: form.primary.first_name.trim(), last_name: form.primary.last_name.trim() || null, nickname: form.primary.nickname.trim() || null, mobile: form.primary.mobile.trim(), food_preference: form.primary.food_preference || null, liquor_preference: form.primary.liquor_preference || null, partner_name: partnerName, partner_mobile: form.spouse.mobile.trim() || null, invite_code: form.primary.invite_code, invited_count: 2, send_together: true }).select().single()
         if (e1) throw e1
-
-        const { data: spouseRow, error: e2 } = await supabase.from('guests').insert({
-          ...sharedDetails,
-          first_name: form.spouse.first_name.trim(),
-          last_name: form.spouse.last_name.trim(),
-          nickname: form.spouse.nickname.trim() || null,
-          mobile: form.spouse.mobile.trim(),
-          food_preference: form.spouse.food_preference || null,
-          liquor_preference: form.spouse.liquor_preference || null,
-          invite_code: form.spouse.invite_code,
-          invited_count: 1,
-          send_together: true,
-        }).select().single()
+        const { data: s, error: e2 } = await supabase.from('guests').insert({ ...shared, first_name: form.spouse.first_name.trim(), last_name: form.spouse.last_name.trim() || null, nickname: form.spouse.nickname.trim() || null, mobile: form.spouse.mobile.trim(), food_preference: form.spouse.food_preference || null, liquor_preference: form.spouse.liquor_preference || null, invite_code: form.spouse.invite_code, invited_count: 1, send_together: true }).select().single()
         if (e2) throw e2
-
-        if (primaryRow && spouseRow) {
-          await supabase.from('guests').update({ linked_guest_id: spouseRow.id }).eq('id', primaryRow.id)
-          await supabase.from('guests').update({ linked_guest_id: primaryRow.id }).eq('id', spouseRow.id)
-        }
-
+        if (p && s) { await supabase.from('guests').update({ linked_guest_id: s.id }).eq('id', p.id); await supabase.from('guests').update({ linked_guest_id: p.id }).eq('id', s.id) }
       } else {
-        const { data: primaryRow, error: e1 } = await supabase.from('guests').insert({
-          ...sharedDetails,
-          first_name: form.primary.first_name.trim(),
-          last_name: form.primary.last_name.trim(),
-          nickname: form.primary.nickname.trim() || null,
-          mobile: form.primary.mobile.trim(),
-          food_preference: form.primary.food_preference || null,
-          liquor_preference: form.primary.liquor_preference || null,
-          invite_code: form.primary.invite_code,
-          invited_count: 1,
-          send_together: false,
-        }).select().single()
+        const { data: p, error: e1 } = await supabase.from('guests').insert({ ...shared, first_name: form.primary.first_name.trim(), last_name: form.primary.last_name.trim() || null, nickname: form.primary.nickname.trim() || null, mobile: form.primary.mobile.trim(), food_preference: form.primary.food_preference || null, liquor_preference: form.primary.liquor_preference || null, invite_code: form.primary.invite_code, invited_count: 1, send_together: false }).select().single()
         if (e1) throw e1
-
-        const { data: spouseRow, error: e2 } = await supabase.from('guests').insert({
-          ...sharedDetails,
-          first_name: form.spouse.first_name.trim(),
-          last_name: form.spouse.last_name.trim(),
-          nickname: form.spouse.nickname.trim() || null,
-          mobile: form.spouse.mobile.trim(),
-          food_preference: form.spouse.food_preference || null,
-          liquor_preference: form.spouse.liquor_preference || null,
-          invite_code: form.spouse.invite_code,
-          invited_count: 1,
-          send_together: false,
-        }).select().single()
+        const { data: s, error: e2 } = await supabase.from('guests').insert({ ...shared, first_name: form.spouse.first_name.trim(), last_name: form.spouse.last_name.trim() || null, nickname: form.spouse.nickname.trim() || null, mobile: form.spouse.mobile.trim(), food_preference: form.spouse.food_preference || null, liquor_preference: form.spouse.liquor_preference || null, invite_code: form.spouse.invite_code, invited_count: 1, send_together: false }).select().single()
         if (e2) throw e2
-
-        if (primaryRow && spouseRow) {
-          await supabase.from('guests').update({ linked_guest_id: spouseRow.id }).eq('id', primaryRow.id)
-          await supabase.from('guests').update({ linked_guest_id: primaryRow.id }).eq('id', spouseRow.id)
-        }
+        if (p && s) { await supabase.from('guests').update({ linked_guest_id: s.id }).eq('id', p.id); await supabase.from('guests').update({ linked_guest_id: p.id }).eq('id', s.id) }
       }
-
-      setForm(emptyForm())
-      setShowForm(false)
-      fetchGuests()
-
+      setForm(emptyForm()); setShowForm(false); fetchGuests()
     } catch (err: any) {
-      alert('Error saving guest: ' + (err?.message || 'Unknown error. Check Supabase SQL columns are added!'))
-    } finally {
-      setSaving(false)
-    }
+      alert('Error: ' + (err?.message || 'Unknown'))
+    } finally { setSaving(false) }
   }
 
-  const copyLink = (code: string) => {
-    navigator.clipboard.writeText(`${BASE_URL}/i/${code}`)
-    setCopied(code)
-    setTimeout(() => setCopied(null), 2000)
+  // ── EDIT ──
+  const startEdit = (g: Guest) => {
+    setEditingGuest(g)
+    setEditForm({ first_name: g.first_name, last_name: g.last_name || '', nickname: g.nickname || '', mobile: g.mobile || '', partner_name: g.partner_name || '', partner_mobile: g.partner_mobile || '', food_preference: g.food_preference || '', liquor_preference: g.liquor_preference || '', guest_of: g.guest_of || '', relationship_group: g.relationship_group || '', invite_code: g.invite_code })
   }
-
-  const sendWhatsApp = (guest: Guest) => {
-    const link = `${BASE_URL}/i/${guest.invite_code}`
-    const name = guest.nickname || (guest.partner_name ? `${guest.first_name} & ${guest.partner_name}` : guest.first_name)
-    const msg = `Hi ${name}! 🎂🪔\n\nArpit ke 40th Birthday aur Diwali celebration ke liye ek khaas invitation aapka intezaar kar raha hai...\n\n👉 ${link}\n\n— Vipul`
-    window.open(`https://wa.me/${VIPUL_PHONE}?text=${encodeURIComponent(msg)}`, '_blank')
-  }
-
-  const deleteGuest = async (id: string) => {
-    if (!confirm('Delete this guest?')) return
-    await supabase.from('guests').delete().eq('id', id)
-    fetchGuests()
-  }
-
-  const startEdit = (guest: Guest) => {
-    setEditingGuest(guest)
-    setEditForm({
-      first_name: guest.first_name,
-      last_name: guest.last_name || '',
-      nickname: guest.nickname || '',
-      mobile: guest.mobile || '',
-      partner_name: guest.partner_name || '',
-      partner_mobile: guest.partner_mobile || '',
-      food_preference: guest.food_preference || '',
-      liquor_preference: guest.liquor_preference || '',
-      guest_of: guest.guest_of || '',
-      relationship_group: guest.relationship_group || '',
-      invite_code: guest.invite_code,
-    })
-  }
-
   const handleEditSave = async () => {
     if (!editingGuest) return
     const { error } = await supabase.from('guests').update(editForm).eq('id', editingGuest.id)
     if (error) { alert('Error: ' + error.message); return }
-    setEditingGuest(null)
+    setEditingGuest(null); fetchGuests()
+  }
+
+  // ── DELETE ──
+  const deleteGuest = async (id: string) => {
+    if (!confirm('Delete this guest?')) return
+    await supabase.from('guests').delete().eq('id', id); fetchGuests()
+  }
+
+  // ── COPY LINK ──
+  const copyLink = (code: string) => {
+    navigator.clipboard.writeText(`${BASE_URL}/i/${code}`)
+    setCopied(code); setTimeout(() => setCopied(null), 2000)
+  }
+
+  // ── WHATSAPP ──
+  const sendWhatsApp = (g: Guest) => {
+    const link = `${BASE_URL}/i/${g.invite_code}`
+    const name = g.nickname || (g.partner_name ? `${g.first_name} & ${g.partner_name}` : g.first_name)
+    const msg = `Hi ${name}! 🎂🪔\n\nArpit ke 40th Birthday aur Diwali ke liye ek khaas invitation aapka intezaar kar raha hai...\n\n👉 ${link}\n\n— Vipul`
+    window.open(`https://wa.me/${VIPUL_PHONE}?text=${encodeURIComponent(msg)}`, '_blank')
+  }
+
+  // ── EXPORT CSV ──
+  const exportCSV = () => {
+    const headers = ['Name', 'Nickname', 'Mobile', 'Partner', 'Partner Mobile', 'Food', 'Drinks', 'Invited By', 'Group', 'Status', 'Invite Code', 'Invite Link']
+    const rows = guests.map(g => [
+      `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`,
+      g.nickname || '',
+      g.mobile || '',
+      g.partner_name || '',
+      g.partner_mobile || '',
+      g.food_preference || '',
+      g.liquor_preference || '',
+      g.guest_of || '',
+      g.relationship_group || '',
+      g.invitation_status,
+      g.invite_code,
+      `${BASE_URL}/i/${g.invite_code}`
+    ])
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = 'arpit40_guests.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // ── IMPORT CSV ──
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return
+    setImportMsg('Importing...')
+    const text = await file.text()
+    const lines = text.trim().split('\n').slice(1) // skip header
+    let count = 0
+    for (const line of lines) {
+      const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, '').replace(/""/g, '"'))
+      const [name, nickname, mobile, partner_name, partner_mobile, food_preference, liquor_preference, guest_of, relationship_group] = cols
+      if (!name) continue
+      const [first_name, ...rest] = name.split(' ')
+      const last_name = rest.join(' ')
+      const code = generateCode()
+      await supabase.from('guests').insert({ first_name, last_name: last_name || null, nickname: nickname || null, mobile: mobile || null, partner_name: partner_name || null, partner_mobile: partner_mobile || null, food_preference: food_preference || null, liquor_preference: liquor_preference || null, guest_of: guest_of || null, relationship_group: relationship_group || null, invite_code: code, invited_count: partner_name ? 2 : 1 })
+      count++
+    }
+    setImportMsg(`✅ ${count} guests imported!`)
+    setTimeout(() => setImportMsg(''), 3000)
     fetchGuests()
+    if (fileRef.current) fileRef.current.value = ''
   }
 
   const filtered = guests.filter(g =>
-    `${g.first_name} ${g.last_name} ${g.partner_name} ${g.mobile} ${(g as any).nickname}`.toLowerCase().includes(search.toLowerCase())
+    `${g.first_name} ${g.last_name} ${g.partner_name} ${g.mobile} ${g.nickname}`.toLowerCase().includes(search.toLowerCase())
   )
 
+  // ── LOGIN ──
   if (!authed) {
     return (
       <div className="min-h-screen bg-[#050D1A] flex items-center justify-center px-6">
@@ -340,8 +256,7 @@ export default function AdminPage() {
           </div>
           <div className="glass rounded-sm p-6 flex flex-col gap-4">
             <input type="password" placeholder="Password" value={pass}
-              onChange={e => setPass(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleLogin()}
+              onChange={e => setPass(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()}
               className="bg-transparent border-b border-[#C9A84C]/20 pb-2 text-[#F5ECD7] font-sans placeholder-white/20 outline-none focus:border-[#C9A84C]/50" />
             <button onClick={handleLogin} className="btn-primary py-3 text-sm tracking-widest uppercase">Enter</button>
           </div>
@@ -380,15 +295,111 @@ export default function AdminPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="px-6 py-4 flex gap-3 items-center">
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search guests..."
-          className="flex-1 bg-white/5 border border-white/10 rounded-sm px-4 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-[#C9A84C]/40" />
+      <div className="px-4 py-3 flex gap-2 items-center flex-wrap border-b border-[#C9A84C]/10">
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..."
+          className="flex-1 min-w-[150px] bg-white/5 border border-white/10 rounded-sm px-4 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-[#C9A84C]/40" />
         <button onClick={() => { setShowForm(true); setForm(emptyForm()) }}
-          className="btn-primary px-5 py-2 text-sm tracking-wider whitespace-nowrap">+ Add Guest</button>
-        <button onClick={fetchGuests} className="btn-outline px-4 py-2 text-sm">↻</button>
+          className="btn-primary px-4 py-2 text-sm tracking-wider whitespace-nowrap">+ Add Guest</button>
+        <button onClick={exportCSV}
+          className="btn-outline px-4 py-2 text-sm whitespace-nowrap">↓ Export CSV</button>
+        <label className="btn-outline px-4 py-2 text-sm whitespace-nowrap cursor-pointer">
+          ↑ Import CSV
+          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
+        </label>
+        <button onClick={fetchGuests} className="btn-outline px-3 py-2 text-sm">↻</button>
+        {importMsg && <span className="text-[11px] text-green-400">{importMsg}</span>}
       </div>
 
-      {/* ══════════ ADD GUEST MODAL ══════════ */}
+      {/* ── TABLE ── */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-[#C9A84C]/10 text-[10px] uppercase tracking-widest text-white/30">
+              <th className="px-4 py-3 text-left">Name</th>
+              <th className="px-4 py-3 text-left">Nickname</th>
+              <th className="px-4 py-3 text-left">Mobile</th>
+              <th className="px-4 py-3 text-left">Partner</th>
+              <th className="px-4 py-3 text-left">Partner Mob</th>
+              <th className="px-4 py-3 text-left">Food</th>
+              <th className="px-4 py-3 text-left">Drinks</th>
+              <th className="px-4 py-3 text-left">Via</th>
+              <th className="px-4 py-3 text-left">Group</th>
+              <th className="px-4 py-3 text-left">Status</th>
+              <th className="px-4 py-3 text-left">Code</th>
+              <th className="px-4 py-3 text-left">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={12} className="px-4 py-16 text-center text-white/30">Loading...</td></tr>
+            ) : filtered.length === 0 ? (
+              <tr><td colSpan={12} className="px-4 py-16 text-center text-white/30">
+                <p className="font-serif text-lg mb-1">No guests yet</p>
+                <p className="text-xs">Click "+ Add Guest" to get started</p>
+              </td></tr>
+            ) : filtered.map(g => {
+              const statusColor: Record<string, string> = { pending: 'text-white/30', opened: 'text-blue-400', entered: 'text-yellow-400', rsvp_yes: 'text-green-400', rsvp_no: 'text-red-400' }
+              return (
+                <tr key={g.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                  <td className="px-4 py-3 font-serif text-[#F5ECD7] whitespace-nowrap">
+                    {g.first_name}{g.last_name ? ' ' + g.last_name : ''}
+                  </td>
+                  <td className="px-4 py-3 text-[#C9A84C]/60 italic text-xs">{g.nickname || '—'}</td>
+                  <td className="px-4 py-3 text-white/60 whitespace-nowrap">{g.mobile || '—'}</td>
+                  <td className="px-4 py-3 text-white/50 whitespace-nowrap">{g.partner_name || '—'}</td>
+                  <td className="px-4 py-3 text-white/40 whitespace-nowrap">{g.partner_mobile || '—'}</td>
+                  <td className="px-4 py-3">
+                    {g.food_preference ? (
+                      <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full text-white/50 capitalize whitespace-nowrap">
+                        {g.food_preference === 'vegetarian' ? 'Veg' : g.food_preference === 'non-vegetarian' ? 'Non-Veg' : g.food_preference}
+                      </span>
+                    ) : <span className="text-white/20">—</span>}
+                  </td>
+                  <td className="px-4 py-3">
+                    {g.liquor_preference ? (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap ${g.liquor_preference === 'yes' ? 'bg-amber-500/10 text-amber-400' : g.liquor_preference === 'no' ? 'bg-white/5 text-white/30' : 'bg-blue-500/10 text-blue-400'}`}>
+                        🥂 {g.liquor_preference}
+                      </span>
+                    ) : <span className="text-white/20">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-[#C9A84C]/40 text-xs">{g.guest_of || '—'}</td>
+                  <td className="px-4 py-3 text-white/40 text-xs capitalize">{g.relationship_group || '—'}</td>
+                  <td className={`px-4 py-3 text-[10px] uppercase tracking-wider whitespace-nowrap ${statusColor[g.invitation_status] || 'text-white/30'}`}>
+                    {g.invitation_status}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-[11px] text-[#C9A84C]/60">{g.invite_code}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1 items-center">
+                      <button onClick={() => copyLink(g.invite_code)} title="Copy link"
+                        className={`px-2 py-1 border rounded-sm text-[10px] transition-all whitespace-nowrap ${copied === g.invite_code ? 'border-green-500/40 text-green-400' : 'border-white/10 text-white/40 hover:border-[#C9A84C]/30 hover:text-[#C9A84C]'}`}>
+                        {copied === g.invite_code ? '✓' : '🔗'}
+                      </button>
+                      <button onClick={() => sendWhatsApp(g)} title="WhatsApp"
+                        className="px-2 py-1 border border-green-500/20 text-green-400/60 hover:text-green-400 rounded-sm text-[10px] transition-all">
+                        WA
+                      </button>
+                      <button onClick={() => window.open(`${BASE_URL}/i/${g.invite_code}`, '_blank')} title="Preview"
+                        className="px-2 py-1 border border-white/10 text-white/30 hover:text-white/60 rounded-sm text-[10px] transition-all">
+                        👁
+                      </button>
+                      <button onClick={() => startEdit(g)} title="Edit"
+                        className="px-2 py-1 border border-[#C9A84C]/20 text-[#C9A84C]/50 hover:text-[#C9A84C] rounded-sm text-[10px] transition-all">
+                        ✏️
+                      </button>
+                      <button onClick={() => deleteGuest(g.id)} title="Delete"
+                        className="px-2 py-1 border border-red-500/10 text-red-400/30 hover:text-red-400 hover:border-red-500/30 rounded-sm text-[10px] transition-all">
+                        ✕
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ══ ADD GUEST MODAL ══ */}
       {showForm && (
         <div className="fixed inset-0 bg-black/80 z-50 overflow-y-auto py-8 px-4">
           <div className="glass w-full max-w-lg mx-auto rounded-sm p-6">
@@ -396,75 +407,41 @@ export default function AdminPage() {
               <h2 className="font-serif text-xl text-[#F5ECD7]">Add Guest</h2>
               <button onClick={() => setShowForm(false)} className="text-white/30 hover:text-white text-xl">✕</button>
             </div>
-
-            <form onSubmit={handleAdd} className="flex flex-col gap-5">
-
-              {/* Primary guest */}
-              <PersonSection label="Primary Guest" person={form.primary}
-                onChange={p => setForm(f => ({ ...f, primary: p }))} />
-
-              {/* Has spouse toggle */}
-              <div>
-                <button type="button"
-                  onClick={() => setForm(f => ({ ...f, has_spouse: !f.has_spouse }))}
-                  className={`w-full py-2.5 border rounded-sm text-xs tracking-widest uppercase transition-all ${form.has_spouse ? 'border-[#C9A84C]/40 text-[#C9A84C]' : 'border-white/10 text-white/40'}`}>
-                  {form.has_spouse ? '✓ Spouse / Partner Added' : '+ Add Spouse / Partner'}
-                </button>
-              </div>
-
-              {/* Spouse section */}
+            <form onSubmit={handleAdd} className="flex flex-col gap-4">
+              <PersonSection label="Primary Guest" person={form.primary} onChange={p => setForm(f => ({ ...f, primary: p }))} />
+              <button type="button" onClick={() => setForm(f => ({ ...f, has_spouse: !f.has_spouse }))}
+                className={`w-full py-2.5 border rounded-sm text-xs tracking-widest uppercase transition-all ${form.has_spouse ? 'border-[#C9A84C]/40 text-[#C9A84C]' : 'border-white/10 text-white/40'}`}>
+                {form.has_spouse ? '✓ Spouse Added' : '+ Add Spouse / Partner'}
+              </button>
               {form.has_spouse && (
                 <>
-                  <PersonSection label="Spouse / Partner" person={form.spouse}
-                    onChange={p => setForm(f => ({ ...f, spouse: p }))} />
-
-                  {/* Together / Separate */}
+                  <PersonSection label="Spouse / Partner" person={form.spouse} onChange={p => setForm(f => ({ ...f, spouse: p }))} />
                   <div className="border border-[#C9A84C]/10 rounded-sm p-4">
                     <p className="text-[9px] tracking-widest uppercase text-[#C9A84C]/60 mb-3">Invite Type</p>
                     <div className="flex flex-col gap-2">
-                      <button type="button"
-                        onClick={() => setForm(f => ({ ...f, send_together: true }))}
-                        className={`w-full py-3 px-4 border rounded-sm text-left transition-all ${form.send_together ? 'border-[#C9A84C]/50 bg-[#C9A84C]/5' : 'border-white/10'}`}>
-                        <div className="flex items-center gap-3">
-                          <div className={`w-3 h-3 rounded-full border-2 ${form.send_together ? 'border-[#C9A84C] bg-[#C9A84C]' : 'border-white/30'}`} />
-                          <div>
-                            <p className="text-sm text-[#F5ECD7]">Together — One Link</p>
-                            <p className="text-[10px] text-white/30 mt-0.5">
-                              Invitation shows "{form.primary.first_name || 'Palak'} & {form.spouse.first_name || 'Neha'}" — both RSVP together
-                            </p>
+                      {[{ val: true, label: 'Together — One Link', sub: `"${form.primary.first_name || 'Name'} & ${form.spouse.first_name || 'Partner'}"` }, { val: false, label: 'Separate — Two Links', sub: 'Each gets personal invite' }].map(opt => (
+                        <button key={String(opt.val)} type="button" onClick={() => setForm(f => ({ ...f, send_together: opt.val }))}
+                          className={`w-full py-2.5 px-4 border rounded-sm text-left transition-all ${form.send_together === opt.val ? 'border-[#C9A84C]/50 bg-[#C9A84C]/5' : 'border-white/10'}`}>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full border-2 shrink-0 ${form.send_together === opt.val ? 'border-[#C9A84C] bg-[#C9A84C]' : 'border-white/30'}`} />
+                            <div><p className="text-sm text-[#F5ECD7]">{opt.label}</p><p className="text-[10px] text-white/30">{opt.sub}</p></div>
                           </div>
-                        </div>
-                      </button>
-                      <button type="button"
-                        onClick={() => setForm(f => ({ ...f, send_together: false }))}
-                        className={`w-full py-3 px-4 border rounded-sm text-left transition-all ${!form.send_together ? 'border-[#C9A84C]/50 bg-[#C9A84C]/5' : 'border-white/10'}`}>
-                        <div className="flex items-center gap-3">
-                          <div className={`w-3 h-3 rounded-full border-2 ${!form.send_together ? 'border-[#C9A84C] bg-[#C9A84C]' : 'border-white/30'}`} />
-                          <div>
-                            <p className="text-sm text-[#F5ECD7]">Separate — Two Links</p>
-                            <p className="text-[10px] text-white/30 mt-0.5">
-                              Each gets personal link — "{form.primary.first_name || 'Palak'}" and "{form.spouse.first_name || 'Neha'}" RSVP individually
-                            </p>
-                          </div>
-                        </div>
-                      </button>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </>
               )}
-
-              {/* Other details */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Invited By</label>
-                  <input value={form.guest_of} onChange={e => setForm(f => ({ ...f, guest_of: e.target.value }))}
-                    placeholder="Arpit / Vipul"
+                  <input value={form.guest_of} onChange={e => setForm(f => ({ ...f, guest_of: e.target.value }))} placeholder="Arpit / Vipul"
                     className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40" />
                 </div>
                 <div className="col-span-2">
                   <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Group</label>
                   <select value={form.relationship_group} onChange={e => setForm(f => ({ ...f, relationship_group: e.target.value }))}
-                    className="w-full bg-[#0A1931] border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40">
+                    className="w-full bg-[#0A1931] border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none">
                     <option value="">Select</option>
                     <option value="family">Family</option>
                     <option value="friends">Friends</option>
@@ -473,10 +450,9 @@ export default function AdminPage() {
                   </select>
                 </div>
               </div>
-
               <div className="flex gap-3">
-                <button type="submit" disabled={saving} className="btn-primary flex-1 py-3 text-sm tracking-wider">
-                  {saving ? 'Saving...' : form.has_spouse && !form.send_together ? 'Save 2 Guests (Separate)' : 'Save Guest'}
+                <button type="submit" disabled={saving} className="btn-primary flex-1 py-3 text-sm">
+                  {saving ? 'Saving...' : form.has_spouse && !form.send_together ? 'Save 2 Guests' : 'Save Guest'}
                 </button>
                 <button type="button" onClick={() => setShowForm(false)} className="btn-outline px-6 py-3 text-sm">Cancel</button>
               </div>
@@ -485,183 +461,59 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ══════════ GUEST LIST ══════════ */}
-      <div className="px-6 pb-16">
-        {loading ? (
-          <div className="text-center py-20 text-white/30">Loading...</div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-20 text-white/30">
-            <p className="font-serif text-xl mb-2">No guests yet</p>
-            <p className="text-sm">Click "+ Add Guest" to get started</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {filtered.map(g => {
-              const displayName = g.partner_name ? `${g.first_name} & ${g.partner_name}` : g.first_name
-              const nickname = (g as any).nickname
-              const foodPref = (g as any).food_preference
-              const liquorPref = (g as any).liquor_preference
-              const link = `${BASE_URL}/i/${g.invite_code}`
-              const statusColor: Record<string, string> = {
-                pending: 'text-white/30', opened: 'text-blue-400',
-                entered: 'text-yellow-400', rsvp_yes: 'text-green-400', rsvp_no: 'text-red-400',
-              }
-
-              return (
-                <div key={g.id} className="glass rounded-sm p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <p className="font-serif text-[#F5ECD7] text-base">{displayName}</p>
-                      {nickname && <p className="text-[11px] text-[#C9A84C]/50 italic">"{nickname}"</p>}
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {g.mobile && <span className="text-[11px] text-white/35">{g.mobile}</span>}
-                        {g.guest_of && <span className="text-[11px] text-[#C9A84C]/35">via {g.guest_of}</span>}
-                        {g.relationship_group && <span className="text-[11px] text-white/25 capitalize">{g.relationship_group}</span>}
-                        {foodPref && <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full text-white/40 capitalize">{foodPref}</span>}
-                        {liquorPref && <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full text-white/40 capitalize">🥂 {liquorPref}</span>}
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0 ml-3">
-                      <span className={`text-[10px] tracking-widest uppercase ${statusColor[g.invitation_status] || 'text-white/30'}`}>
-                        {g.invitation_status}
-                      </span>
-                      <p className="text-[10px] text-white/20 font-mono mt-1">{g.invite_code}</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-white/5 rounded-sm px-3 py-1.5 mb-3">
-                    <p className="text-[10px] text-[#C9A84C]/50 font-mono truncate">{link}</p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button onClick={() => copyLink(g.invite_code)}
-                      className={`flex-1 py-2 border rounded-sm text-[11px] tracking-wider transition-all ${copied === g.invite_code ? 'border-green-500/40 text-green-400' : 'border-white/10 text-white/50 hover:border-[#C9A84C]/30 hover:text-[#C9A84C]/70'}`}>
-                      {copied === g.invite_code ? '✓ Copied!' : 'Copy Link'}
-                    </button>
-                    <button onClick={() => sendWhatsApp(g)}
-                      className="flex-1 py-2 border border-green-500/20 text-green-400/70 hover:border-green-500/50 hover:text-green-400 rounded-sm text-[11px] tracking-wider transition-all">
-                      WhatsApp
-                    </button>
-                    <button onClick={() => window.open(link, '_blank')}
-                      className="px-3 py-2 border border-white/10 text-white/30 hover:text-white/60 rounded-sm text-[11px] transition-all">
-                      Preview
-                    </button>
-                    <button onClick={() => startEdit(g)}
-                      className="px-3 py-2 border border-[#C9A84C]/20 text-[#C9A84C]/40 hover:text-[#C9A84C]/80 hover:border-[#C9A84C]/40 rounded-sm text-[11px] transition-all">
-                      Edit
-                    </button>
-                    <button onClick={() => deleteGuest(g.id)}
-                      className="px-3 py-2 border border-red-500/10 text-red-400/30 hover:text-red-400/60 hover:border-red-500/30 rounded-sm text-[11px] transition-all">
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* ══════════ EDIT GUEST MODAL ══════════ */}
+      {/* ══ EDIT MODAL ══ */}
       {editingGuest && (
         <div className="fixed inset-0 bg-black/80 z-50 overflow-y-auto py-8 px-4">
           <div className="glass w-full max-w-lg mx-auto rounded-sm p-6">
             <div className="flex justify-between items-center mb-5">
-              <h2 className="font-serif text-xl text-[#F5ECD7]">Edit Guest</h2>
+              <h2 className="font-serif text-xl text-[#F5ECD7]">Edit — {editingGuest.first_name}</h2>
               <button onClick={() => setEditingGuest(null)} className="text-white/30 hover:text-white text-xl">✕</button>
             </div>
-
             <div className="flex flex-col gap-4">
-              {/* Primary */}
-              <div className="border border-[#C9A84C]/10 rounded-sm p-4">
-                <p className="text-[9px] tracking-widest uppercase text-[#C9A84C]/60 mb-3">Guest Details</p>
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">First Name</label>
-                    <input value={editForm.first_name || ''} onChange={e => setEditForm(f => ({ ...f, first_name: e.target.value }))}
+              <div className="grid grid-cols-2 gap-3">
+                {[['First Name', 'first_name'], ['Last Name', 'last_name'], ['Nickname', 'nickname'], ['Mobile', 'mobile'], ['Partner Name', 'partner_name'], ['Partner Mobile', 'partner_mobile'], ['Invited By', 'guest_of'], ['Invite Code', 'invite_code']].map(([label, key]) => (
+                  <div key={key}>
+                    <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">{label}</label>
+                    <input value={(editForm as any)[key] || ''} onChange={e => setEditForm(f => ({ ...f, [key]: e.target.value }))}
                       className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
                   </div>
-                  <div>
-                    <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Last Name</label>
-                    <input value={editForm.last_name || ''} onChange={e => setEditForm(f => ({ ...f, last_name: e.target.value }))}
-                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Nickname</label>
-                    <input value={editForm.nickname || ''} onChange={e => setEditForm(f => ({ ...f, nickname: e.target.value }))}
-                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
-                  </div>
-                  <div>
-                    <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Mobile</label>
-                    <input value={editForm.mobile || ''} onChange={e => setEditForm(f => ({ ...f, mobile: e.target.value }))}
-                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Partner Name</label>
-                    <input value={editForm.partner_name || ''} onChange={e => setEditForm(f => ({ ...f, partner_name: e.target.value }))}
-                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
-                  </div>
-                  <div>
-                    <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Partner Mobile</label>
-                    <input value={editForm.partner_mobile || ''} onChange={e => setEditForm(f => ({ ...f, partner_mobile: e.target.value }))}
-                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
-                  </div>
+                ))}
+              </div>
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Food</label>
+                <div className="flex gap-1.5">
+                  {['vegetarian', 'jain', 'non-vegetarian', 'other'].map(opt => (
+                    <button key={opt} type="button" onClick={() => setEditForm(f => ({ ...f, food_preference: f.food_preference === opt ? '' : opt }))}
+                      className={`flex-1 py-2 border rounded-sm text-[10px] transition-all ${editForm.food_preference === opt ? 'border-[#C9A84C]/70 text-[#C9A84C]' : 'border-white/10 text-white/40'}`}>
+                      {opt === 'vegetarian' ? 'Veg' : opt === 'non-vegetarian' ? 'Non-Veg' : opt.charAt(0).toUpperCase() + opt.slice(1)}
+                    </button>
+                  ))}
                 </div>
               </div>
-
-              {/* Prefs */}
-              <div className="border border-[#C9A84C]/10 rounded-sm p-4">
-                <p className="text-[9px] tracking-widest uppercase text-[#C9A84C]/60 mb-3">Preferences</p>
-                <div className="mb-3">
-                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Food</label>
-                  <div className="flex gap-1.5">
-                    {['vegetarian', 'jain', 'non-vegetarian', 'other'].map(opt => (
-                      <button key={opt} type="button" onClick={() => setEditForm(f => ({ ...f, food_preference: f.food_preference === opt ? '' : opt }))}
-                        className={`flex-1 py-2 border rounded-sm text-[10px] transition-all ${editForm.food_preference === opt ? 'border-[#C9A84C]/70 text-[#C9A84C]' : 'border-white/10 text-white/40'}`}>
-                        {opt === 'vegetarian' ? 'Veg' : opt === 'non-vegetarian' ? 'Non-Veg' : opt.charAt(0).toUpperCase() + opt.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Drinks</label>
-                  <div className="flex gap-1.5">
-                    {['yes', 'no', 'maybe'].map(opt => (
-                      <button key={opt} type="button" onClick={() => setEditForm(f => ({ ...f, liquor_preference: f.liquor_preference === opt ? '' : opt }))}
-                        className={`flex-1 py-2 border rounded-sm text-[10px] transition-all ${editForm.liquor_preference === opt ? 'border-[#C9A84C]/70 text-[#C9A84C]' : 'border-white/10 text-white/40'}`}>
-                        {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                      </button>
-                    ))}
-                  </div>
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Drinks</label>
+                <div className="flex gap-1.5">
+                  {['yes', 'no', 'maybe'].map(opt => (
+                    <button key={opt} type="button" onClick={() => setEditForm(f => ({ ...f, liquor_preference: f.liquor_preference === opt ? '' : opt }))}
+                      className={`flex-1 py-2 border rounded-sm text-[10px] transition-all ${editForm.liquor_preference === opt ? 'border-[#C9A84C]/70 text-[#C9A84C]' : 'border-white/10 text-white/40'}`}>
+                      {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                    </button>
+                  ))}
                 </div>
               </div>
-
-              {/* Other */}
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Invited By</label>
-                  <input value={editForm.guest_of || ''} onChange={e => setEditForm(f => ({ ...f, guest_of: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
-                </div>
-                <div className="col-span-2">
-                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Group</label>
-                  <select value={editForm.relationship_group || ''} onChange={e => setEditForm(f => ({ ...f, relationship_group: e.target.value }))}
-                    className="w-full bg-[#0A1931] border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40">
-                    <option value="">Select</option>
-                    <option value="family">Family</option>
-                    <option value="friends">Friends</option>
-                    <option value="business">Business</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Group</label>
+                <select value={editForm.relationship_group || ''} onChange={e => setEditForm(f => ({ ...f, relationship_group: e.target.value }))}
+                  className="w-full bg-[#0A1931] border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none">
+                  <option value="">Select</option>
+                  <option value="family">Family</option>
+                  <option value="friends">Friends</option>
+                  <option value="business">Business</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
-
-              <div className="flex gap-3 mt-2">
-                <button onClick={handleEditSave} className="btn-primary flex-1 py-3 text-sm tracking-wider">Save Changes</button>
+              <div className="flex gap-3 mt-1">
+                <button onClick={handleEditSave} className="btn-primary flex-1 py-3 text-sm">Save Changes</button>
                 <button onClick={() => setEditingGuest(null)} className="btn-outline px-6 py-3 text-sm">Cancel</button>
               </div>
             </div>
