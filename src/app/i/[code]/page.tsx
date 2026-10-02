@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation'
-import { getGuestByCode } from '@/lib/supabase'
 import InvitationClient from './InvitationClient'
 
 interface Props {
@@ -8,13 +7,20 @@ interface Props {
 
 export default async function InvitationPage({ params }: Props) {
   const { code } = await params
-  const guest = await getGuestByCode(code)
 
-  if (!guest) {
+  // Graceful handling when Supabase is not configured
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     notFound()
   }
 
-  return <InvitationClient guest={guest} inviteCode={code.toUpperCase()} />
+  try {
+    const { getGuestByCode } = await import('@/lib/supabase')
+    const guest = await getGuestByCode(code)
+    if (!guest) notFound()
+    return <InvitationClient guest={guest!} inviteCode={code.toUpperCase()} />
+  } catch {
+    notFound()
+  }
 }
 
 export async function generateMetadata({ params }: Props) {
