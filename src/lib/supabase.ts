@@ -25,6 +25,7 @@ export interface Guest {
   first_name: string
   last_name?: string
   partner_name?: string
+  partner_mobile?: string
   mobile?: string
   email?: string
   guest_of?: string

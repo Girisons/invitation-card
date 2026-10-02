@@ -23,8 +23,9 @@ export default function AdminPage() {
   const [search, setSearch] = useState('')
   const [copied, setCopied] = useState<string | null>(null)
   const [form, setForm] = useState({
-    first_name: '', last_name: '', partner_name: '',
-    mobile: '', guest_of: '', relationship_group: '',
+    first_name: '', last_name: '', mobile: '',
+    partner_first_name: '', partner_last_name: '', partner_mobile: '',
+    guest_of: '', relationship_group: '',
     invited_count: '1', invite_code: generateCode(),
   })
 
@@ -47,12 +48,22 @@ export default function AdminPage() {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.first_name.trim()) return alert('First name required')
+    const partnerName = form.partner_first_name.trim()
+      ? `${form.partner_first_name.trim()}${form.partner_last_name.trim() ? ' ' + form.partner_last_name.trim() : ''}`
+      : ''
     const { error } = await supabase.from('guests').insert({
-      ...form,
+      first_name: form.first_name.trim(),
+      last_name: form.last_name.trim(),
+      mobile: form.mobile.trim(),
+      partner_name: partnerName,
+      partner_mobile: form.partner_mobile.trim(),
+      guest_of: form.guest_of.trim(),
+      relationship_group: form.relationship_group,
       invited_count: parseInt(form.invited_count),
+      invite_code: form.invite_code.trim().toUpperCase(),
     })
     if (error) { alert('Error: ' + error.message); return }
-    setForm({ first_name: '', last_name: '', partner_name: '', mobile: '', guest_of: '', relationship_group: '', invited_count: '1', invite_code: generateCode() })
+    setForm({ first_name: '', last_name: '', mobile: '', partner_first_name: '', partner_last_name: '', partner_mobile: '', guest_of: '', relationship_group: '', invited_count: '1', invite_code: generateCode() })
     setShowForm(false)
     fetchGuests()
   }
@@ -162,31 +173,57 @@ export default function AdminPage() {
               <h2 className="font-serif text-xl text-[#F5ECD7]">Add Guest</h2>
               <button onClick={() => setShowForm(false)} className="text-white/30 hover:text-white text-xl">✕</button>
             </div>
-            <form onSubmit={handleAdd} className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[9px] tracking-widest uppercase text-[#C9A84C]/50 block mb-1">First Name *</label>
-                  <input required value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
-                </div>
-                <div>
-                  <label className="text-[9px] tracking-widest uppercase text-[#C9A84C]/50 block mb-1">Last Name</label>
-                  <input value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
-                </div>
-              </div>
+            <form onSubmit={handleAdd} className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-1">
+
+              {/* ── PRIMARY GUEST ── */}
               <div>
-                <label className="text-[9px] tracking-widest uppercase text-[#C9A84C]/50 block mb-1">Partner / Plus One</label>
-                <input value={form.partner_name} onChange={e => setForm(f => ({ ...f, partner_name: e.target.value }))}
-                  placeholder="Leave blank if single invite"
-                  className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+                <p className="text-[9px] tracking-widest uppercase text-[#C9A84C]/60 mb-2 border-b border-[#C9A84C]/10 pb-1">Primary Guest</p>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="text-[9px] tracking-widest uppercase text-[#C9A84C]/50 block mb-1">First Name *</label>
+                    <input required value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] tracking-widest uppercase text-[#C9A84C]/50 block mb-1">Last Name</label>
+                    <input value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                  </div>
+                </div>
                 <div>
                   <label className="text-[9px] tracking-widest uppercase text-[#C9A84C]/50 block mb-1">Mobile</label>
                   <input value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                    placeholder="9876543210"
+                    className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40" />
                 </div>
+              </div>
+
+              {/* ── SPOUSE / PARTNER ── */}
+              <div>
+                <p className="text-[9px] tracking-widest uppercase text-[#C9A84C]/60 mb-2 border-b border-[#C9A84C]/10 pb-1">Spouse / Partner <span className="text-white/20 normal-case">(leave blank if single)</span></p>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="text-[9px] tracking-widest uppercase text-[#C9A84C]/50 block mb-1">First Name</label>
+                    <input value={form.partner_first_name} onChange={e => setForm(f => ({ ...f, partner_first_name: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] tracking-widest uppercase text-[#C9A84C]/50 block mb-1">Last Name</label>
+                    <input value={form.partner_last_name} onChange={e => setForm(f => ({ ...f, partner_last_name: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[9px] tracking-widest uppercase text-[#C9A84C]/50 block mb-1">Spouse Mobile</label>
+                  <input value={form.partner_mobile} onChange={e => setForm(f => ({ ...f, partner_mobile: e.target.value }))}
+                    placeholder="9876543211"
+                    className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40" />
+                </div>
+              </div>
+
+              {/* ── OTHER DETAILS ── */}
+              <div>
+                <p className="text-[9px] tracking-widest uppercase text-[#C9A84C]/60 mb-2 border-b border-[#C9A84C]/10 pb-1">Details</p>
                 <div>
                   <label className="text-[9px] tracking-widest uppercase text-[#C9A84C]/50 block mb-1">Invited By</label>
                   <input value={form.guest_of} onChange={e => setForm(f => ({ ...f, guest_of: e.target.value }))}
