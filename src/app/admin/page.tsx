@@ -156,6 +156,8 @@ export default function AdminPage() {
   const [search, setSearch] = useState('')
   const [copied, setCopied] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm())
+  const [editingGuest, setEditingGuest] = useState<Guest | null>(null)
+  const [editForm, setEditForm] = useState<Partial<Guest>>({})
 
   const fetchGuests = useCallback(async () => {
     setLoading(true)
@@ -296,6 +298,31 @@ export default function AdminPage() {
   const deleteGuest = async (id: string) => {
     if (!confirm('Delete this guest?')) return
     await supabase.from('guests').delete().eq('id', id)
+    fetchGuests()
+  }
+
+  const startEdit = (guest: Guest) => {
+    setEditingGuest(guest)
+    setEditForm({
+      first_name: guest.first_name,
+      last_name: guest.last_name || '',
+      nickname: guest.nickname || '',
+      mobile: guest.mobile || '',
+      partner_name: guest.partner_name || '',
+      partner_mobile: guest.partner_mobile || '',
+      food_preference: guest.food_preference || '',
+      liquor_preference: guest.liquor_preference || '',
+      guest_of: guest.guest_of || '',
+      relationship_group: guest.relationship_group || '',
+      invite_code: guest.invite_code,
+    })
+  }
+
+  const handleEditSave = async () => {
+    if (!editingGuest) return
+    const { error } = await supabase.from('guests').update(editForm).eq('id', editingGuest.id)
+    if (error) { alert('Error: ' + error.message); return }
+    setEditingGuest(null)
     fetchGuests()
   }
 
@@ -519,6 +546,10 @@ export default function AdminPage() {
                       className="px-3 py-2 border border-white/10 text-white/30 hover:text-white/60 rounded-sm text-[11px] transition-all">
                       Preview
                     </button>
+                    <button onClick={() => startEdit(g)}
+                      className="px-3 py-2 border border-[#C9A84C]/20 text-[#C9A84C]/40 hover:text-[#C9A84C]/80 hover:border-[#C9A84C]/40 rounded-sm text-[11px] transition-all">
+                      Edit
+                    </button>
                     <button onClick={() => deleteGuest(g.id)}
                       className="px-3 py-2 border border-red-500/10 text-red-400/30 hover:text-red-400/60 hover:border-red-500/30 rounded-sm text-[11px] transition-all">
                       ✕
@@ -530,6 +561,113 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {/* ══════════ EDIT GUEST MODAL ══════════ */}
+      {editingGuest && (
+        <div className="fixed inset-0 bg-black/80 z-50 overflow-y-auto py-8 px-4">
+          <div className="glass w-full max-w-lg mx-auto rounded-sm p-6">
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="font-serif text-xl text-[#F5ECD7]">Edit Guest</h2>
+              <button onClick={() => setEditingGuest(null)} className="text-white/30 hover:text-white text-xl">✕</button>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              {/* Primary */}
+              <div className="border border-[#C9A84C]/10 rounded-sm p-4">
+                <p className="text-[9px] tracking-widest uppercase text-[#C9A84C]/60 mb-3">Guest Details</p>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">First Name</label>
+                    <input value={editForm.first_name || ''} onChange={e => setEditForm(f => ({ ...f, first_name: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Last Name</label>
+                    <input value={editForm.last_name || ''} onChange={e => setEditForm(f => ({ ...f, last_name: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Nickname</label>
+                    <input value={editForm.nickname || ''} onChange={e => setEditForm(f => ({ ...f, nickname: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Mobile</label>
+                    <input value={editForm.mobile || ''} onChange={e => setEditForm(f => ({ ...f, mobile: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Partner Name</label>
+                    <input value={editForm.partner_name || ''} onChange={e => setEditForm(f => ({ ...f, partner_name: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Partner Mobile</label>
+                    <input value={editForm.partner_mobile || ''} onChange={e => setEditForm(f => ({ ...f, partner_mobile: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Prefs */}
+              <div className="border border-[#C9A84C]/10 rounded-sm p-4">
+                <p className="text-[9px] tracking-widest uppercase text-[#C9A84C]/60 mb-3">Preferences</p>
+                <div className="mb-3">
+                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Food</label>
+                  <div className="flex gap-1.5">
+                    {['vegetarian', 'jain', 'non-vegetarian', 'other'].map(opt => (
+                      <button key={opt} type="button" onClick={() => setEditForm(f => ({ ...f, food_preference: f.food_preference === opt ? '' : opt }))}
+                        className={`flex-1 py-2 border rounded-sm text-[10px] transition-all ${editForm.food_preference === opt ? 'border-[#C9A84C]/70 text-[#C9A84C]' : 'border-white/10 text-white/40'}`}>
+                        {opt === 'vegetarian' ? 'Veg' : opt === 'non-vegetarian' ? 'Non-Veg' : opt.charAt(0).toUpperCase() + opt.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Drinks</label>
+                  <div className="flex gap-1.5">
+                    {['yes', 'no', 'maybe'].map(opt => (
+                      <button key={opt} type="button" onClick={() => setEditForm(f => ({ ...f, liquor_preference: f.liquor_preference === opt ? '' : opt }))}
+                        className={`flex-1 py-2 border rounded-sm text-[10px] transition-all ${editForm.liquor_preference === opt ? 'border-[#C9A84C]/70 text-[#C9A84C]' : 'border-white/10 text-white/40'}`}>
+                        {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Other */}
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Invited By</label>
+                  <input value={editForm.guest_of || ''} onChange={e => setEditForm(f => ({ ...f, guest_of: e.target.value }))}
+                    className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Group</label>
+                  <select value={editForm.relationship_group || ''} onChange={e => setEditForm(f => ({ ...f, relationship_group: e.target.value }))}
+                    className="w-full bg-[#0A1931] border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40">
+                    <option value="">Select</option>
+                    <option value="family">Family</option>
+                    <option value="friends">Friends</option>
+                    <option value="business">Business</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-2">
+                <button onClick={handleEditSave} className="btn-primary flex-1 py-3 text-sm tracking-wider">Save Changes</button>
+                <button onClick={() => setEditingGuest(null)} className="btn-outline px-6 py-3 text-sm">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
