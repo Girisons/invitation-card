@@ -15,13 +15,14 @@ interface Props {
 }
 
 export default function InvitationClient({ guest, inviteCode }: Props) {
-  const [screen, setScreen] = useState<Screen>('opening')
+  const [screen, setScreen] = useState<Screen>('video')
   const [rsvpStatus, setRsvpStatus] = useState<'attending' | 'declined' | null>(null)
 
-  // Track invitation opened
+  // Track invitation opened & entered video directly
   useEffect(() => {
     trackEvent(guest.id, inviteCode, 'invitation_opened')
-    updateGuestStatus(guest.id, 'opened')
+    trackEvent(guest.id, inviteCode, 'invitation_entered')
+    updateGuestStatus(guest.id, 'entered')
   }, [guest.id, inviteCode])
 
   const handleEnter = () => {
@@ -62,6 +63,10 @@ export default function InvitationClient({ guest, inviteCode }: Props) {
       {/* Video */}
       <div className={`absolute inset-0 transition-opacity duration-1000 ${screen === 'video' ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none z-0'}`}>
         <VideoScreen
+          guestName={guestDisplayName}
+          guestId={guest.id}
+          videoUrl={guest.video_url}
+          inviteCode={guest.invite_code}
           onEnd={handleVideoEnd}
           onStart={handleVideoStart}
           onSkip={handleVideoEnd}

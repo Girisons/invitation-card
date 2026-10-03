@@ -243,7 +243,7 @@ export default function AdminPage() {
   // ── EDIT ──
   const startEdit = (g: Guest) => {
     setEditingGuest(g)
-    setEditForm({ first_name: g.first_name, last_name: g.last_name || '', nickname: g.nickname || '', mobile: g.mobile || '', partner_name: g.partner_name || '', partner_mobile: g.partner_mobile || '', food_preference: g.food_preference || '', liquor_preference: g.liquor_preference || '', guest_of: g.guest_of || '', relationship_group: g.relationship_group || '', invite_code: g.invite_code })
+    setEditForm({ first_name: g.first_name, last_name: g.last_name || '', nickname: g.nickname || '', mobile: g.mobile || '', partner_name: g.partner_name || '', partner_mobile: g.partner_mobile || '', food_preference: g.food_preference || '', liquor_preference: g.liquor_preference || '', guest_of: g.guest_of || '', relationship_group: g.relationship_group || '', invite_code: g.invite_code, video_url: g.video_url || '' })
   }
   const handleEditSave = async () => {
     if (!editingGuest) return
@@ -423,15 +423,16 @@ export default function AdminPage() {
               <th className="px-4 py-3 text-left">Group</th>
               <th className="px-4 py-3 text-left">Status</th>
               <th className="px-4 py-3 text-left">Send As</th>
+              <th className="px-4 py-3 text-left">Video</th>
               <th className="px-4 py-3 text-left">Code</th>
               <th className="px-4 py-3 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={12} className="px-4 py-16 text-center text-white/30">Loading...</td></tr>
+              <tr><td colSpan={14} className="px-4 py-16 text-center text-white/30">Loading...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={12} className="px-4 py-16 text-center text-white/30">
+              <tr><td colSpan={14} className="px-4 py-16 text-center text-white/30">
                 <p className="font-serif text-lg mb-1">No guests yet</p>
                 <p className="text-xs">Click "+ Add Guest" to get started</p>
               </td></tr>
@@ -476,6 +477,17 @@ export default function AdminPage() {
                         {g.send_together ? '👫 Together' : '👤 Separate'}
                       </button>
                     ) : <span className="text-white/15 text-[10px]">—</span>}
+                  </td>
+                  <td className="px-4 py-3">
+                    {g.video_url ? (
+                      <a href={g.video_url} target="_blank" rel="noreferrer" className="text-[#C9A84C] hover:underline flex items-center gap-1 text-[11px]">
+                        🎬 Custom
+                      </a>
+                    ) : (
+                      <span className="text-white/20 text-[10px]" title="Uses default video or /videos/video_<code.mp4>">
+                        🌐 Default
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 font-mono text-[11px] text-[#C9A84C]/60">{g.invite_code}</td>
                   <td className="px-4 py-3">
@@ -610,6 +622,12 @@ export default function AdminPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+              <div>
+                <label className="text-[9px] uppercase tracking-widest text-[#C9A84C]/80 block mb-1">Personalized Video URL</label>
+                <input value={editForm.video_url || ''} onChange={e => setEditForm(f => ({ ...f, video_url: e.target.value }))} placeholder="https://... or /videos/video_code.mp4"
+                  className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40" />
+                <p className="text-[9px] text-white/30 mt-1">Direct MP4 link (Supabase Storage, CDN, HeyGen, or /videos/filename.mp4)</p>
               </div>
               <div>
                 <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Group</label>

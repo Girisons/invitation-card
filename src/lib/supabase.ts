@@ -34,6 +34,7 @@ export interface Guest {
   liquor_preference?: string
   linked_guest_id?: string
   send_together?: boolean
+  video_url?: string
 }
 
 export interface RSVP {

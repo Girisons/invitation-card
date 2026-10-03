@@ -6,7 +6,7 @@ export const EVENT = {
   venue:   process.env.NEXT_PUBLIC_EVENT_VENUE   || 'Jaipur (Venue details to follow)',
   contact: process.env.NEXT_PUBLIC_RSVP_CONTACT  || 'Vipul',
   phone:   process.env.NEXT_PUBLIC_RSVP_PHONE    || '+919414036060',
-  videoUrl: process.env.NEXT_PUBLIC_VIDEO_URL    || '',  // replace when ready
+  videoUrl: process.env.NEXT_PUBLIC_VIDEO_URL || '/videos/teaser.mp4',  // default video
   poster:   process.env.NEXT_PUBLIC_VIDEO_POSTER || '',
   calDate: '20261023',      // YYYYMMDD for ICS
   calStart: '20261023T190000',
