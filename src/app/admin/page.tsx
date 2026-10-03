@@ -116,19 +116,60 @@ export default function AdminPage() {
   const [editForm, setEditForm] = useState<Partial<Guest>>({})
   const [copied, setCopied] = useState<string | null>(null)
   const [importMsg, setImportMsg] = useState('')
-  const [guestMap, setGuestMap] = useState<Record<string, string>>({})
+  const [guestMap, setGuestMap] = useState<Record<string, { name: string; mobile: string }>>({})
   const fileRef = useRef<HTMLInputElement>(null)
 
   const fetchGuests = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase.from('guests').select('*').order('created_at', { ascending: false })
     if (data) {
-      setGuests(data)
-      // Build id → full name map for linked guest lookup
-      const map: Record<string, string> = {}
+      // Build id → { name, mobile } map for linked guest lookup
+      const map: Record<string, { name: string; mobile: string }> = {}
       data.forEach((g: Guest) => {
-        map[g.id] = `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`
+        map[g.id] = {
+          name: `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`,
+          mobile: g.mobile || ''
+        }
       })
+
+      // Auto-sync partner_name, partner_mobile, and linked_guest_id for any partner pairs
+      for (const g of data) {
+        if (g.linked_guest_id && map[g.linked_guest_id]) {
+          const partner = map[g.linked_guest_id]
+          const updates: Partial<Guest> = {}
+          if (!g.partner_name && partner.name) updates.partner_name = partner.name
+          if (!g.partner_mobile && partner.mobile) updates.partner_mobile = partner.mobile
+          if (Object.keys(updates).length > 0) {
+            if (updates.partner_name) g.partner_name = updates.partner_name
+            if (updates.partner_mobile) g.partner_mobile = updates.partner_mobile
+            await supabase.from('guests').update(updates).eq('id', g.id)
+          }
+        } else if (!g.linked_guest_id && g.partner_name) {
+          const match = data.find(other =>
+            other.id !== g.id &&
+            `${other.first_name}${other.last_name ? ' ' + other.last_name : ''}`.toLowerCase() === g.partner_name?.toLowerCase()
+          )
+          if (match) {
+            const myName = `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`
+            await supabase.from('guests').update({
+              linked_guest_id: match.id,
+              partner_mobile: match.mobile || null
+            }).eq('id', g.id)
+            await supabase.from('guests').update({
+              linked_guest_id: g.id,
+              partner_name: myName,
+              partner_mobile: g.mobile || null
+            }).eq('id', match.id)
+            g.linked_guest_id = match.id
+            g.partner_mobile = match.mobile || g.partner_mobile
+            match.linked_guest_id = g.id
+            match.partner_name = myName
+            match.partner_mobile = g.mobile || match.partner_mobile
+          }
+        }
+      }
+
+      setGuests([...data])
       setGuestMap(map)
     }
     setLoading(false)
@@ -151,19 +192,47 @@ export default function AdminPage() {
       if (!form.has_spouse) {
         const { error } = await supabase.from('guests').insert({ ...shared, first_name: form.primary.first_name.trim(), last_name: form.primary.last_name.trim() || null, nickname: form.primary.nickname.trim() || null, mobile: form.primary.mobile.trim(), food_preference: form.primary.food_preference || null, liquor_preference: form.primary.liquor_preference || null, invite_code: form.primary.invite_code, invited_count: 1 })
         if (error) throw error
-      } else if (form.send_together) {
-        const partnerName = `${form.spouse.first_name.trim()}${form.spouse.last_name.trim() ? ' ' + form.spouse.last_name.trim() : ''}`
-        const { data: p, error: e1 } = await supabase.from('guests').insert({ ...shared, first_name: form.primary.first_name.trim(), last_name: form.primary.last_name.trim() || null, nickname: form.primary.nickname.trim() || null, mobile: form.primary.mobile.trim(), food_preference: form.primary.food_preference || null, liquor_preference: form.primary.liquor_preference || null, partner_name: partnerName, partner_mobile: form.spouse.mobile.trim() || null, invite_code: form.primary.invite_code, invited_count: 2, send_together: true }).select().single()
-        if (e1) throw e1
-        const { data: s, error: e2 } = await supabase.from('guests').insert({ ...shared, first_name: form.spouse.first_name.trim(), last_name: form.spouse.last_name.trim() || null, nickname: form.spouse.nickname.trim() || null, mobile: form.spouse.mobile.trim(), food_preference: form.spouse.food_preference || null, liquor_preference: form.spouse.liquor_preference || null, invite_code: form.spouse.invite_code, invited_count: 1, send_together: true }).select().single()
-        if (e2) throw e2
-        if (p && s) { await supabase.from('guests').update({ linked_guest_id: s.id }).eq('id', p.id); await supabase.from('guests').update({ linked_guest_id: p.id }).eq('id', s.id) }
       } else {
-        const { data: p, error: e1 } = await supabase.from('guests').insert({ ...shared, first_name: form.primary.first_name.trim(), last_name: form.primary.last_name.trim() || null, nickname: form.primary.nickname.trim() || null, mobile: form.primary.mobile.trim(), food_preference: form.primary.food_preference || null, liquor_preference: form.primary.liquor_preference || null, invite_code: form.primary.invite_code, invited_count: 1, send_together: false }).select().single()
+        const partnerName = `${form.spouse.first_name.trim()}${form.spouse.last_name.trim() ? ' ' + form.spouse.last_name.trim() : ''}`
+        const primaryName = `${form.primary.first_name.trim()}${form.primary.last_name.trim() ? ' ' + form.primary.last_name.trim() : ''}`
+        const isTogether = form.send_together
+
+        const { data: p, error: e1 } = await supabase.from('guests').insert({
+          ...shared,
+          first_name: form.primary.first_name.trim(),
+          last_name: form.primary.last_name.trim() || null,
+          nickname: form.primary.nickname.trim() || null,
+          mobile: form.primary.mobile.trim(),
+          food_preference: form.primary.food_preference || null,
+          liquor_preference: form.primary.liquor_preference || null,
+          partner_name: partnerName,
+          partner_mobile: form.spouse.mobile.trim() || null,
+          invite_code: form.primary.invite_code,
+          invited_count: isTogether ? 2 : 1,
+          send_together: isTogether
+        }).select().single()
         if (e1) throw e1
-        const { data: s, error: e2 } = await supabase.from('guests').insert({ ...shared, first_name: form.spouse.first_name.trim(), last_name: form.spouse.last_name.trim() || null, nickname: form.spouse.nickname.trim() || null, mobile: form.spouse.mobile.trim(), food_preference: form.spouse.food_preference || null, liquor_preference: form.spouse.liquor_preference || null, invite_code: form.spouse.invite_code, invited_count: 1, send_together: false }).select().single()
+
+        const { data: s, error: e2 } = await supabase.from('guests').insert({
+          ...shared,
+          first_name: form.spouse.first_name.trim(),
+          last_name: form.spouse.last_name.trim() || null,
+          nickname: form.spouse.nickname.trim() || null,
+          mobile: form.spouse.mobile.trim(),
+          food_preference: form.spouse.food_preference || null,
+          liquor_preference: form.spouse.liquor_preference || null,
+          partner_name: primaryName,
+          partner_mobile: form.primary.mobile.trim() || null,
+          invite_code: form.spouse.invite_code,
+          invited_count: 1,
+          send_together: isTogether
+        }).select().single()
         if (e2) throw e2
-        if (p && s) { await supabase.from('guests').update({ linked_guest_id: s.id }).eq('id', p.id); await supabase.from('guests').update({ linked_guest_id: p.id }).eq('id', s.id) }
+
+        if (p && s) {
+          await supabase.from('guests').update({ linked_guest_id: s.id }).eq('id', p.id)
+          await supabase.from('guests').update({ linked_guest_id: p.id }).eq('id', s.id)
+        }
       }
       setForm(emptyForm()); setShowForm(false); fetchGuests()
     } catch (err: any) {
@@ -180,6 +249,16 @@ export default function AdminPage() {
     if (!editingGuest) return
     const { error } = await supabase.from('guests').update(editForm).eq('id', editingGuest.id)
     if (error) { alert('Error: ' + error.message); return }
+
+    // If editing guest is linked, sync updated name & mobile to partner's partner_name & partner_mobile
+    if (editingGuest.linked_guest_id) {
+      const myFullName = `${editForm.first_name || ''}${editForm.last_name ? ' ' + editForm.last_name : ''}`.trim()
+      await supabase.from('guests').update({
+        partner_name: myFullName,
+        partner_mobile: editForm.mobile || null
+      }).eq('id', editingGuest.linked_guest_id)
+    }
+
     setEditingGuest(null); fetchGuests()
   }
 
@@ -198,7 +277,7 @@ export default function AdminPage() {
   // ── WHATSAPP ──
   const sendWhatsApp = (g: Guest) => {
     const link = `${BASE_URL}/i/${g.invite_code}`
-    const name = g.nickname || (g.partner_name ? `${g.first_name} & ${g.partner_name}` : g.first_name)
+    const name = g.nickname || ((g.send_together && g.partner_name) ? `${g.first_name} & ${g.partner_name}` : g.first_name)
     const msg = `Hi ${name}! 🎂🪔\n\nArpit ke 40th Birthday aur Diwali ke liye ek khaas invitation aapka intezaar kar raha hai...\n\n👉 ${link}\n\n— Vipul`
     window.open(`https://wa.me/${VIPUL_PHONE}?text=${encodeURIComponent(msg)}`, '_blank')
   }
@@ -210,8 +289,8 @@ export default function AdminPage() {
       `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`,
       g.nickname || '',
       g.mobile || '',
-      g.partner_name || '',
-      g.partner_mobile || '',
+      g.partner_name || (g.linked_guest_id && guestMap[g.linked_guest_id]?.name) || '',
+      g.partner_mobile || (g.linked_guest_id && guestMap[g.linked_guest_id]?.mobile) || '',
       g.food_preference || '',
       g.liquor_preference || '',
       g.guest_of || '',
@@ -250,33 +329,18 @@ export default function AdminPage() {
     if (fileRef.current) fileRef.current.value = ''
   }
 
-  // ── TOGGLE TOGETHER / SEPARATE ──
+  // ── TOGGLE TOGETHER / SEPARATE (INDEPENDENT PER GUEST) ──
   const toggleTogether = async (g: Guest) => {
-    if (!g.linked_guest_id) return
-    const linked = guests.find(x => x.id === g.linked_guest_id)
-    if (!linked) return
-
     const nowTogether = !g.send_together
-
-    // Always keep partner_name set — only send_together controls invitation display
-    const myFullName = `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`
-    const linkedFullName = `${linked.first_name}${linked.last_name ? ' ' + linked.last_name : ''}`
-
-    await supabase.from('guests').update({
-      send_together: nowTogether,
-      partner_name: linkedFullName  // always keep partner name
-    }).eq('id', g.id)
-    await supabase.from('guests').update({
-      send_together: nowTogether,
-      partner_name: myFullName  // always keep partner name
-    }).eq('id', linked.id)
-
+    await supabase.from('guests').update({ send_together: nowTogether }).eq('id', g.id)
     fetchGuests()
   }
 
-  const filtered = guests.filter(g =>
-    `${g.first_name} ${g.last_name} ${g.partner_name} ${g.mobile} ${g.nickname}`.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = guests.filter(g => {
+    const partnerName = g.partner_name || (g.linked_guest_id && guestMap[g.linked_guest_id]?.name) || ''
+    const partnerMob = g.partner_mobile || (g.linked_guest_id && guestMap[g.linked_guest_id]?.mobile) || ''
+    return `${g.first_name} ${g.last_name} ${partnerName} ${g.mobile} ${partnerMob} ${g.nickname}`.toLowerCase().includes(search.toLowerCase())
+  })
 
   // ── LOGIN ──
   if (!authed) {
@@ -381,9 +445,11 @@ export default function AdminPage() {
                   <td className="px-4 py-3 text-[#C9A84C]/60 italic text-xs">{g.nickname || '—'}</td>
                   <td className="px-4 py-3 text-white/60 whitespace-nowrap">{g.mobile || '—'}</td>
                   <td className="px-4 py-3 text-white/50 whitespace-nowrap">
-                    {g.partner_name || (g.linked_guest_id && guestMap[g.linked_guest_id]) || '—'}
+                    {g.partner_name || (g.linked_guest_id && guestMap[g.linked_guest_id]?.name) || '—'}
                   </td>
-                  <td className="px-4 py-3 text-white/40 whitespace-nowrap">{g.partner_mobile || '—'}</td>
+                  <td className="px-4 py-3 text-white/40 whitespace-nowrap">
+                    {g.partner_mobile || (g.linked_guest_id && guestMap[g.linked_guest_id]?.mobile) || '—'}
+                  </td>
                   <td className="px-4 py-3">
                     {g.food_preference ? (
                       <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full text-white/50 capitalize whitespace-nowrap">
