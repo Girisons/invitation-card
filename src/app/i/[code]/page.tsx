@@ -42,16 +42,16 @@ export async function generateMetadata({ params }: Props) {
 
   return {
     metadataBase: new URL('https://khandelwalinvite.vercel.app'),
-    title: `Arpit @ 40 × Diwali — For ${guestName}`,
-    description: 'A personal invitation — 23 October 2026, Jaipur.',
+    title: `Arpit's 40th & Diwali Bash — For ${guestName}`,
+    description: 'A personal invitation — Friday, 23 October 2026, Jaipur.',
     openGraph: {
-      title: `Arpit @ 40 × Diwali — For ${guestName}`,
-      description: 'A personal invitation — 23 October 2026, Jaipur.',
+      title: `Arpit's 40th & Diwali Bash — For ${guestName}`,
+      description: 'A personal invitation — Friday, 23 October 2026, Jaipur.',
       images: [{
         url: '/og.jpg',
         width: 1200,
         height: 630,
-        alt: 'Arpit @ 40 × Diwali Invitation',
+        alt: "Arpit's 40th & Diwali Bash Invitation",
       }],
     },
   }

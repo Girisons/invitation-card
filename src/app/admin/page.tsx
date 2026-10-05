@@ -385,7 +385,7 @@ export default function AdminPage() {
       {/* Header */}
       <div className="border-b border-[#C9A84C]/10 px-6 py-4 flex justify-between items-center">
         <div>
-          <h1 className="font-serif text-xl text-[#C9A84C]">Arpit @ 40 × Diwali</h1>
+          <h1 className="font-serif text-xl text-[#C9A84C]">Arpit's 40th & Diwali Bash</h1>
           <p className="text-[10px] tracking-widest uppercase text-white/30 mt-0.5">Guest Management</p>
         </div>
         <div className="text-right">

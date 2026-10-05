@@ -15,11 +15,11 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Arpit @ 40 × Diwali — A Personal Invitation',
-  description: 'You have received a personal invitation.',
+  title: "Arpit's 40th & Diwali Bash — A Personal Invitation",
+  description: 'You have received a personal invitation — Friday, 23 October 2026, Jaipur.',
   openGraph: {
-    title: 'Arpit @ 40 × Diwali',
-    description: 'A personal invitation for you — 23 October 2026, Jaipur.',
+    title: "Arpit's 40th & Diwali Bash",
+    description: 'A personal invitation for you — Friday, 23 October 2026, Jaipur.',
     images: ['/og.jpg'],
   },
   robots: 'noindex, nofollow',
