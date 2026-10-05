@@ -442,7 +442,19 @@ export default function AdminPage() {
     const msg = `${EMOJI.sparkles} *Four Decades. One Amazing Journey. And Now… One BIG Celebration!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my brother *ARPIT’s 40th Birthday & Diwali Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\n*${name} — no excuses, no “we’ll try”, and definitely no last-minute plans! ${EMOJI.wink}*\nWe are waiting to celebrate this beautiful evening with ${youTarget}. ${EMOJI.heart}\n\nWith lots of love,\n*Vipul & Entire Khandelwal Family*\n${EMOJI.phone} +91 9414036060\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${link}`
 
     const phone = formatWhatsAppPhone(g.mobile || '')
-    const targetUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+
+    let targetUrl = ''
+    if (isMobile) {
+      targetUrl = phone
+        ? `whatsapp://send?phone=${phone}&text=${encodeURIComponent(msg)}`
+        : `whatsapp://send?text=${encodeURIComponent(msg)}`
+    } else {
+      targetUrl = phone
+        ? `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`
+        : `https://web.whatsapp.com/send?text=${encodeURIComponent(msg)}`
+    }
+
     window.open(targetUrl, '_blank')
   }
 
