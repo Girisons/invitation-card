@@ -231,7 +231,10 @@ const getStatusInfo = (status: string) => {
   if (s === 'entered' || s === 'opened' || s === 'seen' || s === 'message_seen') {
     return { label: 'MESSAGE SEEN', color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' }
   }
-  return { label: 'MESSAGE SENT', color: 'text-white/40 bg-white/5 border-white/10' }
+  if (s === 'sent' || s === 'message_sent') {
+    return { label: 'MESSAGE SENT', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' }
+  }
+  return { label: 'PENDING', color: 'text-white/30 bg-white/5 border-white/10' }
 }
 
 export default function AdminPage() {
@@ -414,7 +417,14 @@ export default function AdminPage() {
   }
 
   // ── WHATSAPP (DIRECT CONTACT SEND) ──
-  const sendWhatsApp = (g: Guest) => {
+  const sendWhatsApp = async (g: Guest) => {
+    const currentSt = (g.invitation_status || '').toLowerCase()
+    if (!currentSt || currentSt === 'pending' || currentSt === 'not_sent') {
+      await supabase.from('guests').update({ invitation_status: 'sent' }).eq('id', g.id)
+      g.invitation_status = 'sent'
+      fetchGuests()
+    }
+
     const link = `${BASE_URL}/i/${g.invite_code}`
     const isCouple = (g.send_together && !!g.partner_name) || (g.invited_count && g.invited_count > 1)
 
@@ -523,10 +533,11 @@ export default function AdminPage() {
   })
 
   // Attendance stats counts
+  const pendingCount = guests.filter(g => !g.invitation_status || ['pending', 'not_sent'].includes((g.invitation_status || '').toLowerCase())).length
+  const messageSentCount = guests.filter(g => ['sent', 'message_sent'].includes((g.invitation_status || '').toLowerCase())).length
+  const messageSeenCount = guests.filter(g => ['opened', 'entered', 'seen', 'message_seen'].includes((g.invitation_status || '').toLowerCase())).length
   const attendingCount = guests.filter(g => ['rsvp_yes', 'attending', 'yes'].includes((g.invitation_status || '').toLowerCase())).length
   const declinedCount = guests.filter(g => ['rsvp_no', 'declined', 'not_attending', 'no'].includes((g.invitation_status || '').toLowerCase())).length
-  const messageSeenCount = guests.filter(g => ['opened', 'entered', 'seen', 'message_seen'].includes((g.invitation_status || '').toLowerCase())).length
-  const messageSentCount = guests.filter(g => !g.invitation_status || ['pending', 'sent', 'message_sent'].includes((g.invitation_status || '').toLowerCase())).length
 
   // ── LOGIN ──
   if (!authed) {
@@ -563,10 +574,11 @@ export default function AdminPage() {
       </div>
 
       {/* Stats Bar */}
-      <div className="grid grid-cols-5 border-b border-[#C9A84C]/10">
+      <div className="grid grid-cols-6 border-b border-[#C9A84C]/10">
         {[
           { label: 'Total', val: guests.length, color: 'text-[#C9A84C]' },
-          { label: 'Message Sent', val: messageSentCount, color: 'text-white/50' },
+          { label: 'Pending', val: pendingCount, color: 'text-white/40' },
+          { label: 'Message Sent', val: messageSentCount, color: 'text-blue-400' },
           { label: 'Message Seen', val: messageSeenCount, color: 'text-yellow-400' },
           { label: 'Attending', val: attendingCount, color: 'text-green-400' },
           { label: 'Not Attending', val: declinedCount, color: 'text-red-400' },
