@@ -27,32 +27,54 @@ export default async function InvitationPage({ params }: Props) {
   return <InvitationClient guest={activeGuest} inviteCode={code.toUpperCase()} />
 }
 
+function getDisplayName(nickname?: string, fullName?: string): string {
+  if (nickname && nickname.trim()) return nickname.trim()
+  if (!fullName || !fullName.trim()) return ''
+  return fullName.trim().split(' ')[0]
+}
+
 export async function generateMetadata({ params }: Props) {
   const { code } = await params
 
   let guestName = 'Honored Guest'
   try {
     const guest = await getGuestByCode(code)
-    if (guest?.first_name) {
-      guestName = (guest.send_together && guest.partner_name)
-        ? `${guest.first_name} & ${guest.partner_name}`
-        : `${guest.first_name}${guest.last_name ? ' ' + guest.last_name : ''}`
+    if (guest) {
+      const primaryDisplay = getDisplayName(guest.nickname, guest.first_name)
+      const partnerDisplay = getDisplayName(undefined, guest.partner_name)
+      guestName = (guest.send_together && partnerDisplay)
+        ? `${primaryDisplay} & ${partnerDisplay}`
+        : (primaryDisplay || 'Honored Guest')
     }
   } catch {}
 
+  const titleText = `Arpit's 40th & Diwali Bash — For ${guestName}`
+  const descText = 'A personal invitation — Friday, 23 October 2026, Jaipur.'
+  const ogImageUrl = 'https://khandelwalinvite.vercel.app/og.jpg'
+
   return {
     metadataBase: new URL('https://khandelwalinvite.vercel.app'),
-    title: `Arpit's 40th & Diwali Bash — For ${guestName}`,
-    description: 'A personal invitation — Friday, 23 October 2026, Jaipur.',
+    title: titleText,
+    description: descText,
     openGraph: {
-      title: `Arpit's 40th & Diwali Bash — For ${guestName}`,
-      description: 'A personal invitation — Friday, 23 October 2026, Jaipur.',
+      type: 'website',
+      url: `https://khandelwalinvite.vercel.app/i/${code}`,
+      title: titleText,
+      description: descText,
+      siteName: "Arpit's 40th & Diwali Bash",
       images: [{
-        url: '/og.jpg',
+        url: ogImageUrl,
         width: 1200,
         height: 630,
+        type: 'image/jpeg',
         alt: "Arpit's 40th & Diwali Bash Invitation",
       }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: titleText,
+      description: descText,
+      images: [ogImageUrl],
     },
   }
 }
