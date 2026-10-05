@@ -413,8 +413,8 @@ export default function AdminPage() {
     setCopied(code); setTimeout(() => setCopied(null), 2000)
   }
 
-  // ── WHATSAPP ──
-  const sendWhatsApp = (g: Guest) => {
+  // ── WHATSAPP (OPTION 2: PHOTO INVITATION + CAPTION) ──
+  const sendWhatsApp = async (g: Guest) => {
     const link = `${BASE_URL}/i/${g.invite_code}`
     const isCouple = (g.send_together && !!g.partner_name) || (g.invited_count && g.invited_count > 1)
 
@@ -437,10 +437,32 @@ export default function AdminPage() {
       wink: String.fromCodePoint(0x1F61C),
       phone: String.fromCodePoint(0x1F4DE),
       gift: String.fromCodePoint(0x1F381),
+      point: String.fromCodePoint(0x1F449),
+      play: String.fromCodePoint(0x25B6),
     }
 
-    const msg = `${EMOJI.sparkles} *Four Decades. One Amazing Journey. And Now… One BIG Celebration!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my brother *ARPIT’s 40th Birthday & Diwali Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\n*${name} — no excuses, no “we’ll try”, and definitely no last-minute plans! ${EMOJI.wink}*\nWe are waiting to celebrate this beautiful evening with ${youTarget}. ${EMOJI.heart}\n\nWith lots of love,\n*Vipul & Entire Khandelwal Family*\n${EMOJI.phone} +91 9414036060\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${link}`
+    const msg = `${EMOJI.sparkles} *Four Decades. One Amazing Journey. And Now… One BIG Celebration!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my brother *ARPIT’s 40th Birthday & Diwali Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\n*${name} — no excuses, no “we’ll try”, and definitely no last-minute plans! ${EMOJI.wink}*\nWe are waiting to celebrate this beautiful evening with ${youTarget}. ${EMOJI.heart}\n\nWith lots of love,\n*Vipul & Entire Khandelwal Family*\n${EMOJI.phone} +91 9414036060\n\n${EMOJI.point} *Tap the link below to play your personal invitation:* ${EMOJI.play}\n${link}`
 
+    // Option 2: Web Share API (native full photo attachment + message caption)
+    if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
+      try {
+        const response = await fetch(`${BASE_URL}/og.jpg`)
+        const blob = await response.blob()
+        const file = new File([blob], 'Save_The_Date.jpg', { type: 'image/jpeg' })
+
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            text: msg,
+          })
+          return
+        }
+      } catch (shareErr) {
+        console.log('Share sheet dismissed or fallback needed:', shareErr)
+      }
+    }
+
+    // Fallback: Direct WhatsApp URL
     const phone = formatWhatsAppPhone(g.mobile || '')
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 
