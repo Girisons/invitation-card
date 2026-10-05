@@ -429,7 +429,7 @@ export default function AdminPage() {
     const name = (g.send_together && partDisplay) ? `${pDisplay} & ${partDisplay}` : pDisplay
     const youTarget = isCouple ? 'you both' : 'you'
 
-    const msg = `\u2728 Four Decades. One Amazing Journey. And Now... One BIG Celebration! \u2728\n\nDear ${name}, \u2764\uFE0F\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my brother ARPIT’s 40th Birthday & Diwali Celebration!\n\n\uD83D\uDCC5 Friday, 23rd October 2026\n\uD83D\uDCCD Jaipur\n\n${name} \u2014 no excuses, no "we'll try", and definitely no last-minute plans! \uD83D\uDE1C\n\n\uD83D\uDC49 *Personal Digital Invitation:*\n${link}`
+    const msg = `✨ Four Decades. One Amazing Journey. And Now... One BIG Celebration! ✨\n\nDear ${name}, ❤️\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my brother ARPIT’s 40th Birthday & Diwali Celebration — an evening filled with family, friendship, laughter, lights, music, masti and lots of beautiful memories! 🪔 🎂 ✨\n\n📅 Friday, 23rd October 2026\n📍 Jaipur\n\nYour presence will make this celebration truly special for us. ❤️\nSo please come ready to celebrate, dance, laugh, eat, click endless pictures... and of course, make Arpit feel like he’s actually 40! 😂 🎉\n\n${name} — no excuses, no "we'll try", and definitely no last-minute plans! 😜\n\n👉 *Personal Digital Invitation:*\n${link}`
 
     const phone = formatWhatsAppPhone(g.mobile || '')
     const targetUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`
@@ -681,25 +681,17 @@ export default function AdminPage() {
                   </td>
                   <td className="px-4 py-3 font-mono text-[11px] text-[#C9A84C]/60">{g.invite_code}</td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-1 items-center">
-                      <button onClick={() => copyLink(g.invite_code)} title="Copy Card link (/i/code)"
-                        className={`px-2 py-1 border rounded-sm text-[10px] transition-all whitespace-nowrap ${copied === g.invite_code ? 'border-green-500/40 text-green-400' : 'border-[#C9A84C]/40 text-[#C9A84C] hover:bg-[#C9A84C]/10'}`}>
-                        {copied === g.invite_code ? '✓ Copied' : '📋 Copy Link'}
-                      </button>
+                    <div className="flex gap-1.5 items-center">
                       <button onClick={() => sendWhatsApp(g)} title="Send via WhatsApp"
-                        className="px-2 py-1 border border-green-500/20 text-green-400/60 hover:text-green-400 rounded-sm text-[10px] transition-all whitespace-nowrap">
-                        WA
+                        className="px-3 py-1 bg-green-600/80 hover:bg-green-600 text-white font-medium rounded-sm text-[11px] transition-all whitespace-nowrap flex items-center gap-1">
+                        <span>💬</span> Send WhatsApp
                       </button>
-                      <button onClick={() => window.open(`${BASE_URL}/i/${g.invite_code}`, '_blank')} title="Preview Full Invitation Card"
-                        className="px-2 py-1 border border-white/10 text-white/30 hover:text-white/60 rounded-sm text-[10px] transition-all">
-                        👁
-                      </button>
-                      <button onClick={() => startEdit(g)} title="Edit"
-                        className="px-2 py-1 border border-[#C9A84C]/20 text-[#C9A84C]/50 hover:text-[#C9A84C] rounded-sm text-[10px] transition-all">
+                      <button onClick={() => startEdit(g)} title="Edit Guest"
+                        className="px-2 py-1 border border-[#C9A84C]/20 text-[#C9A84C]/60 hover:text-[#C9A84C] hover:border-[#C9A84C]/50 rounded-sm text-[10px] transition-all">
                         ✏️
                       </button>
-                      <button onClick={() => deleteGuest(g.id)} title="Delete"
-                        className="px-2 py-1 border border-red-500/10 text-red-400/30 hover:text-red-400 hover:border-red-500/30 rounded-sm text-[10px] transition-all">
+                      <button onClick={() => deleteGuest(g.id)} title="Delete Guest"
+                        className="px-2 py-1 border border-red-500/10 text-red-400/40 hover:text-red-400 hover:border-red-500/30 rounded-sm text-[10px] transition-all">
                         ✕
                       </button>
                     </div>
