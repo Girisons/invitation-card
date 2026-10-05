@@ -48,19 +48,19 @@ export default function InvitationClient({ guest, inviteCode }: Props) {
     setScreen('confirmation')
   }
 
-  function getFirstName(fullName?: string): string {
-    if (!fullName) return ''
-    const trimmed = fullName.trim()
-    return trimmed.split(' ')[0]
+  function getDisplayName(nickname?: string, fullName?: string): string {
+    if (nickname && nickname.trim()) return nickname.trim()
+    if (!fullName || !fullName.trim()) return ''
+    return fullName.trim().split(' ')[0]
   }
 
-  const primaryFirst = guest.nickname || getFirstName(guest.first_name)
-  const partnerFirst = getFirstName(guest.partner_name)
+  const primaryDisplay = getDisplayName(guest.nickname, guest.first_name)
+  const partnerDisplay = getDisplayName(undefined, guest.partner_name)
 
-  // Show first names only (no surnames in video or invite overlay)
-  const guestDisplayName = (guest.send_together && partnerFirst)
-    ? `${primaryFirst} & ${partnerFirst}`
-    : primaryFirst
+  // Give preference to Nickname first, then First Name (stripping surnames)
+  const guestDisplayName = (guest.send_together && partnerDisplay)
+    ? `${primaryDisplay} & ${partnerDisplay}`
+    : primaryDisplay
 
   return (
     <div className="grain relative w-full full-viewport-height overflow-hidden bg-[#050D1A]">

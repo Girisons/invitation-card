@@ -322,8 +322,8 @@ export default function AdminPage() {
         const { error } = await supabase.from('guests').insert({ ...shared, first_name: form.primary.first_name.trim(), last_name: form.primary.last_name.trim() || null, nickname: form.primary.nickname.trim() || null, mobile: form.primary.mobile.trim(), food_preference: form.primary.food_preference || null, liquor_preference: form.primary.liquor_preference || null, invite_code: form.primary.invite_code, invited_count: 1 })
         if (error) throw error
       } else {
-        const partnerName = `${form.spouse.first_name.trim()}${form.spouse.last_name.trim() ? ' ' + form.spouse.last_name.trim() : ''}`
-        const primaryName = `${form.primary.first_name.trim()}${form.primary.last_name.trim() ? ' ' + form.primary.last_name.trim() : ''}`
+        const partnerName = form.spouse.nickname.trim() || `${form.spouse.first_name.trim()}${form.spouse.last_name.trim() ? ' ' + form.spouse.last_name.trim() : ''}`
+        const primaryName = form.primary.nickname.trim() || `${form.primary.first_name.trim()}${form.primary.last_name.trim() ? ' ' + form.primary.last_name.trim() : ''}`
         const isTogether = form.send_together
 
         const { data: p, error: e1 } = await supabase.from('guests').insert({
@@ -416,9 +416,11 @@ export default function AdminPage() {
   // ── WHATSAPP ──
   const sendWhatsApp = (g: Guest) => {
     const link = `${BASE_URL}/i/${g.invite_code}`
+    const isCouple = (g.send_together && !!g.partner_name) || (g.invited_count && g.invited_count > 1)
     const name = g.nickname || ((g.send_together && g.partner_name) ? `${g.first_name} & ${g.partner_name}` : `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`)
-    
-    const msg = `Four decades of beautiful memories, countless reasons to smile, and a heart full of stories. \uD83D\uDC96\n\nNow it's time to celebrate *${name}* at *Arpit's 40th Birthday & Diwali Celebration!* \u2728\nOn *Friday, 23rd October 2026* at *Jaipur*.\nCome be a part of this special evening and make the milestone even more memorable. \uD83C\uDF89\uD83C\uDF1F\n\nRegards\n*Vipul Khandelwal & Family*\n\uD83D\uDCF1 +91 9414036060\n\n\uD83D\uDC49 *Personal Digital Invitation:*\n${link}`
+    const youTarget = isCouple ? 'you both' : 'you'
+
+    const msg = `✨ Four Decades. One Amazing Journey. And Now... One BIG Celebration! ✨\n\nDear ${name}, ❤️\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my brother ARPIT’s 40th Birthday & Diwali Celebration — an evening filled with family, friendship, laughter, lights, music, masti and lots of beautiful memories! 🪔 🎂 ✨\n\n📅 Friday, 23rd October 2026\n📍 Jaipur\n\nYour presence will make this celebration truly special for us. ❤️\nSo please come ready to celebrate, dance, laugh, eat, click endless pictures... and of course, make Arpit feel like he’s actually 40! 😂 🎉\n\n${name} — no excuses, no "we'll try", and definitely no last-minute plans! 😜\n\n${link}`
 
     const phone = formatWhatsAppPhone(g.mobile || '')
     const targetUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`
