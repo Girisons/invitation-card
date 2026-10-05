@@ -11,16 +11,16 @@ function generateCode(): string {
 }
 
 const COUNTRY_CODES = [
-  { code: '+91', label: '🇮🇳 +91 (India)' },
-  { code: '+65', label: '🇸🇬 +65 (Singapore)' },
-  { code: '+971', label: '🇦🇪 +971 (UAE)' },
-  { code: '+1', label: '🇺🇸 +1 (USA/Canada)' },
-  { code: '+44', label: '🇬🇧 +44 (UK)' },
-  { code: '+60', label: '🇲🇾 +60 (Malaysia)' },
-  { code: '+61', label: '🇦🇺 +61 (Australia)' },
-  { code: '+66', label: '🇹🇭 +66 (Thailand)' },
-  { code: '+62', label: '🇮🇩 +62 (Indonesia)' },
-  { code: '+49', label: '🇩🇪 +49 (Germany)' },
+  { code: '+91', label: '+91 (IN)' },
+  { code: '+65', label: '+65 (SG)' },
+  { code: '+971', label: '+971 (AE)' },
+  { code: '+1', label: '+1 (US)' },
+  { code: '+44', label: '+44 (UK)' },
+  { code: '+60', label: '+60 (MY)' },
+  { code: '+61', label: '+61 (AU)' },
+  { code: '+66', label: '+66 (TH)' },
+  { code: '+62', label: '+62 (ID)' },
+  { code: '+49', label: '+49 (DE)' },
 ]
 
 export function formatWhatsAppPhone(rawMobile: string): string {
@@ -115,11 +115,11 @@ function PhoneInputWithPrefix({ value, onChange }: { value: string; onChange: (v
   }
 
   return (
-    <div className="flex gap-1.5">
+    <div className="flex gap-1.5 w-full min-w-0">
       <select
         value={prefix}
         onChange={e => handlePrefixChange(e.target.value)}
-        className="bg-[#0A1931] border border-white/10 rounded-sm px-2 py-2 text-xs text-[#C9A84C] font-mono outline-none focus:border-[#C9A84C]/40"
+        className="w-24 shrink-0 min-w-0 bg-[#0A1931] border border-white/10 rounded-sm px-2 py-2 text-xs text-[#C9A84C] font-mono outline-none focus:border-[#C9A84C]/40"
       >
         {COUNTRY_CODES.map(c => (
           <option key={c.code} value={c.code}>{c.label}</option>
@@ -129,7 +129,7 @@ function PhoneInputWithPrefix({ value, onChange }: { value: string; onChange: (v
         value={digits}
         onChange={e => handleDigitsChange(e.target.value)}
         placeholder="9876543210"
-        className="flex-1 bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40"
+        className="flex-1 min-w-0 w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40 font-mono"
       />
     </div>
   )
@@ -428,8 +428,7 @@ export default function AdminPage() {
     const partDisplay = getName(undefined, g.partner_name)
     const name = (g.send_together && partDisplay) ? `${pDisplay} & ${partDisplay}` : pDisplay
     const youTarget = isCouple ? 'you both' : 'you'
-
-    const msg = `\u2728 Four Decades. One Amazing Journey. And Now... One BIG Celebration! \u2728\n\nDear ${name}, \u2764\uFE0F\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my brother ARPIT’s 40th Birthday & Diwali Celebration — an evening filled with family, friendship, laughter, lights, music, masti and lots of beautiful memories! \uD83E\uDE94 \u2728 \uD83C\uDF89\n\n\uD83D\uDCC5 Friday, 23rd October 2026\n\uD83D\uDCCD Jaipur\n\nYour presence will make this celebration truly special for us. \uD83E\uDD42\nSo please come ready to celebrate, dance, laugh, eat, click endless pictures... and of course, make Arpit feel like he’s actually 40! \uD83C\uDF82 \uD83C\uDF89\n\n${name} — no excuses, no "we'll try", and definitely no last-minute plans! \uD83D\uDE1C\n\n\uD83D\uDC49 *Personal Digital Invitation:*\n${link}`
+    const msg = `✨ Four Decades. One Amazing Journey. And Now... One BIG Celebration! ✨\n\nDear ${name}, ❤️\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my brother ARPIT's 40th Birthday & Diwali Celebration — an evening filled with family, friendship, laughter, lights, music, masti and lots of beautiful memories! 🪔 🎂 ✨\n\n📅 Friday, 23rd October 2026\n📍 Jaipur\n\nYour presence will make this celebration truly special for us. ❤️\nSo please come ready to celebrate, dance, laugh, eat, click endless pictures... and of course, make Arpit feel like he's actually 40! 😂 🎉\n\n${name} - no excuses, no "we'll try", and definitely no last-minute plans! 😜\n\n👉 *Personal Digital Invitation:*\n${link}`
 
     const phone = formatWhatsAppPhone(g.mobile || '')
     const targetUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`
@@ -686,6 +685,14 @@ export default function AdminPage() {
                         className="px-3 py-1 bg-green-600/80 hover:bg-green-600 text-white font-medium rounded-sm text-[11px] transition-all whitespace-nowrap flex items-center gap-1">
                         <span>💬</span> Send WhatsApp
                       </button>
+                      <button onClick={() => window.open(`${BASE_URL}/i/${g.invite_code}`, '_blank')} title="View / Preview Invitation"
+                        className="px-2.5 py-1 border border-blue-500/30 text-blue-400 hover:border-blue-400 hover:bg-blue-500/10 rounded-sm text-[11px] transition-all flex items-center gap-1 whitespace-nowrap font-medium">
+                        👁️ View
+                      </button>
+                      <button onClick={() => copyLink(g.invite_code)} title="Copy Invitation Link"
+                        className={`px-2 py-1 border rounded-sm text-[10px] transition-all whitespace-nowrap ${copied === g.invite_code ? 'border-green-500/40 text-green-400 bg-green-500/10' : 'border-white/15 text-white/50 hover:border-[#C9A84C]/40 hover:text-[#C9A84C]'}`}>
+                        {copied === g.invite_code ? '✓ Copied' : '🔗 Link'}
+                      </button>
                       <button onClick={() => startEdit(g)} title="Edit Guest"
                         className="px-2 py-1 border border-[#C9A84C]/20 text-[#C9A84C]/60 hover:text-[#C9A84C] hover:border-[#C9A84C]/50 rounded-sm text-[10px] transition-all">
                         ✏️
@@ -706,7 +713,7 @@ export default function AdminPage() {
       {/* ══ ADD GUEST MODAL ══ */}
       {showForm && (
         <div className="fixed inset-0 bg-black/80 z-50 overflow-y-auto py-8 px-4">
-          <div className="glass w-full max-w-lg mx-auto rounded-sm p-6">
+          <div className="glass w-full max-w-xl mx-auto rounded-sm p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-serif text-xl text-[#F5ECD7]">Add Guest</h2>
               <button onClick={() => setShowForm(false)} className="text-white/30 hover:text-white text-xl">✕</button>
@@ -768,7 +775,7 @@ export default function AdminPage() {
       {/* ══ EDIT MODAL ══ */}
       {editingGuest && (
         <div className="fixed inset-0 bg-black/80 z-50 overflow-y-auto py-8 px-4">
-          <div className="glass w-full max-w-lg mx-auto rounded-sm p-6">
+          <div className="glass w-full max-w-xl mx-auto rounded-sm p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-5">
               <h2 className="font-serif text-xl text-[#F5ECD7]">Edit — {editingGuest.first_name}</h2>
               <button onClick={() => setEditingGuest(null)} className="text-white/30 hover:text-white text-xl">✕</button>

@@ -23,6 +23,21 @@ export const metadata: Metadata = {
     description: 'A personal invitation for you — Friday, 23 October 2026, Jaipur.',
     url: 'https://khandelwalinvite.vercel.app',
     siteName: "Arpit's 40th & Diwali Bash",
+    images: [
+      {
+        url: 'https://khandelwalinvite.vercel.app/og.jpg',
+        width: 1200,
+        height: 630,
+        type: 'image/jpeg',
+        alt: "Arpit's 40th & Diwali Bash Invitation",
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "Arpit's 40th & Diwali Bash",
+    description: 'A personal invitation for you — Friday, 23 October 2026, Jaipur.',
+    images: ['https://khandelwalinvite.vercel.app/og.jpg'],
   },
   robots: 'noindex, nofollow',
 }

@@ -50,6 +50,8 @@ export async function generateMetadata({ params }: Props) {
 
   const titleText = `Arpit's 40th & Diwali Bash — For ${guestName}`
   const descText = 'A personal invitation — Friday, 23 October 2026, Jaipur.'
+  const ogImageUrl = 'https://khandelwalinvite.vercel.app/og.jpg'
+
   return {
     metadataBase: new URL('https://khandelwalinvite.vercel.app'),
     title: titleText,
@@ -60,11 +62,21 @@ export async function generateMetadata({ params }: Props) {
       title: titleText,
       description: descText,
       siteName: "Arpit's 40th & Diwali Bash",
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          type: 'image/jpeg',
+          alt: "Arpit's 40th & Diwali Bash Invitation",
+        },
+      ],
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title: titleText,
       description: descText,
+      images: [ogImageUrl],
     },
   }
 }
