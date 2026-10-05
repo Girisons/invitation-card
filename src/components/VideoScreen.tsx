@@ -232,8 +232,8 @@ export default function VideoScreen({
           <div className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ${
             isBeat1 ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
           }`}>
-            <p className="font-sans text-[10px] sm:text-xs tracking-[0.4em] uppercase text-[#C9A84C]/70 mb-3">
-              AN EXCLUSIVE CELEBRATION
+            <p className="font-sans text-[10px] sm:text-xs tracking-[0.45em] uppercase text-[#C9A84C]/80 mb-3">
+              A TIMELESS CELEBRATION
             </p>
             <h1
               className="font-serif font-bold text-4xl sm:text-6xl tracking-tight mb-3 leading-tight"
@@ -247,8 +247,8 @@ export default function VideoScreen({
               40 & Festive
             </h1>
             <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-[#C9A84C]/60 to-transparent my-3" />
-            <p className="font-sans text-xs sm:text-sm tracking-[0.3em] uppercase text-[#F5ECD7]/80">
-              ARPIT @ 40 × DIWALI
+            <p className="font-sans text-xs sm:text-sm tracking-[0.3em] uppercase text-[#F5ECD7]/80 font-medium">
+              ARPIT'S 40 & DIWALI BASH
             </p>
           </div>
 
@@ -257,7 +257,7 @@ export default function VideoScreen({
             isBeat2 ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
           }`}>
             <p className="font-sans text-[10px] sm:text-xs tracking-[0.45em] uppercase text-[#C9A84C]/80 mb-4">
-              A PERSONAL INVITATION FOR
+              A FESTIVE WELCOME TO
             </p>
             <h2
               className="font-serif font-bold text-3xl sm:text-5xl tracking-wide uppercase mb-4 px-4 leading-tight"
@@ -270,10 +270,10 @@ export default function VideoScreen({
             >
               {guestName || 'HONORED GUEST'}
             </h2>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 border border-[#C9A84C]/30 bg-[#050D1A]/60 backdrop-blur-md rounded-full">
+            <div className="inline-flex items-center gap-2 px-4 py-2 border border-[#C9A84C]/40 bg-[#050D1A]/70 backdrop-blur-md rounded-full shadow-lg shadow-[#C9A84C]/10">
               <span className="text-[#C9A84C] text-xs">🪔</span>
-              <span className="font-sans text-[10px] tracking-[0.25em] uppercase text-[#F5ECD7]/90">
-                JOIN US FOR AN UNFORGETTABLE NIGHT
+              <span className="font-sans text-[10px] sm:text-[11px] tracking-[0.25em] uppercase text-[#F5ECD7]/90 font-medium">
+                JOIN US TO CELEBRATE 40 YEARS OF LIGHT
               </span>
             </div>
           </div>
@@ -283,10 +283,10 @@ export default function VideoScreen({
             isBeat3 ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
           }`}>
             <p className="font-sans text-[10px] sm:text-xs tracking-[0.4em] uppercase text-[#C9A84C]/90 mb-2">
-              DRINKS · DANCE · CELEBRATION
+              DIWALI VIBES · 40 YEARS · MEMORIES
             </p>
             <h3 className="font-serif text-2xl sm:text-4xl text-[#F5ECD7] font-bold mb-2">
-              SATURDAY | OCT 23, 2026
+              FRIDAY | OCT 23, 2026
             </h3>
             <p className="font-sans text-[11px] tracking-[0.25em] uppercase text-white/60 mb-6">
               JAIPUR · RAJASTHAN

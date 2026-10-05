@@ -1,7 +1,7 @@
 // Event + venue configuration — all configurable without code changes
 export const EVENT = {
-  name:    process.env.NEXT_PUBLIC_EVENT_NAME    || 'Arpit @ 40 × Diwali',
-  date:    process.env.NEXT_PUBLIC_EVENT_DATE    || '23 October 2026',
+  name:    process.env.NEXT_PUBLIC_EVENT_NAME    || "Arpit's 40 & Diwali Bash",
+  date:    process.env.NEXT_PUBLIC_EVENT_DATE    || 'Friday, 23 October 2026',
   city:    process.env.NEXT_PUBLIC_EVENT_CITY    || 'Jaipur',
   venue:   process.env.NEXT_PUBLIC_EVENT_VENUE   || 'Jaipur (Venue details to follow)',
   contact: process.env.NEXT_PUBLIC_RSVP_CONTACT  || 'Vipul',
