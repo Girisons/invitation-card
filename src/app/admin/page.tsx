@@ -10,6 +10,46 @@ function generateCode(): string {
   return Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
 
+function formatWhatsAppPhone(rawMobile: string): string {
+  let cleaned = (rawMobile || '').trim()
+  if (!cleaned) return ''
+
+  // If user explicitly typed a leading '+', e.g. '+6587222516' or '+919414036060'
+  if (cleaned.startsWith('+')) {
+    return cleaned.replace(/\D/g, '')
+  }
+
+  const digits = cleaned.replace(/\D/g, '')
+
+  // If digits length > 10, country code is already included
+  if (digits.length > 10) {
+    return digits
+  }
+
+  // If exactly 10 digits, check for common international country code prefixes
+  if (digits.length === 10) {
+    if (
+      digits.startsWith('65') || // Singapore
+      digits.startsWith('971') || // UAE
+      digits.startsWith('44') || // UK
+      digits.startsWith('60') || // Malaysia
+      digits.startsWith('61') || // Australia
+      digits.startsWith('62') || // Indonesia
+      digits.startsWith('49') || // Germany
+      digits.startsWith('33') || // France
+      digits.startsWith('81') || // Japan
+      digits.startsWith('86')    // China
+    ) {
+      return digits
+    }
+
+    // Default to India (+91) for standard 10-digit Indian numbers
+    return '91' + digits
+  }
+
+  return digits
+}
+
 const BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'https://khandelwalinvite.vercel.app'
 const VIPUL_PHONE = '919414036060'
 
@@ -68,7 +108,7 @@ function PersonSection({ label, person, onChange }: { label: string; person: Per
         </div>
         <div>
           <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Mobile</label>
-          <input value={person.mobile} onChange={e => set('mobile', e.target.value)} placeholder="9876543210"
+          <input value={person.mobile} onChange={e => set('mobile', e.target.value)} placeholder="9876543210 or +6587222516"
             className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40" />
         </div>
       </div>
@@ -101,6 +141,20 @@ function PersonSection({ label, person, onChange }: { label: string; person: Per
       </div>
     </div>
   )
+}
+
+const getStatusInfo = (status: string) => {
+  const s = (status || '').toLowerCase()
+  if (s === 'entered' || s === 'opened' || s === 'seen' || s === 'message_seen') {
+    return { label: 'MESSAGE SEEN', color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' }
+  }
+  if (s === 'rsvp_yes' || s === 'attending' || s === 'yes') {
+    return { label: 'ATTENDING', color: 'text-green-400 bg-green-500/10 border-green-500/20' }
+  }
+  if (s === 'rsvp_no' || s === 'declined' || s === 'not_attending' || s === 'no') {
+    return { label: 'NOT ATTENDING', color: 'text-red-400 bg-red-500/10 border-red-500/20' }
+  }
+  return { label: 'MESSAGE SENT', color: 'text-white/40 bg-white/5 border-white/10' }
 }
 
 export default function AdminPage() {
@@ -292,10 +346,9 @@ export default function AdminPage() {
     const link = `${BASE_URL}/i/${g.invite_code}`
     const name = g.nickname || ((g.send_together && g.partner_name) ? `${g.first_name} & ${g.partner_name}` : `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`)
     
-    const msg = `Four decades of beautiful memories, countless reasons to smile, and a heart full of stories. ❤️\n\nNow it's time to celebrate *${name}* at *Arpit's 40th Birthday & Diwali Celebration!* ✨\nOn *23rd October 2026* at *Jaipur* At *8pm Onwards*.\nCome be a part of this special evening and make the milestone even more memorable. 🥂💫\n\nRegards\n*Vipul Khandelwal & Family*\n📞 +91 9414036060\n\n👉 *Personal Digital Invitation:*\n${link}`
+    const msg = `Four decades of beautiful memories, countless reasons to smile, and a heart full of stories. \uD83D\uDC96\n\nNow it's time to celebrate *${name}* at *Arpit's 40th Birthday & Diwali Celebration!* \u2728\nOn *Friday, 23rd October 2026* at *Jaipur*.\nCome be a part of this special evening and make the milestone even more memorable. \uD83C\uDF89\uD83C\uDF1F\n\nRegards\n*Vipul Khandelwal & Family*\n\uD83D\uDCF1 +91 9414036060\n\n\uD83D\uDC49 *Personal Digital Invitation:*\n${link}`
 
-    let phone = (g.mobile || '').replace(/\D/g, '')
-    if (phone.length === 10) phone = '91' + phone
+    const phone = formatWhatsAppPhone(g.mobile || '')
     const targetUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`
     window.open(targetUrl, '_blank')
   }
@@ -395,15 +448,16 @@ export default function AdminPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 border-b border-[#C9A84C]/10">
+      <div className="grid grid-cols-5 border-b border-[#C9A84C]/10">
         {[
-          { label: 'Total', val: guests.length },
-          { label: 'Opened', val: guests.filter(g => g.invitation_status !== 'pending').length },
-          { label: 'RSVP Yes', val: guests.filter(g => g.invitation_status === 'rsvp_yes').length },
-          { label: 'Pending', val: guests.filter(g => g.invitation_status === 'pending').length },
+          { label: 'Total', val: guests.length, color: 'text-[#C9A84C]' },
+          { label: 'Message Sent', val: guests.filter(g => !g.invitation_status || ['pending', 'sent', 'message_sent'].includes((g.invitation_status || '').toLowerCase())).length, color: 'text-white/50' },
+          { label: 'Message Seen', val: guests.filter(g => ['opened', 'entered', 'seen', 'message_seen'].includes((g.invitation_status || '').toLowerCase())).length, color: 'text-yellow-400' },
+          { label: 'Attending', val: guests.filter(g => ['rsvp_yes', 'attending', 'yes'].includes((g.invitation_status || '').toLowerCase())).length, color: 'text-green-400' },
+          { label: 'Not Attending', val: guests.filter(g => ['rsvp_no', 'declined', 'not_attending', 'no'].includes((g.invitation_status || '').toLowerCase())).length, color: 'text-red-400' },
         ].map(s => (
           <div key={s.label} className="px-4 py-3 text-center border-r border-[#C9A84C]/10 last:border-0">
-            <p className="text-lg font-serif text-[#C9A84C]">{s.val}</p>
+            <p className={`text-lg font-serif ${s.color}`}>{s.val}</p>
             <p className="text-[9px] text-white/30 tracking-widest uppercase">{s.label}</p>
           </div>
         ))}
@@ -455,7 +509,7 @@ export default function AdminPage() {
                 <p className="text-xs">Click "+ Add Guest" to get started</p>
               </td></tr>
             ) : filtered.map(g => {
-              const statusColor: Record<string, string> = { pending: 'text-white/30', opened: 'text-blue-400', entered: 'text-yellow-400', rsvp_yes: 'text-green-400', rsvp_no: 'text-red-400' }
+              const info = getStatusInfo(g.invitation_status)
               return (
                 <tr key={g.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
                   <td className="px-4 py-3 font-serif text-[#F5ECD7] whitespace-nowrap">
@@ -485,8 +539,10 @@ export default function AdminPage() {
                   </td>
                   <td className="px-4 py-3 text-[#C9A84C]/40 text-xs">{g.guest_of || '—'}</td>
                   <td className="px-4 py-3 text-white/40 text-xs capitalize">{g.relationship_group || '—'}</td>
-                  <td className={`px-4 py-3 text-[10px] uppercase tracking-wider whitespace-nowrap ${statusColor[g.invitation_status] || 'text-white/30'}`}>
-                    {g.invitation_status}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className={`text-[9px] font-semibold px-2 py-0.5 border rounded-sm tracking-wider whitespace-nowrap ${info.color}`}>
+                      {info.label}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     {g.linked_guest_id ? (
