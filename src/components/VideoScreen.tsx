@@ -319,21 +319,6 @@ export default function VideoScreen({
               {soundMuted ? 'Tap for Sound & Play' : 'Sound On'}
             </span>
           </button>
-
-          <div className="flex gap-2">
-            <button
-              onClick={(e) => { e.stopPropagation(); onSelectYes() }}
-              className="font-sans text-[10px] tracking-[0.2em] uppercase text-white font-bold bg-gradient-to-r from-[#C9A84C] to-[#E8810A] px-4 py-2 rounded-full shadow-md shadow-[#C9A84C]/30 hover:brightness-110 active:scale-95 transition-all"
-            >
-              ✓ YES
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onSelectNo() }}
-              className="font-sans text-[10px] tracking-[0.2em] uppercase text-white/70 bg-black/60 backdrop-blur-md border border-white/20 px-4 py-2 rounded-full hover:text-white active:scale-95 transition-all"
-            >
-              ✕ NO
-            </button>
-          </div>
         </div>
       </div>
 
