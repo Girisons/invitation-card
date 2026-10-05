@@ -247,7 +247,20 @@ export default function AdminPage() {
   }
   const handleEditSave = async () => {
     if (!editingGuest) return
-    const { error } = await supabase.from('guests').update(editForm).eq('id', editingGuest.id)
+    const payload: Record<string, any> = { ...editForm }
+
+    // If video_url is empty string, convert to null or omit if not set
+    if (payload.video_url === '') delete payload.video_url
+
+    let { error } = await supabase.from('guests').update(payload).eq('id', editingGuest.id)
+
+    // If Supabase schema does not have video_url column, retry without video_url
+    if (error && (error.message?.includes('video_url') || error.message?.includes('schema cache'))) {
+      delete payload.video_url
+      const retry = await supabase.from('guests').update(payload).eq('id', editingGuest.id)
+      error = retry.error
+    }
+
     if (error) { alert('Error: ' + error.message); return }
 
     // If editing guest is linked, sync updated name & mobile to partner's partner_name & partner_mobile
