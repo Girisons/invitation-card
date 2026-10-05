@@ -235,7 +235,7 @@ export default function VideoScreen({
             </h1>
             <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-[#C9A84C]/60 to-transparent my-3" />
             <p className="font-sans text-xs sm:text-sm tracking-[0.3em] uppercase text-[#F5ECD7]/80 font-medium">
-              ARPIT'S 40 & DIWALI BASH
+              ARPIT'S 40TH & DIWALI BASH
             </p>
           </div>
 
@@ -270,7 +270,7 @@ export default function VideoScreen({
             isBeat3 ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
           }`}>
             <p className="font-sans text-[10px] sm:text-xs tracking-[0.4em] uppercase text-[#C9A84C]/90 mb-2">
-              DIWALI VIBES · 40 YEARS · MEMORIES
+              DIWALI VIBES • FAB 40 • MEMORIES
             </p>
             <h3 className="font-serif text-2xl sm:text-4xl text-[#F5ECD7] font-bold mb-2">
               FRIDAY | OCT 23, 2026
