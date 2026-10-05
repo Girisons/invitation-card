@@ -15,9 +15,14 @@
 
 * { box-sizing: border-box; }
 
-html, body {
+html {
   min-height: 100%;
-  overflow-x: hidden;
+  background: var(--navy);
+}
+
+body {
+  min-height: 100%;
+  overflow-y: auto;
   background: var(--navy);
 }
 

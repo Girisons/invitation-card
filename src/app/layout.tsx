@@ -36,7 +36,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${playfair.variable} ${inter.variable}`}>
-      <body className="bg-[#050D1A] text-white antialiased overscroll-none">
+      <body className="bg-[#050D1A] text-white antialiased">
         {children}
       </body>
     </html>

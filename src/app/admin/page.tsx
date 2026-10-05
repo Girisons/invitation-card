@@ -366,7 +366,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050D1A] text-white font-sans">
+    <div className="min-h-screen w-full bg-[#050D1A] text-white font-sans pb-24 overflow-y-auto">
       {/* Header */}
       <div className="border-b border-[#C9A84C]/10 px-6 py-4 flex justify-between items-center">
         <div>
