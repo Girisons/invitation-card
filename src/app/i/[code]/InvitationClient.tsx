@@ -48,10 +48,19 @@ export default function InvitationClient({ guest, inviteCode }: Props) {
     setScreen('confirmation')
   }
 
-  // Show combined name only when send_together=true, even if partner_name is set
-  const guestDisplayName = (guest.send_together && guest.partner_name)
-    ? `${guest.first_name} & ${guest.partner_name}`
-    : guest.first_name
+  function getFirstName(fullName?: string): string {
+    if (!fullName) return ''
+    const trimmed = fullName.trim()
+    return trimmed.split(' ')[0]
+  }
+
+  const primaryFirst = guest.nickname || getFirstName(guest.first_name)
+  const partnerFirst = getFirstName(guest.partner_name)
+
+  // Show first names only (no surnames in video or invite overlay)
+  const guestDisplayName = (guest.send_together && partnerFirst)
+    ? `${primaryFirst} & ${partnerFirst}`
+    : primaryFirst
 
   return (
     <div className="grain relative w-full full-viewport-height overflow-hidden bg-[#050D1A]">
