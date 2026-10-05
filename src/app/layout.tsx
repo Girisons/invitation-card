@@ -15,12 +15,14 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://khandelwalinvite.vercel.app'),
   title: "Arpit's 40th & Diwali Bash — A Personal Invitation",
   description: 'You have received a personal invitation — Friday, 23 October 2026, Jaipur.',
   openGraph: {
     title: "Arpit's 40th & Diwali Bash",
     description: 'A personal invitation for you — Friday, 23 October 2026, Jaipur.',
-    images: ['/og.jpg'],
+    url: 'https://khandelwalinvite.vercel.app',
+    siteName: "Arpit's 40th & Diwali Bash",
   },
   robots: 'noindex, nofollow',
 }

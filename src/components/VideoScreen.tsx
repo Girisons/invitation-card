@@ -305,14 +305,24 @@ export default function VideoScreen({
         </div>
 
         {/* BOTTOM NAVIGATION BAR */}
-        <div className="w-full pb-4 flex justify-between items-center pointer-events-auto">
+        <div className="w-full pb-4 flex justify-between items-center pointer-events-auto gap-2">
           <button
             onClick={handleUserInteraction}
-            className="glass px-4 py-2 rounded-full border border-[#C9A84C]/40 flex items-center gap-2 hover:bg-[#C9A84C]/10 transition-all active:scale-95 animate-pulse"
+            className="glass px-3.5 py-2 rounded-full border border-[#C9A84C]/40 flex items-center gap-1.5 hover:bg-[#C9A84C]/10 transition-all active:scale-95 animate-pulse"
           >
             <span className="text-amber-400 text-xs">{soundMuted ? '🔇' : '🔊'}</span>
-            <span className="font-sans text-[10px] tracking-[0.2em] uppercase text-[#C9A84C]">
-              {soundMuted ? 'Tap for Sound & Play' : 'Sound On'}
+            <span className="font-sans text-[10px] tracking-[0.15em] uppercase text-[#C9A84C]">
+              {soundMuted ? 'Tap for Sound' : 'Sound On'}
+            </span>
+          </button>
+
+          <button
+            onClick={handleCalendar}
+            className="glass px-3.5 py-2 rounded-full border border-[#C9A84C]/60 bg-[#C9A84C]/15 flex items-center gap-1.5 hover:bg-[#C9A84C]/30 text-[#F5ECD7] transition-all active:scale-95 shadow-md shadow-[#C9A84C]/10"
+          >
+            <span className="text-xs">📅</span>
+            <span className="font-sans text-[10px] tracking-[0.15em] uppercase text-[#C9A84C] font-bold">
+              Add to Calendar
             </span>
           </button>
         </div>

@@ -429,7 +429,7 @@ export default function AdminPage() {
     const name = (g.send_together && partDisplay) ? `${pDisplay} & ${partDisplay}` : pDisplay
     const youTarget = isCouple ? 'you both' : 'you'
 
-    const msg = `✨ Four Decades. One Amazing Journey. And Now... One BIG Celebration! ✨\n\nDear ${name}, ❤️\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my brother ARPIT’s 40th Birthday & Diwali Celebration!\n\n📅 Friday, 23rd October 2026\n📍 Jaipur\n\n${name} — no excuses, no "we'll try", and definitely no last-minute plans! 😜\n\n👉 *Personal Digital Invitation:*\n${link}`
+    const msg = `\u2728 Four Decades. One Amazing Journey. And Now... One BIG Celebration! \u2728\n\nDear ${name}, \u2764\uFE0F\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my brother ARPIT’s 40th Birthday & Diwali Celebration!\n\n\uD83D\uDCC5 Friday, 23rd October 2026\n\uD83D\uDCCD Jaipur\n\n${name} \u2014 no excuses, no "we'll try", and definitely no last-minute plans! \uD83D\uDE1C\n\n\uD83D\uDC49 *Personal Digital Invitation:*\n${link}`
 
     const phone = formatWhatsAppPhone(g.mobile || '')
     const targetUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`
@@ -682,15 +682,15 @@ export default function AdminPage() {
                   <td className="px-4 py-3 font-mono text-[11px] text-[#C9A84C]/60">{g.invite_code}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1 items-center">
-                      <button onClick={() => copyLink(g.invite_code)} title="Copy link"
-                        className={`px-2 py-1 border rounded-sm text-[10px] transition-all whitespace-nowrap ${copied === g.invite_code ? 'border-green-500/40 text-green-400' : 'border-white/10 text-white/40 hover:border-[#C9A84C]/30 hover:text-[#C9A84C]'}`}>
-                        {copied === g.invite_code ? '✓' : '🔗'}
+                      <button onClick={() => copyLink(g.invite_code)} title="Copy Card link (/i/code)"
+                        className={`px-2 py-1 border rounded-sm text-[10px] transition-all whitespace-nowrap ${copied === g.invite_code ? 'border-green-500/40 text-green-400' : 'border-[#C9A84C]/40 text-[#C9A84C] hover:bg-[#C9A84C]/10'}`}>
+                        {copied === g.invite_code ? '✓ Copied' : '📋 Copy Link'}
                       </button>
-                      <button onClick={() => sendWhatsApp(g)} title="WhatsApp"
-                        className="px-2 py-1 border border-green-500/20 text-green-400/60 hover:text-green-400 rounded-sm text-[10px] transition-all">
+                      <button onClick={() => sendWhatsApp(g)} title="Send via WhatsApp"
+                        className="px-2 py-1 border border-green-500/20 text-green-400/60 hover:text-green-400 rounded-sm text-[10px] transition-all whitespace-nowrap">
                         WA
                       </button>
-                      <button onClick={() => window.open(`${BASE_URL}/i/${g.invite_code}`, '_blank')} title="Preview"
+                      <button onClick={() => window.open(`${BASE_URL}/i/${g.invite_code}`, '_blank')} title="Preview Full Invitation Card"
                         className="px-2 py-1 border border-white/10 text-white/30 hover:text-white/60 rounded-sm text-[10px] transition-all">
                         👁
                       </button>

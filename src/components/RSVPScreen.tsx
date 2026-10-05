@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Guest, submitRSVP, trackEvent } from '@/lib/supabase'
-import { EVENT } from '@/lib/config'
+import { EVENT, buildGoogleCalUrl, buildICSContent } from '@/lib/config'
 
 interface Props {
   guest: Guest
@@ -19,6 +19,24 @@ export default function RSVPScreen({ guest, guestName, onComplete, active }: Pro
     if (active) setTimeout(() => setVisible(true), 100)
     else setVisible(false)
   }, [active])
+
+  const handleCalendar = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (guest?.id) trackEvent(guest.id, '', 'calendar_clicked')
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    if (isMobile) {
+      const ics = buildICSContent()
+      const blob = new Blob([ics], { type: 'text/calendar' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'arpit_40th_diwali.ics'
+      a.click()
+      URL.revokeObjectURL(url)
+    } else {
+      window.open(buildGoogleCalUrl(), '_blank')
+    }
+  }
 
   const handleYes = async () => {
     setLoading(true)
@@ -72,6 +90,12 @@ export default function RSVPScreen({ guest, guestName, onComplete, active }: Pro
               className="btn-outline w-full py-4 text-sm tracking-[0.2em] uppercase opacity-60 hover:opacity-100"
             >
               {loading ? 'Saving…' : "Sorry, can't make it"}
+            </button>
+            <button
+              onClick={handleCalendar}
+              className="w-full py-3.5 px-6 glass border border-[#C9A84C]/50 text-[#C9A84C] font-sans font-semibold text-xs tracking-[0.2em] uppercase rounded-sm hover:bg-[#C9A84C]/10 active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              <span>📅</span> Add to Calendar
             </button>
           </div>
         </div>
