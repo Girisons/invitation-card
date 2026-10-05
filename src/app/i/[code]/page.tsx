@@ -33,16 +33,26 @@ export async function generateMetadata({ params }: Props) {
   let guestName = 'Honored Guest'
   try {
     const guest = await getGuestByCode(code)
-    if (guest?.first_name) guestName = guest.first_name
+    if (guest?.first_name) {
+      guestName = (guest.send_together && guest.partner_name)
+        ? `${guest.first_name} & ${guest.partner_name}`
+        : `${guest.first_name}${guest.last_name ? ' ' + guest.last_name : ''}`
+    }
   } catch {}
 
   return {
-    title: `A personal invitation for ${guestName}`,
-    description: 'You have received a personal invitation to Arpit @ 40 × Diwali.',
+    metadataBase: new URL('https://khandelwalinvite.vercel.app'),
+    title: `Arpit @ 40 × Diwali — For ${guestName}`,
+    description: 'A personal invitation — 23 October 2026, Jaipur.',
     openGraph: {
       title: `Arpit @ 40 × Diwali — For ${guestName}`,
       description: 'A personal invitation — 23 October 2026, Jaipur.',
-      images: ['/og.jpg'],
+      images: [{
+        url: '/og.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Arpit @ 40 × Diwali Invitation',
+      }],
     },
   }
 }
