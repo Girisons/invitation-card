@@ -34,7 +34,15 @@ export default function ConfirmationScreen({ guest, guestName, status }: Props) 
 
   const handleWhatsApp = () => {
     trackEvent(guest.id, '', 'whatsapp_clicked')
-    window.open(WHATSAPP_URL, '_blank')
+    const phone = EVENT.phone.replace(/\D/g, '')
+    let msg = ''
+    if (status === 'attending') {
+      msg = `Hi Vipul! I just confirmed YES for Arpit's 40th & Diwali celebration. Eagerly looking forward to seeing you on Friday, 23 October 2026! 🎂🪔\n\n— ${guestName}`
+    } else {
+      msg = `Hi Vipul! Unfortunately I won't be able to make it for Arpit's 40th & Diwali celebration. Sending my warmest wishes to Arpit & family! 🎂🪔\n\n— ${guestName}`
+    }
+    const targetUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+    window.open(targetUrl, '_blank')
   }
 
   if (status === 'declined') {
