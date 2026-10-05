@@ -1,13 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Guest, trackEvent, updateGuestStatus } from '@/lib/supabase'
+import { Guest, trackEvent, updateGuestStatus, submitRSVP } from '@/lib/supabase'
 import OpeningScreen from '@/components/OpeningScreen'
 import VideoScreen from '@/components/VideoScreen'
-import RSVPScreen from '@/components/RSVPScreen'
 import ConfirmationScreen from '@/components/ConfirmationScreen'
 
-type Screen = 'opening' | 'video' | 'rsvp' | 'confirmation'
+type Screen = 'opening' | 'video' | 'confirmation'
 
 interface Props {
   guest: Guest
@@ -31,17 +30,21 @@ export default function InvitationClient({ guest, inviteCode }: Props) {
     setScreen('video')
   }
 
-  const handleVideoEnd = () => {
-    trackEvent(guest.id, inviteCode, 'video_completed')
-    setScreen('rsvp')
-  }
-
   const handleVideoStart = () => {
     trackEvent(guest.id, inviteCode, 'video_started')
   }
 
-  const handleRSVP = (status: 'attending' | 'declined') => {
-    setRsvpStatus(status)
+  const handleSelectYes = async () => {
+    trackEvent(guest.id, inviteCode, 'rsvp_attending')
+    await submitRSVP(guest.id, 'attending', guest.invited_count || 1)
+    setRsvpStatus('attending')
+    setScreen('confirmation')
+  }
+
+  const handleSelectNo = async () => {
+    trackEvent(guest.id, inviteCode, 'rsvp_declined')
+    await submitRSVP(guest.id, 'declined', 0)
+    setRsvpStatus('declined')
     setScreen('confirmation')
   }
 
@@ -67,20 +70,10 @@ export default function InvitationClient({ guest, inviteCode }: Props) {
           guestId={guest.id}
           videoUrl={guest.video_url}
           inviteCode={guest.invite_code}
-          onEnd={handleVideoEnd}
+          onSelectYes={handleSelectYes}
+          onSelectNo={handleSelectNo}
           onStart={handleVideoStart}
-          onSkip={handleVideoEnd}
           active={screen === 'video'}
-        />
-      </div>
-
-      {/* RSVP */}
-      <div className={`absolute inset-0 transition-opacity duration-1000 ${screen === 'rsvp' ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none z-0'}`}>
-        <RSVPScreen
-          guest={guest}
-          guestName={guestDisplayName}
-          onComplete={handleRSVP}
-          active={screen === 'rsvp'}
         />
       </div>
 
@@ -90,7 +83,7 @@ export default function InvitationClient({ guest, inviteCode }: Props) {
           guest={guest}
           guestName={guestDisplayName}
           status={rsvpStatus}
-          onBack={() => setScreen('rsvp')}
+          onBack={() => setScreen('video')}
         />
       </div>
     </div>

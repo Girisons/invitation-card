@@ -9,9 +9,9 @@ interface Props {
   guestId?: string
   videoUrl?: string
   inviteCode?: string
-  onEnd: () => void
+  onSelectYes: () => void
+  onSelectNo: () => void
   onStart: () => void
-  onSkip: () => void
   active: boolean
 }
 
@@ -20,9 +20,9 @@ export default function VideoScreen({
   guestId,
   videoUrl: customVideoUrl,
   inviteCode,
-  onEnd,
+  onSelectYes,
+  onSelectNo,
   onStart,
-  onSkip,
   active
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -98,7 +98,7 @@ export default function VideoScreen({
           const next = prev + 0.25
           if (next >= duration && !endedCalledRef.current) {
             endedCalledRef.current = true
-            setTimeout(() => onEnd(), 3500)
+            setVideoState('ended')
           }
           return next
         })
@@ -118,10 +118,7 @@ export default function VideoScreen({
       if (endedCalledRef.current) return
       endedCalledRef.current = true
       setVideoState('ended')
-      setTimeout(() => {
-        if (audio) audio.pause()
-        onEnd()
-      }, 3500)
+      if (audio) audio.pause()
     }
 
     const handleError = (e: Event) => {
@@ -141,7 +138,7 @@ export default function VideoScreen({
       video.pause()
       if (audio) audio.pause()
     }
-  }, [active, customVideoUrl, duration, onEnd, onStart])
+  }, [active, customVideoUrl, duration, onStart])
 
   // Handle user interaction (tap anywhere to un-mute and guarantee playback)
   const handleUserInteraction = (e: React.MouseEvent) => {
@@ -292,19 +289,19 @@ export default function VideoScreen({
               JAIPUR · RAJASTHAN
             </p>
 
-            {/* Interactive CTAs */}
-            <div className="flex flex-col gap-3 w-full max-w-xs px-4">
+            {/* Interactive CTAs — Direct Yes / No Buttons */}
+            <div className="flex flex-col gap-2.5 w-full max-w-xs px-4">
               <button
-                onClick={handleCalendar}
-                className="w-full py-3 px-6 bg-gradient-to-r from-[#C9A84C] to-[#E8D5A3] text-black font-sans font-semibold text-xs tracking-[0.2em] uppercase rounded-sm shadow-lg shadow-[#C9A84C]/20 hover:brightness-110 active:scale-95 transition-all"
+                onClick={(e) => { e.stopPropagation(); onSelectYes() }}
+                className="w-full py-3.5 px-6 bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white font-sans font-bold text-xs tracking-[0.2em] uppercase rounded-sm shadow-xl shadow-[#C9A84C]/25 hover:brightness-110 active:scale-95 transition-all"
               >
-                📅 Add to Calendar
+                YES, I'LL BE THERE
               </button>
               <button
-                onClick={(e) => { e.stopPropagation(); onSkip() }}
-                className="w-full py-3 px-6 glass border border-[#C9A84C]/40 text-[#F5ECD7] font-sans font-medium text-xs tracking-[0.2em] uppercase rounded-sm hover:bg-[#C9A84C]/10 active:scale-95 transition-all"
+                onClick={(e) => { e.stopPropagation(); onSelectNo() }}
+                className="w-full py-3.5 px-6 glass border border-white/20 text-[#F5ECD7]/80 font-sans font-medium text-xs tracking-[0.2em] uppercase rounded-sm hover:border-white/50 hover:text-white active:scale-95 transition-all opacity-85 hover:opacity-100"
               >
-                ✉️ RSVP Now
+                SORRY, CAN'T MAKE IT
               </button>
             </div>
           </div>
@@ -323,14 +320,20 @@ export default function VideoScreen({
             </span>
           </button>
 
-          {showSkip && (
+          <div className="flex gap-2">
             <button
-              onClick={(e) => { e.stopPropagation(); onSkip() }}
-              className="font-sans text-[11px] tracking-[0.25em] uppercase text-white/60 hover:text-white transition-colors bg-black/40 backdrop-blur-md border border-white/10 px-4 py-2 rounded-full"
+              onClick={(e) => { e.stopPropagation(); onSelectYes() }}
+              className="font-sans text-[10px] tracking-[0.2em] uppercase text-white font-bold bg-gradient-to-r from-[#C9A84C] to-[#E8810A] px-4 py-2 rounded-full shadow-md shadow-[#C9A84C]/30 hover:brightness-110 active:scale-95 transition-all"
             >
-              Skip to RSVP →
+              ✓ YES
             </button>
-          )}
+            <button
+              onClick={(e) => { e.stopPropagation(); onSelectNo() }}
+              className="font-sans text-[10px] tracking-[0.2em] uppercase text-white/70 bg-black/60 backdrop-blur-md border border-white/20 px-4 py-2 rounded-full hover:text-white active:scale-95 transition-all"
+            >
+              ✕ NO
+            </button>
+          </div>
         </div>
       </div>
 
