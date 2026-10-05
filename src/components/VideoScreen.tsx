@@ -26,12 +26,13 @@ export default function VideoScreen({
   active
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [soundBlocked, setSoundBlocked] = useState(false)
+  const audioRef = useRef<HTMLAudioElement>(null)
   const [videoState, setVideoState] = useState<'loading' | 'playing' | 'ended' | 'unavailable'>('loading')
   const [activeUrl, setActiveUrl] = useState<string>('')
   const [currentTime, setCurrentTime] = useState<number>(0)
-  const [duration, setDuration] = useState<number>(15)
+  const [duration, setDuration] = useState<number>(10)
   const [showSkip, setShowSkip] = useState(false)
+  const [soundMuted, setSoundMuted] = useState(true)
   const startedRef = useRef(false)
 
   // Calendar handle
@@ -57,55 +58,54 @@ export default function VideoScreen({
 
     // Resolve video URL priority:
     // 1. Explicit guest custom video URL
-    // 2. Convention-based local public video: /videos/video_<code.toLowerCase()>.mp4
-    // 3. Global default video URL from config
+    // 2. Global default video URL from config
+    // 3. Fallback video path
     const targetUrl = customVideoUrl || EVENT.videoUrl || '/videos/teaser.mp4'
-
     setActiveUrl(targetUrl)
 
-    if (!targetUrl) {
-      setVideoState('unavailable')
-      const t = setTimeout(() => onEnd(), 3500)
-      return () => clearTimeout(t)
-    }
-
     const video = videoRef.current
+    const audio = audioRef.current
     if (!video) return
 
     video.src = targetUrl
-    video.muted = false
+    video.muted = true
 
     // Show skip after 3 seconds
     const skipTimer = setTimeout(() => setShowSkip(true), 3000)
 
-    const tryPlay = async () => {
+    const playVideo = async () => {
       try {
         await video.play()
-        setSoundBlocked(false)
         setVideoState('playing')
         if (!startedRef.current) { startedRef.current = true; onStart() }
-      } catch {
-        // Try muted autoplay
-        video.muted = true
+
+        // Try unmuting sound automatically if permitted
         try {
-          await video.play()
-          setSoundBlocked(true)
-          setVideoState('playing')
-          if (!startedRef.current) { startedRef.current = true; onStart() }
+          video.muted = false
+          setSoundMuted(false)
         } catch {
-          // If custom URL failed, try global default fallback or unavailable
-          if (targetUrl !== EVENT.videoUrl && EVENT.videoUrl) {
-            video.src = EVENT.videoUrl
-            video.play().catch(() => setVideoState('unavailable'))
-          } else {
-            setVideoState('unavailable')
-            setTimeout(() => onEnd(), 3500)
-          }
+          video.muted = true
+          setSoundMuted(true)
         }
+
+        if (audio && EVENT.audioUrl) {
+          audio.src = EVENT.audioUrl
+          audio.play().catch(() => {})
+        }
+      } catch (err) {
+        console.warn('Autoplay attempt:', err)
+        video.muted = true
+        video.play().then(() => {
+          setVideoState('playing')
+          setSoundMuted(true)
+          if (!startedRef.current) { startedRef.current = true; onStart() }
+        }).catch(() => {
+          setVideoState('playing')
+        })
       }
     }
 
-    tryPlay()
+    playVideo()
 
     const handleTimeUpdate = () => {
       if (video) {
@@ -118,17 +118,15 @@ export default function VideoScreen({
 
     const handleEnded = () => {
       setVideoState('ended')
-      setTimeout(() => onEnd(), 800)
+      // Wait 3.5 seconds on the final frame & end screen before navigating to RSVP
+      setTimeout(() => {
+        if (audio) audio.pause()
+        onEnd()
+      }, 3500)
     }
 
-    const handleError = () => {
-      console.warn('Video load error for:', targetUrl)
-      if (targetUrl !== EVENT.videoUrl && EVENT.videoUrl) {
-        video.src = EVENT.videoUrl
-        video.play().catch(() => setVideoState('unavailable'))
-      } else {
-        setVideoState('unavailable')
-      }
+    const handleError = (e: Event) => {
+      console.warn('Video load error:', e)
     }
 
     video.addEventListener('timeupdate', handleTimeUpdate)
@@ -141,38 +139,57 @@ export default function VideoScreen({
       video.removeEventListener('ended', handleEnded)
       video.removeEventListener('error', handleError)
       video.pause()
+      if (audio) audio.pause()
     }
-  }, [active, customVideoUrl, inviteCode, onEnd, onStart])
+  }, [active, customVideoUrl, onEnd, onStart])
 
-  const handleUnmute = () => {
+  // Sound toggle button
+  const toggleSound = (e: React.MouseEvent) => {
+    e.stopPropagation()
     if (videoRef.current) {
-      videoRef.current.muted = false
-      videoRef.current.play()
-      setSoundBlocked(false)
+      const nextMuted = !videoRef.current.muted
+      videoRef.current.muted = nextMuted
+      setSoundMuted(nextMuted)
+    }
+    if (audioRef.current) {
+      if (audioRef.current.paused) audioRef.current.play().catch(() => {})
+      else audioRef.current.pause()
     }
   }
 
-  // Active Beat logic tuned for 10-second movie teaser duration:
-  // Beat 1 (0:00 - 0:03.3): Opening Title Reveal
-  // Beat 2 (0:03.3 - 0:06.6): Personalized Guest Card
-  // Beat 3 (0:06.6 - 0:10.0+): Climax & Interactive CTAs
-  const isBeat1 = videoState === 'playing' && currentTime < 3.3
-  const isBeat2 = videoState === 'playing' && currentTime >= 3.3 && currentTime < 6.6
-  const isBeat3 = videoState === 'playing' && currentTime >= 6.6
+  // Auto-scale Beat logic based on actual video duration:
+  // Beat 1: First 33% of video
+  // Beat 2: Middle 33% of video
+  // Beat 3: Final 33% of video + 3.5s pause on final frame
+  const beat1End = duration ? duration * 0.33 : 3.3
+  const beat2End = duration ? duration * 0.66 : 6.6
+
+  const isBeat1 = videoState !== 'ended' && currentTime < beat1End
+  const isBeat2 = videoState !== 'ended' && currentTime >= beat1End && currentTime < beat2End
+  const isBeat3 = videoState === 'ended' || currentTime >= beat2End
 
   return (
-    <div className="relative w-full h-dvh bg-black overflow-hidden select-none">
+    <div
+      className="relative w-full h-dvh bg-black overflow-hidden select-none cursor-pointer"
+      onClick={toggleSound}
+    >
 
       {/* Video Element */}
-      {(activeUrl || EVENT.videoUrl) && (
-        <video
-          ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover"
-          playsInline
-          webkit-playsinline="true"
-          preload="auto"
-          poster={EVENT.poster || undefined}
-        />
+      <video
+        ref={videoRef}
+        className="absolute inset-0 w-full h-full object-cover"
+        playsInline
+        webkit-playsinline="true"
+        x5-playsinline="true"
+        muted
+        autoPlay
+        preload="auto"
+        poster={EVENT.poster || undefined}
+      />
+
+      {/* Optional Custom Audio Element */}
+      {EVENT.audioUrl && (
+        <audio ref={audioRef} preload="auto" />
       )}
 
       {/* Dark Vignette Overlay for Crisp Typography Contrast */}
@@ -189,11 +206,9 @@ export default function VideoScreen({
               #40AndFestive
             </span>
           </div>
-          {videoState === 'playing' && (
-            <span className="font-mono text-[10px] tracking-widest text-white/40">
-              {Math.floor(currentTime)}s / {Math.floor(duration)}s
-            </span>
-          )}
+          <span className="font-mono text-[10px] tracking-widest text-white/40">
+            {Math.floor(currentTime)}s / {Math.floor(duration)}s
+          </span>
         </div>
 
         {/* CENTER STAGE: SEQUENTIAL TEASER BEATS */}
@@ -272,7 +287,7 @@ export default function VideoScreen({
                 📅 Add to Calendar
               </button>
               <button
-                onClick={onSkip}
+                onClick={(e) => { e.stopPropagation(); onSkip() }}
                 className="w-full py-3 px-6 glass border border-[#C9A84C]/40 text-[#F5ECD7] font-sans font-medium text-xs tracking-[0.2em] uppercase rounded-sm hover:bg-[#C9A84C]/10 active:scale-95 transition-all"
               >
                 ✉️ RSVP Now
@@ -282,23 +297,21 @@ export default function VideoScreen({
 
         </div>
 
-        {/* BOTTOM NAVIGATION & SOUND BAR */}
+        {/* BOTTOM NAVIGATION BAR */}
         <div className="w-full pb-4 flex justify-between items-center pointer-events-auto">
-          {soundBlocked && videoState === 'playing' ? (
-            <button
-              onClick={handleUnmute}
-              className="glass px-4 py-2 rounded-full border border-[#C9A84C]/40 flex items-center gap-2 hover:bg-[#C9A84C]/10 transition-all"
-            >
-              <span className="text-amber-400 text-xs animate-bounce">🔊</span>
-              <span className="font-sans text-[10px] tracking-[0.2em] uppercase text-[#C9A84C]">
-                Tap for Sound
-              </span>
-            </button>
-          ) : <div />}
+          <button
+            onClick={toggleSound}
+            className="glass px-4 py-2 rounded-full border border-[#C9A84C]/40 flex items-center gap-2 hover:bg-[#C9A84C]/10 transition-all active:scale-95 animate-pulse"
+          >
+            <span className="text-amber-400 text-xs">{soundMuted ? '🔇' : '🔊'}</span>
+            <span className="font-sans text-[10px] tracking-[0.2em] uppercase text-[#C9A84C]">
+              {soundMuted ? 'Tap for Sound' : 'Sound On'}
+            </span>
+          </button>
 
-          {showSkip && videoState === 'playing' && (
+          {showSkip && (
             <button
-              onClick={onSkip}
+              onClick={(e) => { e.stopPropagation(); onSkip() }}
               className="font-sans text-[11px] tracking-[0.25em] uppercase text-white/60 hover:text-white transition-colors bg-black/40 backdrop-blur-md border border-white/10 px-4 py-2 rounded-full"
             >
               Skip to RSVP →
@@ -306,21 +319,6 @@ export default function VideoScreen({
           )}
         </div>
       </div>
-
-      {/* Unavailable / Placeholder State */}
-      {videoState === 'unavailable' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#050D1A] z-30">
-          <div className="flame-animate text-6xl mb-8" style={{ filter: 'drop-shadow(0 0 20px rgba(232,129,10,0.8))' }}>◆</div>
-          <p className="font-sans text-[10px] tracking-[0.35em] uppercase text-[#C9A84C]/50 mb-3">
-            Invitation Film
-          </p>
-          <p className="font-serif text-2xl text-[#F5ECD7]/60 mb-2">{EVENT.name}</p>
-          <p className="font-sans text-xs tracking-[0.2em] text-[#F5ECD7]/30">{EVENT.date} · {EVENT.city}</p>
-          <p className="font-sans text-[10px] text-[#C9A84C]/30 mt-8 tracking-widest uppercase">
-            Film coming soon…
-          </p>
-        </div>
-      )}
 
     </div>
   )

@@ -279,7 +279,10 @@ export default function AdminPage() {
     const link = `${BASE_URL}/i/${g.invite_code}`
     const name = g.nickname || ((g.send_together && g.partner_name) ? `${g.first_name} & ${g.partner_name}` : g.first_name)
     const msg = `Hi ${name}! 🎂🪔\n\nArpit ke 40th Birthday aur Diwali ke liye ek khaas invitation aapka intezaar kar raha hai...\n\n👉 ${link}\n\n— Vipul`
-    window.open(`https://wa.me/${VIPUL_PHONE}?text=${encodeURIComponent(msg)}`, '_blank')
+    let phone = (g.mobile || '').replace(/\D/g, '')
+    if (phone.length === 10) phone = '91' + phone
+    const targetUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`
+    window.open(targetUrl, '_blank')
   }
 
   // ── EXPORT CSV ──

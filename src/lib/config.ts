@@ -7,6 +7,7 @@ export const EVENT = {
   contact: process.env.NEXT_PUBLIC_RSVP_CONTACT  || 'Vipul',
   phone:   process.env.NEXT_PUBLIC_RSVP_PHONE    || '+919414036060',
   videoUrl: process.env.NEXT_PUBLIC_VIDEO_URL || '/videos/teaser.mp4',  // default video
+  audioUrl: process.env.NEXT_PUBLIC_AUDIO_URL || '/audio/music.mp3',   // custom background music
   poster:   process.env.NEXT_PUBLIC_VIDEO_POSTER || '',
   calDate: '20261023',      // YYYYMMDD for ICS
   calStart: '20261023T190000',
