@@ -434,8 +434,35 @@ export default function AdminPage() {
       return fullName.trim().split(' ')[0]
     }
 
-    const pDisplay = getName(g.nickname, g.first_name)
-    const partDisplay = getName(undefined, g.partner_name)
+    const pDisplay = (g.nickname && g.nickname.trim())
+      ? g.nickname.trim()
+      : (g.first_name || '').trim().split(' ')[0]
+
+    let partDisplay = ''
+    if (g.linked_guest_id) {
+      const linkedPartner = guests.find(other => other.id === g.linked_guest_id)
+      if (linkedPartner) {
+        partDisplay = (linkedPartner.nickname && linkedPartner.nickname.trim())
+          ? linkedPartner.nickname.trim()
+          : (linkedPartner.first_name || '').trim().split(' ')[0]
+      }
+    }
+
+    if (!partDisplay && g.partner_name) {
+      const matched = guests.find(other =>
+        `${other.first_name}${other.last_name ? ' ' + other.last_name : ''}`.toLowerCase() === g.partner_name?.toLowerCase() ||
+        other.first_name.toLowerCase() === g.partner_name?.toLowerCase() ||
+        (other.nickname && other.nickname.toLowerCase() === g.partner_name?.toLowerCase())
+      )
+      if (matched) {
+        partDisplay = (matched.nickname && matched.nickname.trim())
+          ? matched.nickname.trim()
+          : (matched.first_name || '').trim().split(' ')[0]
+      } else {
+        partDisplay = g.partner_name.trim().split(' ')[0]
+      }
+    }
+
     const name = (g.send_together && partDisplay) ? `${pDisplay} & ${partDisplay}` : pDisplay
     const youTarget = isCouple ? 'you both' : 'you'
 

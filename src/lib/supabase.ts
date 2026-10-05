@@ -75,6 +75,24 @@ export async function getGuestByCode(code: string): Promise<Guest | null> {
     .single()
 
   if (error || !data) return null
+
+  if (data.linked_guest_id) {
+    const { data: partner } = await supabase
+      .from('guests')
+      .select('first_name, nickname')
+      .eq('id', data.linked_guest_id)
+      .single()
+
+    if (partner) {
+      const partnerDisplay = (partner.nickname && partner.nickname.trim())
+        ? partner.nickname.trim()
+        : (partner.first_name || '').trim().split(' ')[0]
+      if (partnerDisplay) {
+        data.partner_name = partnerDisplay
+      }
+    }
+  }
+
   return data
 }
 
