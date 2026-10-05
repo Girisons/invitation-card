@@ -209,18 +209,8 @@ export default function VideoScreen({
       {/* ── MOVIE TEASER DYNAMIC TEXT OVERLAY SEQUENCE ── */}
       <div className="absolute inset-0 flex flex-col justify-between p-6 sm:p-10 pointer-events-none z-20">
 
-        {/* Top Header Tag */}
-        <div className="flex justify-between items-center w-full pt-4">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <span className="font-sans text-[10px] tracking-[0.35em] uppercase text-[#C9A84C]/90">
-              #40AndFestive
-            </span>
-          </div>
-          <span className="font-mono text-[10px] tracking-widest text-white/40">
-            {Math.floor(currentTime)}s / {Math.floor(duration)}s
-          </span>
-        </div>
+        {/* Top Header — Clean space */}
+        <div className="w-full pt-4 pointer-events-none" />
 
         {/* CENTER STAGE: SEQUENTIAL TEASER BEATS */}
         <div className="relative w-full flex-1 flex flex-col items-center justify-center text-center">
@@ -289,7 +279,7 @@ export default function VideoScreen({
               JAIPUR · RAJASTHAN
             </p>
 
-            {/* Interactive CTAs — Direct Yes / No Buttons */}
+            {/* Interactive CTAs — Direct Yes / No / Calendar Buttons */}
             <div className="flex flex-col gap-2.5 w-full max-w-xs px-4">
               <button
                 onClick={(e) => { e.stopPropagation(); onSelectYes() }}
@@ -302,6 +292,12 @@ export default function VideoScreen({
                 className="w-full py-3.5 px-6 glass border border-white/20 text-[#F5ECD7]/80 font-sans font-medium text-xs tracking-[0.2em] uppercase rounded-sm hover:border-white/50 hover:text-white active:scale-95 transition-all opacity-85 hover:opacity-100"
               >
                 SORRY, CAN'T MAKE IT
+              </button>
+              <button
+                onClick={handleCalendar}
+                className="w-full py-3 px-6 glass border border-[#C9A84C]/40 text-[#C9A84C] font-sans font-medium text-xs tracking-[0.2em] uppercase rounded-sm hover:bg-[#C9A84C]/10 active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                <span>📅</span> ADD TO CALENDAR
               </button>
             </div>
           </div>
