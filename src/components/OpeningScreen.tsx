@@ -17,8 +17,10 @@ export default function OpeningScreen({ guestName, onEnter }: Props) {
   }, [])
 
   return (
-    <div className="relative w-full full-viewport-height flex flex-col items-center justify-center safe-top safe-bottom px-8 overflow-hidden">
-
+    <div 
+      onClick={onEnter}
+      className="relative w-full full-viewport-height flex flex-col items-center justify-center safe-top safe-bottom px-8 overflow-hidden cursor-pointer select-none"
+    >
       {/* Ambient background glow — top */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full ambient-glow pointer-events-none"
@@ -63,7 +65,7 @@ export default function OpeningScreen({ guestName, onEnter }: Props) {
         <div className={`divider mb-8 transition-all duration-[1000ms] delay-700 ${visible ? 'opacity-100' : 'opacity-0'}`} />
 
         {/* Event details */}
-        <div className={`flex flex-col gap-2 mb-12 transition-all duration-[1200ms] delay-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+        <div className={`flex flex-col gap-2 mb-10 transition-all duration-[1200ms] delay-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
           <p className="font-sans text-[11px] tracking-[0.3em] uppercase text-[#C9A84C]/50">
             40 & Festive
           </p>
@@ -76,19 +78,21 @@ export default function OpeningScreen({ guestName, onEnter }: Props) {
         </div>
 
         {/* Enter button */}
-        <button
-          onClick={onEnter}
+        <div
           className={`group relative transition-all duration-[1400ms] delay-1000 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
         >
-          <div className="flex items-center gap-4 px-10 py-4 border border-[#C9A84C]/20 rounded-sm hover:border-[#C9A84C]/50 transition-colors duration-300">
-            <span className="font-sans text-[11px] tracking-[0.35em] uppercase text-[#C9A84C]/70 group-hover:text-[#C9A84C] transition-colors duration-300">
+          <div className="flex items-center gap-4 px-10 py-4 border border-[#C9A84C]/30 bg-[#C9A84C]/5 rounded-sm group-hover:border-[#C9A84C]/70 group-hover:bg-[#C9A84C]/10 transition-all duration-300">
+            <span className="font-sans text-[11px] tracking-[0.35em] uppercase text-[#C9A84C] transition-colors duration-300">
               Enter Invitation
             </span>
-            <span className="text-[#C9A84C]/40 group-hover:text-[#C9A84C] transition-all duration-300 group-hover:translate-x-1">
+            <span className="text-[#C9A84C] transition-all duration-300 group-hover:translate-x-1">
               →
             </span>
           </div>
-        </button>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-[#C9A84C]/50 mt-3 font-sans animate-pulse">
+            Tap anywhere to view video
+          </p>
+        </div>
       </div>
 
       {/* Bottom ambient glow */}
