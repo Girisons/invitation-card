@@ -40,12 +40,12 @@ export async function generateMetadata({ params }: Props) {
   return {
     metadataBase: new URL('https://khandelwalinvite.vercel.app'),
     title: "Arpit's 40th & Diwali Bash",
-    description: 'Personal Video Invitation — Tap to Play',
+    description: 'Invitation - Tap to open',
     openGraph: {
       type: 'website',
       url: `https://khandelwalinvite.vercel.app/i/${code}`,
       title: "Arpit's 40th & Diwali Bash",
-      description: 'Personal Video Invitation — Tap to Play',
+      description: 'Invitation - Tap to open',
       siteName: "Arpit's 40th & Diwali Bash",
       images: [
         {
@@ -60,7 +60,7 @@ export async function generateMetadata({ params }: Props) {
     twitter: {
       card: 'summary_large_image',
       title: "Arpit's 40th & Diwali Bash",
-      description: 'Personal Video Invitation — Tap to Play',
+      description: 'Invitation - Tap to open',
       images: [ogImageUrl],
     },
   }
