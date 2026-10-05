@@ -279,7 +279,7 @@ export default function AdminPage() {
     const link = `${BASE_URL}/i/${g.invite_code}`
     const name = g.nickname || ((g.send_together && g.partner_name) ? `${g.first_name} & ${g.partner_name}` : `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`)
     
-    const msg = `✨ *ARPIT @ 40 × DIWALI CELEBRATION* ✨\n\nDearest *${name}*,\n\nYou are cordially invited to celebrate two monumental occasions with us! 🪔✨\n\n🗓 *SAVE THE DATE*\n*Event:* Arpit @ 40 × Diwali Celebration\n*Date:* Friday, 23rd October 2026\n📍 *Venue:* Jaipur, Rajasthan\n\nTap your personal invitation card link below to view your special video invite:\n👉 ${link}\n\nWarmest Regards,\n*Vipul Khandelwal*\n📞 +91 9414036060`
+    const msg = `✨ *ARPIT @ 40 × DIWALI CELEBRATION* ✨\n\nDearest *${name}*,\n\nYou are cordially invited to celebrate two monumental occasions with us! 🪔✨\n\n🗓 *SAVE THE DATE*\n*Event:* Arpit @ 40 × Diwali Celebration\n*Date:* Friday, 23rd October 2026\n📍 *Venue:* Jaipur, Rajasthan\n\nWarmest Regards,\n*Vipul Khandelwal*\n📞 +91 9414036060\n\n${link}`
 
     let phone = (g.mobile || '').replace(/\D/g, '')
     if (phone.length === 10) phone = '91' + phone
