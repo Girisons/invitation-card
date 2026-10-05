@@ -10,48 +10,132 @@ function generateCode(): string {
   return Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
 
-function formatWhatsAppPhone(rawMobile: string): string {
+const COUNTRY_CODES = [
+  { code: '+91', label: '🇮🇳 +91 (India)' },
+  { code: '+65', label: '🇸🇬 +65 (Singapore)' },
+  { code: '+971', label: '🇦🇪 +971 (UAE)' },
+  { code: '+1', label: '🇺🇸 +1 (USA/Canada)' },
+  { code: '+44', label: '🇬🇧 +44 (UK)' },
+  { code: '+60', label: '🇲🇾 +60 (Malaysia)' },
+  { code: '+61', label: '🇦🇺 +61 (Australia)' },
+  { code: '+66', label: '🇹🇭 +66 (Thailand)' },
+  { code: '+62', label: '🇮🇩 +62 (Indonesia)' },
+  { code: '+49', label: '🇩🇪 +49 (Germany)' },
+]
+
+export function formatWhatsAppPhone(rawMobile: string): string {
   let cleaned = (rawMobile || '').trim()
   if (!cleaned) return ''
 
-  // If user explicitly typed a leading '+', e.g. '+6587222516' or '+919414036060'
   if (cleaned.startsWith('+')) {
     return cleaned.replace(/\D/g, '')
   }
 
   const digits = cleaned.replace(/\D/g, '')
+  if (digits.length > 10) return digits
 
-  // If digits length > 10, country code is already included
-  if (digits.length > 10) {
-    return digits
-  }
-
-  // If exactly 10 digits, check for common international country code prefixes
   if (digits.length === 10) {
     if (
-      digits.startsWith('65') || // Singapore
-      digits.startsWith('971') || // UAE
-      digits.startsWith('44') || // UK
-      digits.startsWith('60') || // Malaysia
-      digits.startsWith('61') || // Australia
-      digits.startsWith('62') || // Indonesia
-      digits.startsWith('49') || // Germany
-      digits.startsWith('33') || // France
-      digits.startsWith('81') || // Japan
-      digits.startsWith('86')    // China
+      digits.startsWith('65') ||
+      digits.startsWith('971') ||
+      digits.startsWith('44') ||
+      digits.startsWith('60') ||
+      digits.startsWith('61') ||
+      digits.startsWith('62') ||
+      digits.startsWith('49') ||
+      digits.startsWith('33') ||
+      digits.startsWith('81') ||
+      digits.startsWith('86')
     ) {
       return digits
     }
-
-    // Default to India (+91) for standard 10-digit Indian numbers
     return '91' + digits
   }
 
   return digits
 }
 
+function PhoneInputWithPrefix({ value, onChange }: { value: string; onChange: (val: string) => void }) {
+  let initialPrefix = '+91'
+  let initialDigits = value || ''
+
+  if (value && value.trim().startsWith('+')) {
+    const parts = value.trim().split(' ')
+    if (parts.length > 1) {
+      initialPrefix = parts[0]
+      initialDigits = parts.slice(1).join('')
+    } else {
+      const match = COUNTRY_CODES.find(c => value.startsWith(c.code))
+      if (match) {
+        initialPrefix = match.code
+        initialDigits = value.substring(match.code.length)
+      } else {
+        initialDigits = value.replace(/\D/g, '')
+      }
+    }
+  } else if (value && value.length > 10) {
+    const match = COUNTRY_CODES.find(c => value.replace(/\D/g, '').startsWith(c.code.replace('+', '')))
+    if (match) {
+      initialPrefix = match.code
+      initialDigits = value.replace(/\D/g, '').substring(match.code.length - 1)
+    }
+  }
+
+  const [prefix, setPrefix] = useState(initialPrefix)
+  const [digits, setDigits] = useState(initialDigits)
+
+  useEffect(() => {
+    if (!value) {
+      setDigits('')
+      return
+    }
+    if (value.startsWith('+')) {
+      const match = COUNTRY_CODES.find(c => value.startsWith(c.code))
+      if (match) {
+        setPrefix(match.code)
+        setDigits(value.substring(match.code.length).trim())
+      } else {
+        setDigits(value)
+      }
+    } else {
+      setDigits(value)
+    }
+  }, [value])
+
+  const handlePrefixChange = (newPrefix: string) => {
+    setPrefix(newPrefix)
+    const clean = digits.trim()
+    onChange(clean ? `${newPrefix} ${clean}` : newPrefix)
+  }
+
+  const handleDigitsChange = (newDigits: string) => {
+    setDigits(newDigits)
+    const clean = newDigits.trim()
+    onChange(clean ? `${prefix} ${clean}` : '')
+  }
+
+  return (
+    <div className="flex gap-1.5">
+      <select
+        value={prefix}
+        onChange={e => handlePrefixChange(e.target.value)}
+        className="bg-[#0A1931] border border-white/10 rounded-sm px-2 py-2 text-xs text-[#C9A84C] font-mono outline-none focus:border-[#C9A84C]/40"
+      >
+        {COUNTRY_CODES.map(c => (
+          <option key={c.code} value={c.code}>{c.label}</option>
+        ))}
+      </select>
+      <input
+        value={digits}
+        onChange={e => handleDigitsChange(e.target.value)}
+        placeholder="9876543210"
+        className="flex-1 bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40"
+      />
+    </div>
+  )
+}
+
 const BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'https://khandelwalinvite.vercel.app'
-const VIPUL_PHONE = '919414036060'
 
 type FoodPref = 'vegetarian' | 'jain' | 'non-vegetarian' | 'other' | ''
 type LiquorPref = 'yes' | 'no' | 'maybe' | ''
@@ -107,9 +191,8 @@ function PersonSection({ label, person, onChange }: { label: string; person: Per
             className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40" />
         </div>
         <div>
-          <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Mobile</label>
-          <input value={person.mobile} onChange={e => set('mobile', e.target.value)} placeholder="9876543210 or +6587222516"
-            className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40" />
+          <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Mobile & Country Code</label>
+          <PhoneInputWithPrefix value={person.mobile} onChange={val => set('mobile', val)} />
         </div>
       </div>
       <div>
@@ -148,12 +231,6 @@ const getStatusInfo = (status: string) => {
   if (s === 'entered' || s === 'opened' || s === 'seen' || s === 'message_seen') {
     return { label: 'MESSAGE SEEN', color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' }
   }
-  if (s === 'rsvp_yes' || s === 'attending' || s === 'yes') {
-    return { label: 'ATTENDING', color: 'text-green-400 bg-green-500/10 border-green-500/20' }
-  }
-  if (s === 'rsvp_no' || s === 'declined' || s === 'not_attending' || s === 'no') {
-    return { label: 'NOT ATTENDING', color: 'text-red-400 bg-red-500/10 border-red-500/20' }
-  }
   return { label: 'MESSAGE SENT', color: 'text-white/40 bg-white/5 border-white/10' }
 }
 
@@ -177,7 +254,6 @@ export default function AdminPage() {
     setLoading(true)
     const { data } = await supabase.from('guests').select('*').order('created_at', { ascending: false })
     if (data) {
-      // Build id → { name, mobile } map for linked guest lookup
       const map: Record<string, { name: string; mobile: string }> = {}
       data.forEach((g: Guest) => {
         map[g.id] = {
@@ -186,7 +262,6 @@ export default function AdminPage() {
         }
       })
 
-      // Auto-sync partner_name, partner_mobile, and linked_guest_id for any partner pairs
       for (const g of data) {
         if (g.linked_guest_id && map[g.linked_guest_id]) {
           const partner = map[g.linked_guest_id]
@@ -299,16 +374,14 @@ export default function AdminPage() {
     setEditingGuest(g)
     setEditForm({ first_name: g.first_name, last_name: g.last_name || '', nickname: g.nickname || '', mobile: g.mobile || '', partner_name: g.partner_name || '', partner_mobile: g.partner_mobile || '', food_preference: g.food_preference || '', liquor_preference: g.liquor_preference || '', guest_of: g.guest_of || '', relationship_group: g.relationship_group || '', invite_code: g.invite_code, video_url: g.video_url || '' })
   }
+
   const handleEditSave = async () => {
     if (!editingGuest) return
     const payload: Record<string, any> = { ...editForm }
-
-    // If video_url is empty string, convert to null or omit if not set
     if (payload.video_url === '') delete payload.video_url
 
     let { error } = await supabase.from('guests').update(payload).eq('id', editingGuest.id)
 
-    // If Supabase schema does not have video_url column, retry without video_url
     if (error && (error.message?.includes('video_url') || error.message?.includes('schema cache'))) {
       delete payload.video_url
       const retry = await supabase.from('guests').update(payload).eq('id', editingGuest.id)
@@ -317,7 +390,6 @@ export default function AdminPage() {
 
     if (error) { alert('Error: ' + error.message); return }
 
-    // If editing guest is linked, sync updated name & mobile to partner's partner_name & partner_mobile
     if (editingGuest.linked_guest_id) {
       const myFullName = `${editForm.first_name || ''}${editForm.last_name ? ' ' + editForm.last_name : ''}`.trim()
       await supabase.from('guests').update({
@@ -355,21 +427,26 @@ export default function AdminPage() {
 
   // ── EXPORT CSV ──
   const exportCSV = () => {
-    const headers = ['Name', 'Nickname', 'Mobile', 'Partner', 'Partner Mobile', 'Food', 'Drinks', 'Invited By', 'Group', 'Status', 'Invite Code', 'Invite Link']
-    const rows = guests.map(g => [
-      `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`,
-      g.nickname || '',
-      g.mobile || '',
-      g.partner_name || (g.linked_guest_id && guestMap[g.linked_guest_id]?.name) || '',
-      g.partner_mobile || (g.linked_guest_id && guestMap[g.linked_guest_id]?.mobile) || '',
-      g.food_preference || '',
-      g.liquor_preference || '',
-      g.guest_of || '',
-      g.relationship_group || '',
-      g.invitation_status,
-      g.invite_code,
-      `${BASE_URL}/i/${g.invite_code}`
-    ])
+    const headers = ['Name', 'Nickname', 'Mobile', 'Partner', 'Partner Mobile', 'Attendance', 'Food', 'Drinks', 'Invited By', 'Group', 'Status', 'Invite Code', 'Invite Link']
+    const rows = guests.map(g => {
+      const st = (g.invitation_status || '').toLowerCase()
+      const attendance = (st === 'rsvp_yes' || st === 'attending' || st === 'yes') ? 'Attending' : (st === 'rsvp_no' || st === 'declined' || st === 'no') ? 'Declined' : 'Pending'
+      return [
+        `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`,
+        g.nickname || '',
+        g.mobile || '',
+        g.partner_name || (g.linked_guest_id && guestMap[g.linked_guest_id]?.name) || '',
+        g.partner_mobile || (g.linked_guest_id && guestMap[g.linked_guest_id]?.mobile) || '',
+        attendance,
+        g.food_preference || '',
+        g.liquor_preference || '',
+        g.guest_of || '',
+        g.relationship_group || '',
+        g.invitation_status,
+        g.invite_code,
+        `${BASE_URL}/i/${g.invite_code}`
+      ]
+    })
     const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
@@ -382,7 +459,7 @@ export default function AdminPage() {
     const file = e.target.files?.[0]; if (!file) return
     setImportMsg('Importing...')
     const text = await file.text()
-    const lines = text.trim().split('\n').slice(1) // skip header
+    const lines = text.trim().split('\n').slice(1)
     let count = 0
     for (const line of lines) {
       const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, '').replace(/""/g, '"'))
@@ -400,7 +477,6 @@ export default function AdminPage() {
     if (fileRef.current) fileRef.current.value = ''
   }
 
-  // ── TOGGLE TOGETHER / SEPARATE (INDEPENDENT PER GUEST) ──
   const toggleTogether = async (g: Guest) => {
     const nowTogether = !g.send_together
     await supabase.from('guests').update({ send_together: nowTogether }).eq('id', g.id)
@@ -413,6 +489,12 @@ export default function AdminPage() {
     return `${g.first_name} ${g.last_name} ${partnerName} ${g.mobile} ${partnerMob} ${g.nickname}`.toLowerCase().includes(search.toLowerCase())
   })
 
+  // Attendance stats counts
+  const attendingCount = guests.filter(g => ['rsvp_yes', 'attending', 'yes'].includes((g.invitation_status || '').toLowerCase())).length
+  const declinedCount = guests.filter(g => ['rsvp_no', 'declined', 'not_attending', 'no'].includes((g.invitation_status || '').toLowerCase())).length
+  const messageSeenCount = guests.filter(g => ['opened', 'entered', 'seen', 'message_seen'].includes((g.invitation_status || '').toLowerCase())).length
+  const messageSentCount = guests.filter(g => !g.invitation_status || ['pending', 'sent', 'message_sent'].includes((g.invitation_status || '').toLowerCase())).length
+
   // ── LOGIN ──
   if (!authed) {
     return (
@@ -420,7 +502,7 @@ export default function AdminPage() {
         <div className="w-full max-w-xs">
           <div className="text-center mb-8">
             <p className="font-sans text-[10px] tracking-[0.4em] uppercase text-[#C9A84C]/40 mb-3">Admin Access</p>
-            <h1 className="font-serif text-2xl text-[#F5ECD7]">Arpit @ 40</h1>
+            <h1 className="font-serif text-2xl text-[#F5ECD7]">Arpit's 40th & Diwali Bash</h1>
           </div>
           <div className="glass rounded-sm p-6 flex flex-col gap-4">
             <input type="password" placeholder="Password" value={pass}
@@ -447,14 +529,14 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats Bar */}
       <div className="grid grid-cols-5 border-b border-[#C9A84C]/10">
         {[
           { label: 'Total', val: guests.length, color: 'text-[#C9A84C]' },
-          { label: 'Message Sent', val: guests.filter(g => !g.invitation_status || ['pending', 'sent', 'message_sent'].includes((g.invitation_status || '').toLowerCase())).length, color: 'text-white/50' },
-          { label: 'Message Seen', val: guests.filter(g => ['opened', 'entered', 'seen', 'message_seen'].includes((g.invitation_status || '').toLowerCase())).length, color: 'text-yellow-400' },
-          { label: 'Attending', val: guests.filter(g => ['rsvp_yes', 'attending', 'yes'].includes((g.invitation_status || '').toLowerCase())).length, color: 'text-green-400' },
-          { label: 'Not Attending', val: guests.filter(g => ['rsvp_no', 'declined', 'not_attending', 'no'].includes((g.invitation_status || '').toLowerCase())).length, color: 'text-red-400' },
+          { label: 'Message Sent', val: messageSentCount, color: 'text-white/50' },
+          { label: 'Message Seen', val: messageSeenCount, color: 'text-yellow-400' },
+          { label: 'Attending', val: attendingCount, color: 'text-green-400' },
+          { label: 'Not Attending', val: declinedCount, color: 'text-red-400' },
         ].map(s => (
           <div key={s.label} className="px-4 py-3 text-center border-r border-[#C9A84C]/10 last:border-0">
             <p className={`text-lg font-serif ${s.color}`}>{s.val}</p>
@@ -489,11 +571,12 @@ export default function AdminPage() {
               <th className="px-4 py-3 text-left">Mobile</th>
               <th className="px-4 py-3 text-left">Partner</th>
               <th className="px-4 py-3 text-left">Partner Mob</th>
+              <th className="px-4 py-3 text-left text-[#C9A84C]/90">Attendance</th>
               <th className="px-4 py-3 text-left">Food</th>
               <th className="px-4 py-3 text-left">Drinks</th>
               <th className="px-4 py-3 text-left">Via</th>
               <th className="px-4 py-3 text-left">Group</th>
-              <th className="px-4 py-3 text-left">Status</th>
+              <th className="px-4 py-3 text-left">Msg Status</th>
               <th className="px-4 py-3 text-left">Send As</th>
               <th className="px-4 py-3 text-left">Video</th>
               <th className="px-4 py-3 text-left">Code</th>
@@ -502,27 +585,49 @@ export default function AdminPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={14} className="px-4 py-16 text-center text-white/30">Loading...</td></tr>
+              <tr><td colSpan={15} className="px-4 py-16 text-center text-white/30">Loading...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={14} className="px-4 py-16 text-center text-white/30">
+              <tr><td colSpan={15} className="px-4 py-16 text-center text-white/30">
                 <p className="font-serif text-lg mb-1">No guests yet</p>
                 <p className="text-xs">Click "+ Add Guest" to get started</p>
               </td></tr>
             ) : filtered.map(g => {
               const info = getStatusInfo(g.invitation_status)
+              const st = (g.invitation_status || '').toLowerCase()
+              const isYes = st === 'rsvp_yes' || st === 'attending' || st === 'yes'
+              const isNo = st === 'rsvp_no' || st === 'declined' || st === 'not_attending' || st === 'no'
+
               return (
                 <tr key={g.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
                   <td className="px-4 py-3 font-serif text-[#F5ECD7] whitespace-nowrap">
                     {g.first_name}{g.last_name ? ' ' + g.last_name : ''}
                   </td>
                   <td className="px-4 py-3 text-[#C9A84C]/60 italic text-xs">{g.nickname || '—'}</td>
-                  <td className="px-4 py-3 text-white/60 whitespace-nowrap">{g.mobile || '—'}</td>
+                  <td className="px-4 py-3 text-white/60 font-mono text-xs whitespace-nowrap">{g.mobile || '—'}</td>
                   <td className="px-4 py-3 text-white/50 whitespace-nowrap">
                     {g.partner_name || (g.linked_guest_id && guestMap[g.linked_guest_id]?.name) || '—'}
                   </td>
-                  <td className="px-4 py-3 text-white/40 whitespace-nowrap">
+                  <td className="px-4 py-3 text-white/40 font-mono text-xs whitespace-nowrap">
                     {g.partner_mobile || (g.linked_guest_id && guestMap[g.linked_guest_id]?.mobile) || '—'}
                   </td>
+
+                  {/* DEDICATED ATTENDANCE COLUMN */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {isYes ? (
+                      <span className="text-[10px] font-semibold bg-green-500/15 text-green-400 border border-green-500/30 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                        <span>🎉</span> Attending
+                      </span>
+                    ) : isNo ? (
+                      <span className="text-[10px] font-semibold bg-red-500/15 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                        <span>❌</span> Declined
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-white/35 bg-white/5 border border-white/10 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                        <span>⏳</span> Pending
+                      </span>
+                    )}
+                  </td>
+
                   <td className="px-4 py-3">
                     {g.food_preference ? (
                       <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full text-white/50 capitalize whitespace-nowrap">
@@ -667,14 +772,46 @@ export default function AdminPage() {
             </div>
             <div className="flex flex-col gap-4">
               <div className="grid grid-cols-2 gap-3">
-                {[['First Name', 'first_name'], ['Last Name', 'last_name'], ['Nickname', 'nickname'], ['Mobile', 'mobile'], ['Partner Name', 'partner_name'], ['Partner Mobile', 'partner_mobile'], ['Invited By', 'guest_of'], ['Invite Code', 'invite_code']].map(([label, key]) => (
-                  <div key={key}>
-                    <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">{label}</label>
-                    <input value={(editForm as any)[key] || ''} onChange={e => setEditForm(f => ({ ...f, [key]: e.target.value }))}
-                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
-                  </div>
-                ))}
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">First Name</label>
+                  <input value={editForm.first_name || ''} onChange={e => setEditForm(f => ({ ...f, first_name: e.target.value }))}
+                    className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Last Name</label>
+                  <input value={editForm.last_name || ''} onChange={e => setEditForm(f => ({ ...f, last_name: e.target.value }))}
+                    className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Nickname</label>
+                  <input value={editForm.nickname || ''} onChange={e => setEditForm(f => ({ ...f, nickname: e.target.value }))}
+                    className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Mobile & Country Code</label>
+                  <PhoneInputWithPrefix value={editForm.mobile || ''} onChange={val => setEditForm(f => ({ ...f, mobile: val }))} />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Partner Name</label>
+                  <input value={editForm.partner_name || ''} onChange={e => setEditForm(f => ({ ...f, partner_name: e.target.value }))}
+                    className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Partner Mobile & Country Code</label>
+                  <PhoneInputWithPrefix value={editForm.partner_mobile || ''} onChange={val => setEditForm(f => ({ ...f, partner_mobile: val }))} />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Invited By</label>
+                  <input value={editForm.guest_of || ''} onChange={e => setEditForm(f => ({ ...f, guest_of: e.target.value }))}
+                    className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
+                </div>
+                <div>
+                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Invite Code</label>
+                  <input value={editForm.invite_code || ''} onChange={e => setEditForm(f => ({ ...f, invite_code: e.target.value.toUpperCase() }))}
+                    className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40 font-mono text-[#C9A84C]" />
+                </div>
               </div>
+
               <div>
                 <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Food</label>
                 <div className="flex gap-1.5">
@@ -686,6 +823,7 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
+
               <div>
                 <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Drinks</label>
                 <div className="flex gap-1.5">
@@ -697,12 +835,14 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
+
               <div>
                 <label className="text-[9px] uppercase tracking-widest text-[#C9A84C]/80 block mb-1">Personalized Video URL</label>
                 <input value={editForm.video_url || ''} onChange={e => setEditForm(f => ({ ...f, video_url: e.target.value }))} placeholder="https://... or /videos/video_code.mp4"
                   className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40" />
                 <p className="text-[9px] text-white/30 mt-1">Direct MP4 link (Supabase Storage, CDN, HeyGen, or /videos/filename.mp4)</p>
               </div>
+
               <div>
                 <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Group</label>
                 <select value={editForm.relationship_group || ''} onChange={e => setEditForm(f => ({ ...f, relationship_group: e.target.value }))}
@@ -714,6 +854,7 @@ export default function AdminPage() {
                   <option value="other">Other</option>
                 </select>
               </div>
+
               <div className="flex gap-3 mt-1">
                 <button onClick={handleEditSave} className="btn-primary flex-1 py-3 text-sm">Save Changes</button>
                 <button onClick={() => setEditingGuest(null)} className="btn-outline px-6 py-3 text-sm">Cancel</button>
