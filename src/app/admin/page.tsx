@@ -434,10 +434,11 @@ export default function AdminPage() {
       heart: String.fromCodePoint(0x2764, 0xFE0F),
       calendar: String.fromCodePoint(0x1F4C5),
       pin: String.fromCodePoint(0x1F4CD),
+      wink: String.fromCodePoint(0x1F61C),
       point: String.fromCodePoint(0x1F449),
     }
 
-    const msg = `${EMOJI.sparkles} *Arpit's 40th Birthday & Diwali Celebration* ${EMOJI.sparkles}\n\nDear ${name}, ${EMOJI.heart}\n\nYou are cordially invited to celebrate with us!\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\n${EMOJI.point} *Tap to View Personal Digital Invitation & Video:*\n${link}`
+    const msg = `${EMOJI.sparkles} Four Decades. One Amazing Journey. And Now... One BIG Celebration! ${EMOJI.sparkles}\n\nDear ${name}, ${EMOJI.heart}\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my brother ARPIT’s 40th Birthday & Diwali Celebration!\n\n${EMOJI.calendar} Friday, 23rd October 2026\n${EMOJI.pin} Jaipur\n\n${name} \u2014 no excuses, no "we'll try", and definitely no last-minute plans! ${EMOJI.wink}\n\n${EMOJI.point} *Personal Digital Invitation:*\n${link}`
 
     const phone = formatWhatsAppPhone(g.mobile || '')
     const targetUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`
