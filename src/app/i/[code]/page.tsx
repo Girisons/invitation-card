@@ -35,47 +35,32 @@ function getDisplayName(nickname?: string, fullName?: string): string {
 
 export async function generateMetadata({ params }: Props) {
   const { code } = await params
-
-  let guestName = 'Honored Guest'
-  try {
-    const guest = await getGuestByCode(code)
-    if (guest) {
-      const primaryDisplay = getDisplayName(guest.nickname, guest.first_name)
-      const partnerDisplay = getDisplayName(undefined, guest.partner_name)
-      guestName = (guest.send_together && partnerDisplay)
-        ? `${primaryDisplay} & ${partnerDisplay}`
-        : (primaryDisplay || 'Honored Guest')
-    }
-  } catch {}
-
-  const titleText = `Arpit's 40th & Diwali Bash — For ${guestName}`
-  const descText = 'A personal invitation — Friday, 23 October 2026, Jaipur.'
   const ogImageUrl = 'https://khandelwalinvite.vercel.app/og.jpg'
 
   return {
     metadataBase: new URL('https://khandelwalinvite.vercel.app'),
-    title: titleText,
-    description: descText,
+    title: '\u200B',
+    description: '\u200B',
     openGraph: {
       type: 'website',
       url: `https://khandelwalinvite.vercel.app/i/${code}`,
-      title: titleText,
-      description: descText,
-      siteName: "Arpit's 40th & Diwali Bash",
+      title: '\u200B',
+      description: '\u200B',
+      siteName: '',
       images: [
         {
           url: ogImageUrl,
-          width: 1200,
-          height: 630,
+          width: 720,
+          height: 1280,
           type: 'image/jpeg',
-          alt: "Arpit's 40th & Diwali Bash Invitation",
+          alt: 'Save the Date',
         },
       ],
     },
     twitter: {
       card: 'summary_large_image',
-      title: titleText,
-      description: descText,
+      title: '\u200B',
+      description: '\u200B',
       images: [ogImageUrl],
     },
   }

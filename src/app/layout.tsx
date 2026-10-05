@@ -16,27 +16,27 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://khandelwalinvite.vercel.app'),
-  title: "Arpit's 40th & Diwali Bash — A Personal Invitation",
-  description: 'You have received a personal invitation — Friday, 23 October 2026, Jaipur.',
+  title: '\u200B',
+  description: '\u200B',
   openGraph: {
-    title: "Arpit's 40th & Diwali Bash",
-    description: 'A personal invitation for you — Friday, 23 October 2026, Jaipur.',
+    title: '\u200B',
+    description: '\u200B',
     url: 'https://khandelwalinvite.vercel.app',
-    siteName: "Arpit's 40th & Diwali Bash",
+    siteName: '',
     images: [
       {
         url: 'https://khandelwalinvite.vercel.app/og.jpg',
-        width: 1200,
-        height: 630,
+        width: 720,
+        height: 1280,
         type: 'image/jpeg',
-        alt: "Arpit's 40th & Diwali Bash Invitation",
+        alt: 'Save the Date',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: "Arpit's 40th & Diwali Bash",
-    description: 'A personal invitation for you — Friday, 23 October 2026, Jaipur.',
+    title: '\u200B',
+    description: '\u200B',
     images: ['https://khandelwalinvite.vercel.app/og.jpg'],
   },
   robots: 'noindex, nofollow',
