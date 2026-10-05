@@ -28,12 +28,12 @@ export default function VideoScreen({
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
   const [videoState, setVideoState] = useState<'loading' | 'playing' | 'ended' | 'unavailable'>('loading')
-  const [activeUrl, setActiveUrl] = useState<string>('')
   const [currentTime, setCurrentTime] = useState<number>(0)
   const [duration, setDuration] = useState<number>(10)
   const [showSkip, setShowSkip] = useState(false)
   const [soundMuted, setSoundMuted] = useState(true)
   const startedRef = useRef(false)
+  const endedCalledRef = useRef(false)
 
   // Calendar handle
   const handleCalendar = (e: React.MouseEvent) => {
@@ -56,69 +56,68 @@ export default function VideoScreen({
   useEffect(() => {
     if (!active) return
 
-    // Resolve video URL priority:
-    // 1. Explicit guest custom video URL
-    // 2. Global default video URL from config
-    // 3. Fallback video path
     const targetUrl = customVideoUrl || EVENT.videoUrl || '/videos/teaser.mp4'
-    setActiveUrl(targetUrl)
-
     const video = videoRef.current
     const audio = audioRef.current
     if (!video) return
 
     video.src = targetUrl
     video.muted = true
+    video.defaultMuted = true
 
-    // Show skip after 3 seconds
-    const skipTimer = setTimeout(() => setShowSkip(true), 3000)
+    // Show skip button after 2 seconds guaranteed
+    const skipTimer = setTimeout(() => setShowSkip(true), 2000)
 
-    const playVideo = async () => {
-      try {
-        await video.play()
+    // Attempt MUTED autoplay (100% compliant with mobile browser policies)
+    const playVideoMuted = () => {
+      video.muted = true
+      video.play().then(() => {
         setVideoState('playing')
-        if (!startedRef.current) { startedRef.current = true; onStart() }
-
-        // Try unmuting sound automatically if permitted
-        try {
-          video.muted = false
-          setSoundMuted(false)
-        } catch {
-          video.muted = true
-          setSoundMuted(true)
+        if (!startedRef.current) {
+          startedRef.current = true
+          onStart()
         }
-
-        if (audio && EVENT.audioUrl) {
-          audio.src = EVENT.audioUrl
-          audio.play().catch(() => {})
-        }
-      } catch (err) {
-        console.warn('Autoplay attempt:', err)
-        video.muted = true
-        video.play().then(() => {
-          setVideoState('playing')
-          setSoundMuted(true)
-          if (!startedRef.current) { startedRef.current = true; onStart() }
-        }).catch(() => {
-          setVideoState('playing')
-        })
-      }
+      }).catch((err) => {
+        console.warn('Muted autoplay failed or restricted:', err)
+        setVideoState('playing')
+      })
     }
 
-    playVideo()
+    playVideoMuted()
+
+    // Fallback ticker timer to advance currentTime if video element stalls or fails
+    const fallbackTicker = setInterval(() => {
+      if (video && !video.paused && video.currentTime > 0) {
+        setCurrentTime(video.currentTime)
+        if (video.duration && !isNaN(video.duration) && video.duration > 0) {
+          setDuration(video.duration)
+        }
+      } else {
+        // Increment timer synthetically if video is stuck so text beats still advance
+        setCurrentTime((prev) => {
+          const next = prev + 0.25
+          if (next >= duration && !endedCalledRef.current) {
+            endedCalledRef.current = true
+            setTimeout(() => onEnd(), 3500)
+          }
+          return next
+        })
+      }
+    }, 250)
 
     const handleTimeUpdate = () => {
-      if (video) {
+      if (video && !isNaN(video.currentTime)) {
         setCurrentTime(video.currentTime)
-        if (video.duration && !isNaN(video.duration)) {
+        if (video.duration && !isNaN(video.duration) && video.duration > 0) {
           setDuration(video.duration)
         }
       }
     }
 
     const handleEnded = () => {
+      if (endedCalledRef.current) return
+      endedCalledRef.current = true
       setVideoState('ended')
-      // Wait 3.5 seconds on the final frame & end screen before navigating to RSVP
       setTimeout(() => {
         if (audio) audio.pause()
         onEnd()
@@ -135,32 +134,50 @@ export default function VideoScreen({
 
     return () => {
       clearTimeout(skipTimer)
+      clearInterval(fallbackTicker)
       video.removeEventListener('timeupdate', handleTimeUpdate)
       video.removeEventListener('ended', handleEnded)
       video.removeEventListener('error', handleError)
       video.pause()
       if (audio) audio.pause()
     }
-  }, [active, customVideoUrl, onEnd, onStart])
+  }, [active, customVideoUrl, duration, onEnd, onStart])
 
-  // Sound toggle button
-  const toggleSound = (e: React.MouseEvent) => {
+  // Handle user interaction (tap anywhere to un-mute and guarantee playback)
+  const handleUserInteraction = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (videoRef.current) {
-      const nextMuted = !videoRef.current.muted
-      videoRef.current.muted = nextMuted
-      setSoundMuted(nextMuted)
+    const video = videoRef.current
+    const audio = audioRef.current
+
+    if (video) {
+      if (video.paused) {
+        video.muted = false
+        video.play().then(() => {
+          setSoundMuted(false)
+          setVideoState('playing')
+        }).catch(() => {
+          video.muted = true
+          video.play().catch(() => {})
+          setSoundMuted(true)
+        })
+      } else {
+        const nextMuted = !video.muted
+        video.muted = nextMuted
+        setSoundMuted(nextMuted)
+      }
     }
-    if (audioRef.current) {
-      if (audioRef.current.paused) audioRef.current.play().catch(() => {})
-      else audioRef.current.pause()
+
+    if (audio && EVENT.audioUrl) {
+      if (audio.paused) {
+        audio.src = EVENT.audioUrl
+        audio.play().catch(() => {})
+      } else {
+        audio.pause()
+      }
     }
   }
 
-  // Auto-scale Beat logic based on actual video duration:
-  // Beat 1: First 33% of video
-  // Beat 2: Middle 33% of video
-  // Beat 3: Final 33% of video + 3.5s pause on final frame
+  // Teaser Beat calculations based on current time and total video duration
   const beat1End = duration ? duration * 0.33 : 3.3
   const beat2End = duration ? duration * 0.66 : 6.6
 
@@ -170,24 +187,21 @@ export default function VideoScreen({
 
   return (
     <div
-      className="relative w-full h-dvh bg-black overflow-hidden select-none cursor-pointer"
-      onClick={toggleSound}
+      className="relative w-full full-viewport-height bg-black overflow-hidden select-none cursor-pointer"
+      onClick={handleUserInteraction}
     >
-
       {/* Video Element */}
       <video
         ref={videoRef}
         className="absolute inset-0 w-full h-full object-cover"
         playsInline
-        webkit-playsinline="true"
-        x5-playsinline="true"
         muted
         autoPlay
         preload="auto"
         poster={EVENT.poster || undefined}
       />
 
-      {/* Optional Custom Audio Element */}
+      {/* Optional Audio Element */}
       {EVENT.audioUrl && (
         <audio ref={audioRef} preload="auto" />
       )}
@@ -214,7 +228,7 @@ export default function VideoScreen({
         {/* CENTER STAGE: SEQUENTIAL TEASER BEATS */}
         <div className="relative w-full flex-1 flex flex-col items-center justify-center text-center">
 
-          {/* BEAT 1 (0:00 - 0:03.3): Opening Title Reveal */}
+          {/* BEAT 1: Opening Title Reveal */}
           <div className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ${
             isBeat1 ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
           }`}>
@@ -238,7 +252,7 @@ export default function VideoScreen({
             </p>
           </div>
 
-          {/* BEAT 2 (0:03.3 - 0:06.6): Personalized Guest Card */}
+          {/* BEAT 2: Personalized Guest Card */}
           <div className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ${
             isBeat2 ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
           }`}>
@@ -264,7 +278,7 @@ export default function VideoScreen({
             </div>
           </div>
 
-          {/* BEAT 3 (0:06.6 - 0:10.0+): Climax & Interactive CTAs */}
+          {/* BEAT 3: Climax & Interactive CTAs */}
           <div className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ${
             isBeat3 ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
           }`}>
@@ -278,7 +292,7 @@ export default function VideoScreen({
               JAIPUR · RAJASTHAN
             </p>
 
-            {/* Interactive CTAs inside Video Climax */}
+            {/* Interactive CTAs */}
             <div className="flex flex-col gap-3 w-full max-w-xs px-4">
               <button
                 onClick={handleCalendar}
@@ -300,12 +314,12 @@ export default function VideoScreen({
         {/* BOTTOM NAVIGATION BAR */}
         <div className="w-full pb-4 flex justify-between items-center pointer-events-auto">
           <button
-            onClick={toggleSound}
+            onClick={handleUserInteraction}
             className="glass px-4 py-2 rounded-full border border-[#C9A84C]/40 flex items-center gap-2 hover:bg-[#C9A84C]/10 transition-all active:scale-95 animate-pulse"
           >
             <span className="text-amber-400 text-xs">{soundMuted ? '🔇' : '🔊'}</span>
             <span className="font-sans text-[10px] tracking-[0.2em] uppercase text-[#C9A84C]">
-              {soundMuted ? 'Tap for Sound' : 'Sound On'}
+              {soundMuted ? 'Tap for Sound & Play' : 'Sound On'}
             </span>
           </button>
 

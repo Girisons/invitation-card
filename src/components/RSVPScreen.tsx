@@ -37,8 +37,8 @@ export default function RSVPScreen({ guest, guestName, onComplete, active }: Pro
   }
 
   return (
-    <div className="w-full h-dvh overflow-y-auto overscroll-contain bg-[#050D1A] safe-top safe-bottom">
-      <div className={`min-h-dvh flex flex-col px-6 py-12 max-w-sm mx-auto transition-all duration-700 ${visible ? 'opacity-100' : 'opacity-0'}`}>
+    <div className="w-full full-viewport-height overflow-y-auto overscroll-contain bg-[#050D1A] safe-top safe-bottom">
+      <div className={`min-h-full flex flex-col px-6 py-12 max-w-sm mx-auto transition-all duration-700 ${visible ? 'opacity-100' : 'opacity-0'}`}>
 
         {/* DECISION STEP */}
         <div className="flex flex-col items-center text-center my-auto">

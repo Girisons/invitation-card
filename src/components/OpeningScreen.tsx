@@ -17,7 +17,7 @@ export default function OpeningScreen({ guestName, onEnter }: Props) {
   }, [])
 
   return (
-    <div className="relative w-full h-dvh flex flex-col items-center justify-center safe-top safe-bottom px-8 overflow-hidden">
+    <div className="relative w-full full-viewport-height flex flex-col items-center justify-center safe-top safe-bottom px-8 overflow-hidden">
 
       {/* Ambient background glow — top */}
       <div

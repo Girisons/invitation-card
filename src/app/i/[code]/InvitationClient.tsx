@@ -51,7 +51,7 @@ export default function InvitationClient({ guest, inviteCode }: Props) {
     : guest.first_name
 
   return (
-    <div className="grain relative w-full h-dvh overflow-hidden bg-[#050D1A]">
+    <div className="grain relative w-full full-viewport-height overflow-hidden bg-[#050D1A]">
       {/* Opening — always rendered, hidden when not active */}
       <div className={`absolute inset-0 transition-opacity duration-1000 ${screen === 'opening' ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none z-0'}`}>
         <OpeningScreen

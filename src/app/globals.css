@@ -26,6 +26,13 @@ body {
   background: var(--navy);
 }
 
+.full-viewport-height {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 /* Typography */
 .font-serif { font-family: var(--font-serif), 'Georgia', serif; }
 .font-sans  { font-family: var(--font-sans), system-ui, sans-serif; }

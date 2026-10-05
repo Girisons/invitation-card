@@ -39,7 +39,7 @@ export default function ConfirmationScreen({ guest, guestName, status }: Props) 
 
   if (status === 'declined') {
     return (
-      <div className={`w-full h-dvh flex flex-col items-center justify-center px-8 safe-top safe-bottom bg-[#050D1A] transition-all duration-700 ${visible ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`w-full full-viewport-height flex flex-col items-center justify-center px-8 safe-top safe-bottom bg-[#050D1A] transition-all duration-700 ${visible ? 'opacity-100' : 'opacity-0'}`}>
         <div className="flex flex-col items-center text-center max-w-sm">
           <div className="text-4xl mb-10 opacity-30">◆</div>
           <h2 className="font-serif text-3xl text-[#F5ECD7] mb-4">We'll miss you.</h2>
@@ -59,8 +59,8 @@ export default function ConfirmationScreen({ guest, guestName, status }: Props) 
   }
 
   return (
-    <div className={`w-full h-dvh overflow-y-auto overscroll-contain bg-[#050D1A] safe-top safe-bottom transition-all duration-700 ${visible ? 'opacity-100' : 'opacity-0'}`}>
-      <div className="min-h-dvh flex flex-col items-center justify-center px-8 py-16 max-w-sm mx-auto">
+    <div className={`w-full full-viewport-height overflow-y-auto overscroll-contain bg-[#050D1A] safe-top safe-bottom transition-all duration-700 ${visible ? 'opacity-100' : 'opacity-0'}`}>
+      <div className="min-h-full flex flex-col items-center justify-center px-8 py-16 max-w-sm mx-auto">
 
         {/* Ambient glow */}
         <div
