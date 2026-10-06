@@ -14,13 +14,14 @@ interface Props {
 }
 
 export default function InvitationClient({ guest, inviteCode }: Props) {
-  const [screen, setScreen] = useState<Screen>('opening')
+  const [screen, setScreen] = useState<Screen>('video')
   const [rsvpStatus, setRsvpStatus] = useState<'attending' | 'declined' | null>(null)
 
   // Track invitation opened & entered video directly
   useEffect(() => {
     trackEvent(guest.id, inviteCode, 'invitation_opened')
-    updateGuestStatus(guest.id, 'opened')
+    trackEvent(guest.id, inviteCode, 'invitation_entered')
+    updateGuestStatus(guest.id, 'entered')
   }, [guest.id, inviteCode])
 
   const handleEnter = () => {

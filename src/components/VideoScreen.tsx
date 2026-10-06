@@ -33,6 +33,7 @@ export default function VideoScreen({
   const [showSkip, setShowSkip] = useState(false)
   const [soundMuted, setSoundMuted] = useState(true)
   const [hasTappedSound, setHasTappedSound] = useState(false)
+  const [soundPromptVisible, setSoundPromptVisible] = useState(true)
   const startedRef = useRef(false)
   const endedCalledRef = useRef(false)
 
@@ -68,6 +69,11 @@ export default function VideoScreen({
 
     // Show skip button after 2 seconds guaranteed
     const skipTimer = setTimeout(() => setShowSkip(true), 2000)
+
+    // Auto-dismiss TAP FOR SOUND prompt after 3 seconds
+    const promptTimer = setTimeout(() => {
+      setSoundPromptVisible(false)
+    }, 3000)
 
     // Attempt MUTED autoplay (100% compliant with mobile browser policies)
     const playVideoMuted = () => {
@@ -132,6 +138,7 @@ export default function VideoScreen({
 
     return () => {
       clearTimeout(skipTimer)
+      clearTimeout(promptTimer)
       clearInterval(fallbackTicker)
       video.removeEventListener('timeupdate', handleTimeUpdate)
       video.removeEventListener('ended', handleEnded)
@@ -208,9 +215,9 @@ export default function VideoScreen({
       {/* Dark Vignette Overlay for Crisp Typography Contrast */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/25 to-black/80 pointer-events-none" />
 
-      {/* ── BIG CENTER "TAP TO PLAY WITH SOUND" OVERLAY PROMPT ── */}
-      {soundMuted && !hasTappedSound && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-500 pointer-events-auto p-6">
+      {/* ── BIG CENTER "TAP FOR SOUND" OVERLAY PROMPT (AUTO DISMISSES IN 3s) ── */}
+      {soundMuted && soundPromptVisible && !hasTappedSound && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-700 pointer-events-auto p-6 animate-fadeIn">
           <button
             onClick={handleUserInteraction}
             className="flex flex-col items-center gap-3 px-8 py-7 rounded-2xl border-2 border-[#C9A84C] bg-[#050D1A]/95 text-[#F5ECD7] shadow-[0_0_60px_rgba(201,168,76,0.7)] hover:scale-105 active:scale-95 transition-all animate-pulse"
