@@ -228,7 +228,11 @@ function PersonSection({ label, person, onChange }: { label: string; person: Per
 
 const getStatusInfo = (status: string) => {
   const s = (status || '').toLowerCase()
-  if (s === 'entered' || s === 'opened' || s === 'seen' || s === 'message_seen') {
+  if (
+    s === 'entered' || s === 'opened' || s === 'seen' || s === 'message_seen' ||
+    s === 'attending' || s === 'declined' || s === 'rsvp_yes' || s === 'rsvp_no' ||
+    s === 'yes' || s === 'no'
+  ) {
     return { label: 'MESSAGE SEEN', color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' }
   }
   if (s === 'sent' || s === 'message_sent') {
@@ -573,7 +577,7 @@ export default function AdminPage() {
   // Attendance stats counts
   const pendingCount = guests.filter(g => !g.invitation_status || ['pending', 'not_sent'].includes((g.invitation_status || '').toLowerCase())).length
   const messageSentCount = guests.filter(g => ['sent', 'message_sent'].includes((g.invitation_status || '').toLowerCase())).length
-  const messageSeenCount = guests.filter(g => ['opened', 'entered', 'seen', 'message_seen'].includes((g.invitation_status || '').toLowerCase())).length
+  const messageSeenCount = guests.filter(g => ['opened', 'entered', 'seen', 'message_seen', 'attending', 'declined', 'rsvp_yes', 'rsvp_no', 'yes', 'no'].includes((g.invitation_status || '').toLowerCase())).length
   const attendingCount = guests.filter(g => ['rsvp_yes', 'attending', 'yes'].includes((g.invitation_status || '').toLowerCase())).length
   const declinedCount = guests.filter(g => ['rsvp_no', 'declined', 'not_attending', 'no'].includes((g.invitation_status || '').toLowerCase())).length
 
