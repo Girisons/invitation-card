@@ -36,6 +36,7 @@ export default function VideoScreen({
   const [soundPromptVisible, setSoundPromptVisible] = useState(true)
   const startedRef = useRef(false)
   const endedCalledRef = useRef(false)
+  const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Calendar handle
   const handleCalendar = (e: React.MouseEvent) => {
@@ -66,53 +67,52 @@ export default function VideoScreen({
     video.src = targetUrl
     video.muted = true
     video.defaultMuted = true
+    video.pause() // Do NOT start video immediately, wait for card tap or 3s timer
 
     // Show skip button after 2 seconds guaranteed
     const skipTimer = setTimeout(() => setShowSkip(true), 2000)
 
-    let promptTimer: NodeJS.Timeout | null = null
+    // 3-second timer: If user does not tap, hide card and start video
+    autoPlayTimerRef.current = setTimeout(() => {
+      setSoundPromptVisible(false)
+      if (video) {
+        // Attempt unmuted play first, fallback to muted if browser restricts unmuted autoplay
+        video.muted = false
+        video.play().then(() => {
+          setSoundMuted(false)
+          setVideoState('playing')
+          if (!startedRef.current) {
+            startedRef.current = true
+            onStart()
+          }
+        }).catch(() => {
+          video.muted = true
+          video.play().then(() => {
+            setSoundMuted(true)
+            setVideoState('playing')
+            if (!startedRef.current) {
+              startedRef.current = true
+              onStart()
+            }
+          }).catch((err) => {
+            console.warn('Autoplay restricted:', err)
+            setVideoState('playing')
+          })
+        })
+      }
+    }, 3000)
 
-    // Attempt MUTED autoplay (100% compliant with mobile browser policies)
-    const playVideoMuted = () => {
-      video.muted = true
-      video.play().then(() => {
-        setVideoState('playing')
-        // Start 3-second countdown EXACTLY when video playback begins
-        promptTimer = setTimeout(() => {
-          setSoundPromptVisible(false)
-        }, 3000)
-        if (!startedRef.current) {
-          startedRef.current = true
-          onStart()
-        }
-      }).catch((err) => {
-        console.warn('Muted autoplay failed or restricted:', err)
-        setVideoState('playing')
-        promptTimer = setTimeout(() => {
-          setSoundPromptVisible(false)
-        }, 3000)
-      })
-    }
-
-    playVideoMuted()
-
-    // Fallback ticker timer to advance currentTime if video element stalls or fails
+    // Fallback ticker timer to advance currentTime once video starts
     const fallbackTicker = setInterval(() => {
       if (video && !video.paused && video.currentTime > 0) {
         setCurrentTime(video.currentTime)
-        if (video.currentTime >= 3) {
-          setSoundPromptVisible(false)
-        }
         if (video.duration && !isNaN(video.duration) && video.duration > 0) {
           setDuration(video.duration)
         }
-      } else {
-        // Increment timer synthetically if video is stuck so text beats still advance
+      } else if (startedRef.current) {
+        // Increment timer synthetically if video is playing but stuck
         setCurrentTime((prev) => {
           const next = prev + 0.25
-          if (next >= 3) {
-            setSoundPromptVisible(false)
-          }
           if (next >= duration && !endedCalledRef.current) {
             endedCalledRef.current = true
             setVideoState('ended')
@@ -125,9 +125,6 @@ export default function VideoScreen({
     const handleTimeUpdate = () => {
       if (video && !isNaN(video.currentTime)) {
         setCurrentTime(video.currentTime)
-        if (video.currentTime >= 3) {
-          setSoundPromptVisible(false)
-        }
         if (video.duration && !isNaN(video.duration) && video.duration > 0) {
           setDuration(video.duration)
         }
@@ -151,7 +148,7 @@ export default function VideoScreen({
 
     return () => {
       clearTimeout(skipTimer)
-      if (promptTimer) clearTimeout(promptTimer)
+      if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current)
       clearInterval(fallbackTicker)
       video.removeEventListener('timeupdate', handleTimeUpdate)
       video.removeEventListener('ended', handleEnded)
@@ -161,29 +158,41 @@ export default function VideoScreen({
     }
   }, [active, customVideoUrl, duration, onStart])
 
-  // Handle user interaction (tap anywhere to un-mute and guarantee playback)
+  // Handle user interaction (tap card or screen to start video immediately WITH AUDIO)
   const handleUserInteraction = (e: React.MouseEvent) => {
     e.stopPropagation()
     setHasTappedSound(true)
+    setSoundPromptVisible(false)
+
+    if (autoPlayTimerRef.current) {
+      clearTimeout(autoPlayTimerRef.current)
+      autoPlayTimerRef.current = null
+    }
+
     const video = videoRef.current
     const audio = audioRef.current
 
     if (video) {
-      if (video.paused || soundMuted) {
-        video.muted = false
+      video.muted = false
+      video.play().then(() => {
+        setSoundMuted(false)
+        setVideoState('playing')
+        if (!startedRef.current) {
+          startedRef.current = true
+          onStart()
+        }
+      }).catch((err) => {
+        console.warn('Unmuted play blocked by browser, trying muted:', err)
+        video.muted = true
         video.play().then(() => {
-          setSoundMuted(false)
-          setVideoState('playing')
-        }).catch(() => {
-          video.muted = true
-          video.play().catch(() => {})
           setSoundMuted(true)
-        })
-      } else {
-        const nextMuted = !video.muted
-        video.muted = nextMuted
-        setSoundMuted(nextMuted)
-      }
+          setVideoState('playing')
+          if (!startedRef.current) {
+            startedRef.current = true
+            onStart()
+          }
+        }).catch(() => {})
+      })
     }
 
     if (audio && EVENT.audioUrl) {
@@ -214,8 +223,6 @@ export default function VideoScreen({
         ref={videoRef}
         className="absolute inset-0 w-full h-full object-cover"
         playsInline
-        muted
-        autoPlay
         preload="auto"
         poster={EVENT.poster || undefined}
       />
@@ -228,23 +235,25 @@ export default function VideoScreen({
       {/* Dark Vignette Overlay for Crisp Typography Contrast */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/25 to-black/80 pointer-events-none" />
 
-      {/* ── BIG CENTER "TAP FOR SOUND" OVERLAY PROMPT (AUTO DISMISSES IN 3s) ── */}
-      {soundMuted && soundPromptVisible && !hasTappedSound && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-700 pointer-events-auto p-6 animate-fadeIn">
-          <button
-            onClick={handleUserInteraction}
-            className="flex flex-col items-center gap-3 px-8 py-7 rounded-2xl border-2 border-[#C9A84C] bg-[#050D1A]/95 text-[#F5ECD7] shadow-[0_0_60px_rgba(201,168,76,0.7)] hover:scale-105 active:scale-95 transition-all animate-pulse"
+      {/* ── BIG CENTER "TAP FOR SOUND" OVERLAY PROMPT (AUTO DISMISSES IN 3s OR IMMEDIATELY ON TAP) ── */}
+      {soundPromptVisible && (
+        <div
+          onClick={handleUserInteraction}
+          className="absolute inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md transition-all duration-500 cursor-pointer p-6 animate-fadeIn"
+        >
+          <div
+            className="flex flex-col items-center justify-center text-center px-8 py-10 rounded-2xl border-2 border-[#C9A84C] bg-[#050D1A]/95 text-[#F5ECD7] shadow-[0_0_60px_rgba(201,168,76,0.6)] hover:scale-105 active:scale-95 transition-all max-w-xs w-full"
           >
-            <div className="w-16 h-16 rounded-full bg-[#C9A84C]/20 border border-[#C9A84C] flex items-center justify-center text-3xl text-amber-400 shadow-inner">
-              🔊
+            <div className="w-20 h-20 rounded-full border-2 border-[#C9A84C]/80 bg-[#C9A84C]/10 flex items-center justify-center mb-6 shadow-inner">
+              <span className="text-4xl text-amber-400">🔊</span>
             </div>
-            <span className="font-serif text-xl font-bold tracking-wider text-[#FFF6D6]">
+            <h2 className="font-serif text-2xl font-bold tracking-wider text-[#FFF6D6] mb-3 uppercase">
               TAP FOR SOUND
-            </span>
-            <span className="font-sans text-[10px] tracking-[0.25em] uppercase text-[#C9A84C]/90 font-medium">
-              Arpit's 40th & Diwali Celebration
-            </span>
-          </button>
+            </h2>
+            <p className="font-sans text-[11px] tracking-[0.25em] uppercase text-[#C9A84C] font-semibold">
+              ARPIT'S 40TH & DIWALI CELEBRATION
+            </p>
+          </div>
         </div>
       )}
 
