@@ -37,9 +37,9 @@ export default function ConfirmationScreen({ guest, guestName, status }: Props) 
     const phone = EVENT.phone.replace(/\D/g, '')
     let msg = ''
     if (status === 'attending') {
-      msg = `\u2728 Hi Vipul!\nWe’re super excited to join in for Arpit’s 40th birthday and Diwali celebration. Looking forward to seeing you on Friday, 23rd October 2026 and being part of the double celebration!\n\n— ${guestName} \u2728`
+      msg = `\u2728 Hi Tanvi!\nWe’re super excited to join in for Arpit’s 40th birthday and Diwali celebration. Looking forward to seeing you on Friday, 23rd October 2026 and being part of the double celebration!\n\n— ${guestName} \u2728`
     } else {
-      msg = `Hi Vipul! Unfortunately I won't be able to make it for Arpit's 40th & Diwali celebration. Sending my warmest wishes to Arpit & family!\n\n— ${guestName}`
+      msg = `Hi Tanvi! Unfortunately I won't be able to make it for Arpit's 40th & Diwali celebration. Sending my warmest wishes to Arpit & family!\n\n— ${guestName}`
     }
     const targetUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
     window.open(targetUrl, '_blank')
@@ -56,7 +56,7 @@ export default function ConfirmationScreen({ guest, guestName, status }: Props) 
           </p>
 
           <button onClick={handleWhatsApp} className="btn-outline w-full py-4 text-sm tracking-[0.2em] uppercase mb-4">
-            Message Vipul
+            Message Tanvi
           </button>
           <p className="font-sans text-xs text-[#C9A84C]/60 tracking-wide">
             Plans can change… and we'll be waiting to celebrate with you.
@@ -113,7 +113,7 @@ export default function ConfirmationScreen({ guest, guestName, status }: Props) 
               📅 Add to Calendar
             </button>
             <button onClick={handleWhatsApp} className="btn-outline w-full py-4 text-sm tracking-[0.2em] uppercase">
-              💬 Message Vipul
+              💬 Message Tanvi
             </button>
           </div>
 

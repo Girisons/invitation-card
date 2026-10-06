@@ -491,7 +491,7 @@ export default function AdminPage() {
       gift: String.fromCodePoint(0x1F381),
     }
 
-    const msg = `${EMOJI.sparkles} *Four Decades. One Amazing Journey. And Now… One BIG Celebration!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my brother *ARPIT’s 40th Birthday & Diwali Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\n*${name} — no excuses, no “we’ll try”, and definitely no last-minute plans! ${EMOJI.wink}*\nWe are waiting to celebrate this beautiful evening with ${youTarget}. ${EMOJI.heart}\n\nWith lots of love,\n*Vipul & Entire Khandelwal Family*\n${EMOJI.phone} +91 9414036060\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${link}`
+    const msg = `${EMOJI.sparkles} *Four Decades. One Amazing Journey. And Now… One BIG Celebration!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my husband *ARPIT’s 40th Birthday & Diwali Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\n*${name} — no excuses, no “we’ll try”, and definitely no last-minute plans! ${EMOJI.wink}*\nWe are waiting to celebrate this beautiful evening with ${youTarget}. ${EMOJI.heart}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*\n${EMOJI.phone} +91 9414036060\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${link}`
 
     const phone = formatWhatsAppPhone(g.mobile || '')
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
@@ -823,7 +823,7 @@ export default function AdminPage() {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Invited By</label>
-                  <input value={form.guest_of} onChange={e => setForm(f => ({ ...f, guest_of: e.target.value }))} placeholder="Arpit / Vipul"
+                  <input value={form.guest_of} onChange={e => setForm(f => ({ ...f, guest_of: e.target.value }))} placeholder="Arpit / Tanvi"
                     className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40" />
                 </div>
                 <div className="col-span-2">

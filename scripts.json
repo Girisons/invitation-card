@@ -1,0 +1,59 @@
+{
+  "_event_info": {
+    "event": "Arpit Khandelwal's 40th Birthday + Diwali Double Celebration",
+    "date": "23rd October 2026",
+    "host": "Vipul Khandelwal (younger brother)",
+    "theme": "Save The Date — Birthday + Diwali Combined",
+    "tone": "Friendly, warm, personal, exciting"
+  },
+
+  "vipul_recording_scripts": {
+
+    "heygen_avatar_video_2min": {
+      "purpose": "HeyGen avatar creation — Vipul speaks this naturally on camera",
+      "script": "Hi everyone! Main Vipul hoon. Aaj main apni life ke sabse exciting announcement karne wala hoon. Mere bade bhai Arpit ka 40th birthday aa raha hai — 23 October ko! Yeh sirf ek birthday nahi hai, yaar. Yeh ek milestone hai. 40 saal! Aur sabse mast baat? Is baar Diwali bhi saath mein aa rahi hai! Toh hum log dono ko ek saath celebrate kar rahe hain — ek double dhamaka! Birthday bhi, Diwali bhi! Lights, music, great food, family, friends — sab kuch ek hi raat mein. Mere bhai ne apni zindagi mein jo kuch bhi achieve kiya hai, jo insaan woh hain, us sab ko is raat celebrate karna chahta hoon. Yeh sirf ek party nahi hai — yeh ek moment hai jo hum sab yaad rakhenge. Toh please, 23 October ko apni diary mein mark kar lo. Aur details ke liye neeche scroll karo. Main personally aapka intezaar karoonga!"
+    },
+
+    "voice_clone_30sec": {
+      "purpose": "HeyGen voice clone — Hinglish, clear, warm",
+      "script": "Hi! Main Vipul hoon. Mere bade bhai Arpit ka 40th birthday aur Diwali dono 23 October ko celebrate ho rahe hain. Yeh ek double dhamaka hai aur main chahta hoon ki aap zaroor aayein. Yeh raat kuch khaas hone wali hai!"
+    }
+  },
+
+  "save_the_date_scripts": {
+
+    "uncle_formal": {
+      "salutation": "Pranam {NAME} Ji! 🙏",
+      "script": "Pranam {NAME} Ji! Main Vipul bol raha hoon. Ek bahut khaas khabar hai — mere bade bhai Arpit ka 40th birthday hai 23 October ko, aur is baar hum usse Diwali ke saath celebrate kar rahe hain! Yeh ek double celebration hoga — birthday bhi, Diwali bhi — ek hi khaas raat mein. Aapka aashirwaad aur presence is occasion ko truly special bana dega. Please 23 October apni diary mein save karein. Hum aapka dil se intezaar karenge!"
+    },
+
+    "auntie_formal": {
+      "salutation": "Pranam {NAME} Ji! ✨",
+      "script": "Pranam {NAME} Ji! Yeh Vipul hoon. Ek bohot exciting news share karni thi — Bhaiya Arpit ka 40th birthday 23 October ko hai, aur kyunki Diwali bhi aa rahi hai, hum dono ko ek saath celebrate kar rahe hain! Ek grand evening plan ki hai — lights, diyas, music, accha khana aur poori family saath mein. Aapke bina yeh celebration adhoori lagegi. Please 23 October zaroor save karein!"
+    },
+
+    "friend_close": {
+      "salutation": "Arre {NAME} yaar! 🎉",
+      "script": "Arre {NAME} yaar! Vipul here! Sun na, ek massive news hai — Arpit bhai ka 40th birthday aa gaya bhai! 23 October! Aur sab se mast baat? Diwali bhi saath mein hai! Toh hum log ek double dhamaka kar rahe hain — birthday party aur Diwali celebration ek saath! DJ, lights, drinks, badhiya khana, patakhe — poora scene hoga yaar! Seriously, yeh raat legendary hone wali hai. Tu toh pakka aayega na? 23 October — date block kar abhi!"
+    },
+
+    "friend_casual": {
+      "salutation": "Hey {NAME}! 🔥",
+      "script": "Hey {NAME}! Vipul this side! Bhai, ek game-changing news hai — Arpit bhai 40 ke ho rahe hain 23 October ko! 40 yaar — the big four-oh! Aur upar se Diwali ka season bhi hai toh hum ne socha — ek hi night mein dono celebrate karte hain! It's going to be epic — great vibes, amazing food, lights everywhere aur of course the whole squad together! Don't miss this one. 23 October — mark it now!"
+    },
+
+    "colleague": {
+      "salutation": "Hello {NAME}! 🌟",
+      "script": "Hello {NAME}! Yeh Vipul Khandelwal bol raha hoon. Ek special occasion ke baare mein personally batana chahta tha — Mere bhai Arpit ka 40th birthday 23 October ko hai, aur since Diwali bhi around the same time hai, hum ne decide kiya hai ki dono ko ek grand evening mein celebrate karein! Yeh ek very special night hone wali hai aur hum chahte hain ki aap bhi is celebration ka hissa banen. Please 23 October save karein!"
+    }
+  },
+
+  "whatsapp_message_templates": {
+
+    "uncle_auntie": "🎂🪔 Ek Special Announcement!\n\nMere bhaiya Arpit ka 40th Birthday aur Diwali — dono 23 October ko celebrate ho rahe hain!\n\nAapka personal invite dekhen:\n{LINK}\n\n— Vipul Khandelwal",
+
+    "friend": "🎉🔥 Bhai sun!\n\nArpit bhai ka 40th Birthday + Diwali = Double Dhamaka on 23rd October!\n\nTera personal invite ready hai 👇\n{LINK}\n\nDate block kar abhi! — Vipul",
+
+    "colleague": "🎂✨ You're Invited!\n\nArpit Khandelwal's 40th Birthday & Diwali Double Celebration\n📅 23rd October\n\nYour personal invite:\n{LINK}\n\n— Vipul Khandelwal"
+  }
+}

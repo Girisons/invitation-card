@@ -4,7 +4,7 @@ export const EVENT = {
   date:    process.env.NEXT_PUBLIC_EVENT_DATE    || 'Friday, 23 October 2026',
   city:    process.env.NEXT_PUBLIC_EVENT_CITY    || 'Jaipur',
   venue:   process.env.NEXT_PUBLIC_EVENT_VENUE   || 'Jaipur (Venue details to follow)',
-  contact: process.env.NEXT_PUBLIC_RSVP_CONTACT  || 'Vipul',
+  contact: process.env.NEXT_PUBLIC_RSVP_CONTACT  || 'Tanvi',
   phone:   process.env.NEXT_PUBLIC_RSVP_PHONE    || '+919414036060',
   videoUrl: process.env.NEXT_PUBLIC_VIDEO_URL || '/videos/teaser.mp4',  // default video
   audioUrl: process.env.NEXT_PUBLIC_AUDIO_URL || '/audio/music.mp3',   // custom background music
