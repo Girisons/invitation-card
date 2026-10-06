@@ -32,6 +32,7 @@ export default function VideoScreen({
   const [duration, setDuration] = useState<number>(10)
   const [showSkip, setShowSkip] = useState(false)
   const [soundMuted, setSoundMuted] = useState(true)
+  const [hasTappedSound, setHasTappedSound] = useState(false)
   const startedRef = useRef(false)
   const endedCalledRef = useRef(false)
 
@@ -143,11 +144,12 @@ export default function VideoScreen({
   // Handle user interaction (tap anywhere to un-mute and guarantee playback)
   const handleUserInteraction = (e: React.MouseEvent) => {
     e.stopPropagation()
+    setHasTappedSound(true)
     const video = videoRef.current
     const audio = audioRef.current
 
     if (video) {
-      if (video.paused) {
+      if (video.paused || soundMuted) {
         video.muted = false
         video.play().then(() => {
           setSoundMuted(false)
@@ -205,6 +207,26 @@ export default function VideoScreen({
 
       {/* Dark Vignette Overlay for Crisp Typography Contrast */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/25 to-black/80 pointer-events-none" />
+
+      {/* ── BIG CENTER "TAP TO PLAY WITH SOUND" OVERLAY PROMPT ── */}
+      {soundMuted && !hasTappedSound && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-500 pointer-events-auto p-6">
+          <button
+            onClick={handleUserInteraction}
+            className="flex flex-col items-center gap-3 px-8 py-7 rounded-2xl border-2 border-[#C9A84C] bg-[#050D1A]/95 text-[#F5ECD7] shadow-[0_0_60px_rgba(201,168,76,0.7)] hover:scale-105 active:scale-95 transition-all animate-pulse"
+          >
+            <div className="w-16 h-16 rounded-full bg-[#C9A84C]/20 border border-[#C9A84C] flex items-center justify-center text-3xl text-amber-400 shadow-inner">
+              🔊
+            </div>
+            <span className="font-serif text-xl font-bold tracking-wider text-[#FFF6D6]">
+              TAP TO PLAY WITH SOUND
+            </span>
+            <span className="font-sans text-[10px] tracking-[0.25em] uppercase text-[#C9A84C]/90 font-medium">
+              Arpit's 40th & Diwali Celebration
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* ── MOVIE TEASER DYNAMIC TEXT OVERLAY SEQUENCE ── */}
       <div className="absolute inset-0 flex flex-col justify-between p-6 sm:p-10 pointer-events-none z-20">
