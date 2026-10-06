@@ -70,16 +70,17 @@ export default function VideoScreen({
     // Show skip button after 2 seconds guaranteed
     const skipTimer = setTimeout(() => setShowSkip(true), 2000)
 
-    // Auto-dismiss TAP FOR SOUND prompt after 3 seconds
-    const promptTimer = setTimeout(() => {
-      setSoundPromptVisible(false)
-    }, 3000)
+    let promptTimer: NodeJS.Timeout | null = null
 
     // Attempt MUTED autoplay (100% compliant with mobile browser policies)
     const playVideoMuted = () => {
       video.muted = true
       video.play().then(() => {
         setVideoState('playing')
+        // Start 3-second countdown EXACTLY when video playback begins
+        promptTimer = setTimeout(() => {
+          setSoundPromptVisible(false)
+        }, 3000)
         if (!startedRef.current) {
           startedRef.current = true
           onStart()
@@ -87,6 +88,9 @@ export default function VideoScreen({
       }).catch((err) => {
         console.warn('Muted autoplay failed or restricted:', err)
         setVideoState('playing')
+        promptTimer = setTimeout(() => {
+          setSoundPromptVisible(false)
+        }, 3000)
       })
     }
 
@@ -96,6 +100,9 @@ export default function VideoScreen({
     const fallbackTicker = setInterval(() => {
       if (video && !video.paused && video.currentTime > 0) {
         setCurrentTime(video.currentTime)
+        if (video.currentTime >= 3) {
+          setSoundPromptVisible(false)
+        }
         if (video.duration && !isNaN(video.duration) && video.duration > 0) {
           setDuration(video.duration)
         }
@@ -103,6 +110,9 @@ export default function VideoScreen({
         // Increment timer synthetically if video is stuck so text beats still advance
         setCurrentTime((prev) => {
           const next = prev + 0.25
+          if (next >= 3) {
+            setSoundPromptVisible(false)
+          }
           if (next >= duration && !endedCalledRef.current) {
             endedCalledRef.current = true
             setVideoState('ended')
@@ -115,6 +125,9 @@ export default function VideoScreen({
     const handleTimeUpdate = () => {
       if (video && !isNaN(video.currentTime)) {
         setCurrentTime(video.currentTime)
+        if (video.currentTime >= 3) {
+          setSoundPromptVisible(false)
+        }
         if (video.duration && !isNaN(video.duration) && video.duration > 0) {
           setDuration(video.duration)
         }
@@ -138,7 +151,7 @@ export default function VideoScreen({
 
     return () => {
       clearTimeout(skipTimer)
-      clearTimeout(promptTimer)
+      if (promptTimer) clearTimeout(promptTimer)
       clearInterval(fallbackTicker)
       video.removeEventListener('timeupdate', handleTimeUpdate)
       video.removeEventListener('ended', handleEnded)
