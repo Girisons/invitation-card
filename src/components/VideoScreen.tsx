@@ -219,7 +219,7 @@ export default function VideoScreen({
               🔊
             </div>
             <span className="font-serif text-xl font-bold tracking-wider text-[#FFF6D6]">
-              TAP TO PLAY WITH SOUND
+              TAP FOR SOUND
             </span>
             <span className="font-sans text-[10px] tracking-[0.25em] uppercase text-[#C9A84C]/90 font-medium">
               Arpit's 40th & Diwali Celebration
