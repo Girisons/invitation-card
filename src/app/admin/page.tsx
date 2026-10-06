@@ -301,6 +301,17 @@ export default function AdminPage() {
         }
       }
 
+      // Fetch RSVPs to sync any past or current RSVPs with guest attendance status
+      const { data: rsvps } = await supabase.from('rsvps').select('*')
+      if (rsvps && rsvps.length > 0) {
+        for (const g of data) {
+          const rsvp = rsvps.find((r: any) => r.guest_id === g.id || (g.linked_guest_id && r.guest_id === g.linked_guest_id))
+          if (rsvp && rsvp.status) {
+            g.invitation_status = rsvp.status
+          }
+        }
+      }
+
       setGuests([...data])
       setGuestMap(map)
     }

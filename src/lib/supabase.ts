@@ -125,6 +125,26 @@ export async function submitRSVP(
   status: 'attending' | 'declined',
   numberAttending: number
 ): Promise<RSVP | null> {
+  // Update invitation_status directly on guests table
+  await supabase
+    .from('guests')
+    .update({ invitation_status: status })
+    .eq('id', guestId)
+
+  // If linked partner guest exists and send_together, update partner as well
+  const { data: g } = await supabase
+    .from('guests')
+    .select('linked_guest_id, send_together')
+    .eq('id', guestId)
+    .single()
+
+  if (g && g.linked_guest_id && g.send_together) {
+    await supabase
+      .from('guests')
+      .update({ invitation_status: status })
+      .eq('id', g.linked_guest_id)
+  }
+
   // Check for existing RSVP
   const { data: existing } = await supabase
     .from('rsvps')
