@@ -5,6 +5,22 @@ import { supabase, Guest } from '@/lib/supabase'
 
 const ADMIN_PASS = process.env.NEXT_PUBLIC_ADMIN_PASS || 'arpit40'
 
+export interface PortalUser {
+  id: string
+  username: string
+  password: string
+  name: string
+  role: 'super_admin' | 'user'
+  created_at: string
+}
+
+const DEFAULT_USERS: PortalUser[] = [
+  { id: 'user-admin', username: 'admin', password: 'arpit40', name: 'Super Admin', role: 'super_admin', created_at: new Date().toISOString() },
+  { id: 'user-arpit', username: 'arpit', password: 'arpit40', name: 'Arpit', role: 'user', created_at: new Date().toISOString() },
+  { id: 'user-tanvi', username: 'tanvi', password: 'tanvi40', name: 'Tanvi', role: 'user', created_at: new Date().toISOString() },
+  { id: 'user-vipul', username: 'vipul', password: 'vipul40', name: 'Vipul', role: 'user', created_at: new Date().toISOString() },
+]
+
 function generateCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   return Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
@@ -149,15 +165,6 @@ interface FormState {
   guest_of: string; relationship_group: string
 }
 
-const emptyPerson = (): PersonForm => ({
-  first_name: '', last_name: '', nickname: '', mobile: '',
-  food_preference: '', liquor_preference: '', invite_code: generateCode(),
-})
-const emptyForm = (): FormState => ({
-  primary: emptyPerson(), spouse: { ...emptyPerson(), invite_code: generateCode() },
-  has_spouse: false, send_together: true, guest_of: '', relationship_group: '',
-})
-
 function PrefBtn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick}
@@ -242,21 +249,88 @@ const getStatusInfo = (status: string) => {
 }
 
 export default function AdminPage() {
-  const [authed, setAuthed] = useState(false)
-  const [pass, setPass] = useState('')
+  const [currentUser, setCurrentUser] = useState<PortalUser | null>(null)
+  const [portalUsers, setPortalUsers] = useState<PortalUser[]>(DEFAULT_USERS)
+
+  // Auth inputs
+  const [usernameInput, setUsernameInput] = useState('')
+  const [passwordInput, setPasswordInput] = useState('')
+  const [loginError, setLoginError] = useState('')
+
+  // Guest data & UI state
   const [guests, setGuests] = useState<Guest[]>([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [showUsersModal, setShowUsersModal] = useState(false)
+  const [hostFilter, setHostFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
-  const [form, setForm] = useState<FormState>(emptyForm())
-  const [editingGuest, setEditingGuest] = useState<Guest | null>(null)
-  const [editForm, setEditForm] = useState<Partial<Guest>>({})
   const [copied, setCopied] = useState<string | null>(null)
   const [importMsg, setImportMsg] = useState('')
   const [guestMap, setGuestMap] = useState<Record<string, { name: string; mobile: string }>>({})
+
+  // Form states
+  const emptyPerson = (): PersonForm => ({
+    first_name: '', last_name: '', nickname: '', mobile: '',
+    food_preference: '', liquor_preference: '', invite_code: generateCode(),
+  })
+  const emptyForm = (): FormState => ({
+    primary: emptyPerson(), spouse: { ...emptyPerson(), invite_code: generateCode() },
+    has_spouse: false, send_together: true,
+    guest_of: currentUser ? (currentUser.role === 'super_admin' ? '' : currentUser.name) : '',
+    relationship_group: '',
+  })
+
+  const [form, setForm] = useState<FormState>(emptyForm())
+  const [editingGuest, setEditingGuest] = useState<Guest | null>(null)
+  const [editForm, setEditForm] = useState<Partial<Guest>>({})
+
+  // New User Form State inside Users Modal
+  const [newUserName, setNewUserName] = useState('')
+  const [newUserUsername, setNewUserUsername] = useState('')
+  const [newUserPassword, setNewUserPassword] = useState('')
+  const [newUserRole, setNewUserRole] = useState<'super_admin' | 'user'>('user')
+  const [userMsg, setUserMsg] = useState('')
+
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // ── LOAD PORTAL USERS & CURRENT USER FROM LOCALSTORAGE / SUPABASE ──
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const { data } = await supabase.from('portal_users').select('*')
+        if (data && data.length > 0) {
+          setPortalUsers(data)
+          localStorage.setItem('portal_users', JSON.stringify(data))
+        } else {
+          const saved = localStorage.getItem('portal_users')
+          if (saved) setPortalUsers(JSON.parse(saved))
+          else localStorage.setItem('portal_users', JSON.stringify(DEFAULT_USERS))
+        }
+      } catch {
+        const saved = localStorage.getItem('portal_users')
+        if (saved) setPortalUsers(JSON.parse(saved))
+        else localStorage.setItem('portal_users', JSON.stringify(DEFAULT_USERS))
+      }
+
+      const activeUser = localStorage.getItem('portal_current_user')
+      if (activeUser) {
+        try { setCurrentUser(JSON.parse(activeUser)) } catch {}
+      }
+    }
+    loadUsers()
+  }, [])
+
+  // Save users helper
+  const savePortalUsers = async (updatedUsers: PortalUser[]) => {
+    setPortalUsers(updatedUsers)
+    localStorage.setItem('portal_users', JSON.stringify(updatedUsers))
+    try {
+      await supabase.from('portal_users').upsert(updatedUsers)
+    } catch {}
+  }
+
+  // ── FETCH GUESTS ──
   const fetchGuests = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase.from('guests').select('*').order('created_at', { ascending: false })
@@ -280,32 +354,10 @@ export default function AdminPage() {
             if (updates.partner_mobile) g.partner_mobile = updates.partner_mobile
             await supabase.from('guests').update(updates).eq('id', g.id)
           }
-        } else if (!g.linked_guest_id && g.partner_name) {
-          const match = data.find(other =>
-            other.id !== g.id &&
-            `${other.first_name}${other.last_name ? ' ' + other.last_name : ''}`.toLowerCase() === g.partner_name?.toLowerCase()
-          )
-          if (match) {
-            const myName = `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`
-            await supabase.from('guests').update({
-              linked_guest_id: match.id,
-              partner_mobile: match.mobile || null
-            }).eq('id', g.id)
-            await supabase.from('guests').update({
-              linked_guest_id: g.id,
-              partner_name: myName,
-              partner_mobile: g.mobile || null
-            }).eq('id', match.id)
-            g.linked_guest_id = match.id
-            g.partner_mobile = match.mobile || g.partner_mobile
-            match.linked_guest_id = g.id
-            match.partner_name = myName
-            match.partner_mobile = g.mobile || match.partner_mobile
-          }
         }
       }
 
-      // Fetch RSVPs to sync any past or current RSVPs with guest attendance status
+      // Fetch RSVPs to sync status
       const { data: rsvps } = await supabase.from('rsvps').select('*')
       if (rsvps && rsvps.length > 0) {
         for (const g of data) {
@@ -322,11 +374,85 @@ export default function AdminPage() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { if (authed) fetchGuests() }, [authed, fetchGuests])
+  useEffect(() => {
+    if (currentUser) fetchGuests()
+  }, [currentUser, fetchGuests])
 
-  const handleLogin = () => {
-    if (pass === ADMIN_PASS) setAuthed(true)
-    else alert('Wrong password!')
+  // ── LOGIN ──
+  const handleLogin = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    setLoginError('')
+
+    const uInput = usernameInput.trim().toLowerCase()
+    const pInput = passwordInput.trim()
+
+    // 1. Try matching Username & Password
+    let matched = portalUsers.find(u =>
+      (u.username.toLowerCase() === uInput || u.name.toLowerCase() === uInput) && u.password === pInput
+    )
+
+    // 2. Fallback: if only Password entered or matches Super Admin pass
+    if (!matched && pInput === ADMIN_PASS) {
+      matched = portalUsers.find(u => u.role === 'super_admin') || DEFAULT_USERS[0]
+    }
+
+    // 3. Fallback: match password alone against any user
+    if (!matched && pInput) {
+      matched = portalUsers.find(u => u.password === pInput)
+    }
+
+    if (matched) {
+      setCurrentUser(matched)
+      localStorage.setItem('portal_current_user', JSON.stringify(matched))
+      setUsernameInput('')
+      setPasswordInput('')
+    } else {
+      setLoginError('Invalid Username or Password!')
+    }
+  }
+
+  const handleLogout = () => {
+    setCurrentUser(null)
+    localStorage.removeItem('portal_current_user')
+  }
+
+  // ── CREATE NEW PORTAL USER ──
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newUserName.trim() || !newUserUsername.trim() || !newUserPassword.trim()) {
+      return setUserMsg('Please fill all user fields!')
+    }
+
+    const cleanUsername = newUserUsername.trim().toLowerCase()
+    if (portalUsers.some(u => u.username.toLowerCase() === cleanUsername)) {
+      return setUserMsg('Username already exists! Choose another.')
+    }
+
+    const newUser: PortalUser = {
+      id: 'user-' + Date.now(),
+      name: newUserName.trim(),
+      username: cleanUsername,
+      password: newUserPassword.trim(),
+      role: newUserRole,
+      created_at: new Date().toISOString()
+    }
+
+    const updated = [...portalUsers, newUser]
+    await savePortalUsers(updated)
+
+    setNewUserName('')
+    setNewUserUsername('')
+    setNewUserPassword('')
+    setNewUserRole('user')
+    setUserMsg(`✅ User "${newUser.name}" created! Password: ${newUser.password}`)
+    setTimeout(() => setUserMsg(''), 4000)
+  }
+
+  const handleDeleteUser = async (userId: string) => {
+    if (userId === 'user-admin') return alert('Super Admin cannot be deleted!')
+    if (!confirm('Delete this user account?')) return
+    const updated = portalUsers.filter(u => u.id !== userId)
+    await savePortalUsers(updated)
   }
 
   // ── SAVE GUEST ──
@@ -335,9 +461,20 @@ export default function AdminPage() {
     if (!form.primary.first_name.trim()) return alert('First name required')
     setSaving(true)
     try {
-      const shared = { guest_of: form.guest_of.trim(), relationship_group: form.relationship_group }
+      const guestOfName = form.guest_of.trim() || (currentUser?.name || '')
+      const shared = { guest_of: guestOfName, relationship_group: form.relationship_group }
       if (!form.has_spouse) {
-        const { error } = await supabase.from('guests').insert({ ...shared, first_name: form.primary.first_name.trim(), last_name: form.primary.last_name.trim() || null, nickname: form.primary.nickname.trim() || null, mobile: form.primary.mobile.trim(), food_preference: form.primary.food_preference || null, liquor_preference: form.primary.liquor_preference || null, invite_code: form.primary.invite_code, invited_count: 1 })
+        const { error } = await supabase.from('guests').insert({
+          ...shared,
+          first_name: form.primary.first_name.trim(),
+          last_name: form.primary.last_name.trim() || null,
+          nickname: form.primary.nickname.trim() || null,
+          mobile: form.primary.mobile.trim(),
+          food_preference: form.primary.food_preference || null,
+          liquor_preference: form.primary.liquor_preference || null,
+          invite_code: form.primary.invite_code,
+          invited_count: 1
+        })
         if (error) throw error
       } else {
         const partnerName = form.spouse.nickname.trim() || `${form.spouse.first_name.trim()}${form.spouse.last_name.trim() ? ' ' + form.spouse.last_name.trim() : ''}`
@@ -387,7 +524,7 @@ export default function AdminPage() {
     } finally { setSaving(false) }
   }
 
-  // ── EDIT ──
+  // ── EDIT GUEST ──
   const startEdit = (g: Guest) => {
     setEditingGuest(g)
     setEditForm({ first_name: g.first_name, last_name: g.last_name || '', nickname: g.nickname || '', mobile: g.mobile || '', partner_name: g.partner_name || '', partner_mobile: g.partner_mobile || '', food_preference: g.food_preference || '', liquor_preference: g.liquor_preference || '', guest_of: g.guest_of || '', relationship_group: g.relationship_group || '', invite_code: g.invite_code, video_url: g.video_url || '' })
@@ -431,7 +568,7 @@ export default function AdminPage() {
     setCopied(code); setTimeout(() => setCopied(null), 2000)
   }
 
-  // ── WHATSAPP (DIRECT CONTACT SEND) ──
+  // ── WHATSAPP ──
   const sendWhatsApp = async (g: Guest) => {
     const currentSt = (g.invitation_status || '').toLowerCase()
     if (!currentSt || currentSt === 'pending' || currentSt === 'not_sent') {
@@ -442,12 +579,6 @@ export default function AdminPage() {
 
     const link = `${BASE_URL}/i/${g.invite_code}`
     const isCouple = (g.send_together && !!g.partner_name) || (g.invited_count && g.invited_count > 1)
-
-    function getName(nickname?: string, fullName?: string): string {
-      if (nickname && nickname.trim()) return nickname.trim()
-      if (!fullName || !fullName.trim()) return ''
-      return fullName.trim().split(' ')[0]
-    }
 
     const pDisplay = (g.nickname && g.nickname.trim())
       ? g.nickname.trim()
@@ -513,7 +644,7 @@ export default function AdminPage() {
   // ── EXPORT CSV ──
   const exportCSV = () => {
     const headers = ['Name', 'Nickname', 'Mobile', 'Partner', 'Partner Mobile', 'Attendance', 'Food', 'Drinks', 'Invited By', 'Group', 'Status', 'Invite Code', 'Invite Link']
-    const rows = guests.map(g => {
+    const rows = visibleGuests.map(g => {
       const st = (g.invitation_status || '').toLowerCase()
       const attendance = (st === 'rsvp_yes' || st === 'attending' || st === 'yes') ? 'Attending' : (st === 'rsvp_no' || st === 'declined' || st === 'no') ? 'Declined' : 'Pending'
       return [
@@ -535,7 +666,7 @@ export default function AdminPage() {
     const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = 'arpit40_guests.csv'; a.click()
+    const a = document.createElement('a'); a.href = url; a.download = `${currentUser?.name || 'guests'}_list.csv`; a.click()
     URL.revokeObjectURL(url)
   }
 
@@ -546,6 +677,7 @@ export default function AdminPage() {
     const text = await file.text()
     const lines = text.trim().split('\n').slice(1)
     let count = 0
+    const defaultHost = currentUser?.role === 'super_admin' ? 'Arpit' : (currentUser?.name || '')
     for (const line of lines) {
       const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, '').replace(/""/g, '"'))
       const [name, nickname, mobile, partner_name, partner_mobile, food_preference, liquor_preference, guest_of, relationship_group] = cols
@@ -553,7 +685,20 @@ export default function AdminPage() {
       const [first_name, ...rest] = name.split(' ')
       const last_name = rest.join(' ')
       const code = generateCode()
-      await supabase.from('guests').insert({ first_name, last_name: last_name || null, nickname: nickname || null, mobile: mobile || null, partner_name: partner_name || null, partner_mobile: partner_mobile || null, food_preference: food_preference || null, liquor_preference: liquor_preference || null, guest_of: guest_of || null, relationship_group: relationship_group || null, invite_code: code, invited_count: partner_name ? 2 : 1 })
+      await supabase.from('guests').insert({
+        first_name,
+        last_name: last_name || null,
+        nickname: nickname || null,
+        mobile: mobile || null,
+        partner_name: partner_name || null,
+        partner_mobile: partner_mobile || null,
+        food_preference: food_preference || null,
+        liquor_preference: liquor_preference || null,
+        guest_of: guest_of || defaultHost,
+        relationship_group: relationship_group || null,
+        invite_code: code,
+        invited_count: partner_name ? 2 : 1
+      })
       count++
     }
     setImportMsg(`✅ ${count} guests imported!`)
@@ -568,34 +713,97 @@ export default function AdminPage() {
     fetchGuests()
   }
 
-  const filtered = guests.filter(g => {
-    const partnerName = g.partner_name || (g.linked_guest_id && guestMap[g.linked_guest_id]?.name) || ''
-    const partnerMob = g.partner_mobile || (g.linked_guest_id && guestMap[g.linked_guest_id]?.mobile) || ''
-    return `${g.first_name} ${g.last_name} ${partnerName} ${g.mobile} ${partnerMob} ${g.nickname}`.toLowerCase().includes(search.toLowerCase())
+  // ── DATA ISOLATION & FILTERING LOGIC ──
+  // 1. Filter by User Privacy Role
+  const roleFilteredGuests = guests.filter(g => {
+    if (!currentUser) return false
+    if (currentUser.role === 'super_admin') return true
+    const hostName = (g.guest_of || '').toLowerCase().trim()
+    const userName = currentUser.name.toLowerCase().trim()
+    const uName = currentUser.username.toLowerCase().trim()
+    return hostName === userName || hostName === uName || hostName.includes(userName) || userName.includes(hostName)
   })
 
-  // Attendance stats counts
-  const pendingCount = guests.filter(g => !g.invitation_status || ['pending', 'not_sent'].includes((g.invitation_status || '').toLowerCase())).length
-  const messageSentCount = guests.filter(g => ['sent', 'message_sent'].includes((g.invitation_status || '').toLowerCase())).length
-  const messageSeenCount = guests.filter(g => ['opened', 'entered', 'seen', 'message_seen', 'attending', 'declined', 'rsvp_yes', 'rsvp_no', 'yes', 'no'].includes((g.invitation_status || '').toLowerCase())).length
-  const attendingCount = guests.filter(g => ['rsvp_yes', 'attending', 'yes'].includes((g.invitation_status || '').toLowerCase())).length
-  const declinedCount = guests.filter(g => ['rsvp_no', 'declined', 'not_attending', 'no'].includes((g.invitation_status || '').toLowerCase())).length
+  // 2. Filter by Selected Host Filter Dropdown (Super Admin only)
+  const hostSelectedGuests = roleFilteredGuests.filter(g => {
+    if (currentUser?.role !== 'super_admin' || hostFilter === 'all') return true
+    return (g.guest_of || '').toLowerCase().trim() === hostFilter.toLowerCase().trim()
+  })
 
-  // ── LOGIN ──
-  if (!authed) {
+  // 3. Filter by Search Query
+  const filtered = hostSelectedGuests.filter(g => {
+    const partnerName = g.partner_name || (g.linked_guest_id && guestMap[g.linked_guest_id]?.name) || ''
+    const partnerMob = g.partner_mobile || (g.linked_guest_id && guestMap[g.linked_guest_id]?.mobile) || ''
+    const hostOf = g.guest_of || ''
+    return `${g.first_name} ${g.last_name} ${partnerName} ${g.mobile} ${partnerMob} ${g.nickname} ${hostOf}`.toLowerCase().includes(search.toLowerCase())
+  })
+
+  const visibleGuests = filtered
+
+  // Attendance stats counts for visible guests
+  const pendingCount = visibleGuests.filter(g => !g.invitation_status || ['pending', 'not_sent'].includes((g.invitation_status || '').toLowerCase())).length
+  const messageSentCount = visibleGuests.filter(g => ['sent', 'message_sent'].includes((g.invitation_status || '').toLowerCase())).length
+  const messageSeenCount = visibleGuests.filter(g => ['opened', 'entered', 'seen', 'message_seen', 'attending', 'declined', 'rsvp_yes', 'rsvp_no', 'yes', 'no'].includes((g.invitation_status || '').toLowerCase())).length
+  const attendingCount = visibleGuests.filter(g => ['rsvp_yes', 'attending', 'yes'].includes((g.invitation_status || '').toLowerCase())).length
+  const declinedCount = visibleGuests.filter(g => ['rsvp_no', 'declined', 'not_attending', 'no'].includes((g.invitation_status || '').toLowerCase())).length
+
+  // List of distinct hosts for Super Admin filter
+  const distinctHosts = Array.from(new Set(guests.map(g => (g.guest_of || 'Unassigned').trim()).filter(Boolean)))
+
+  // ── LOGIN SCREEN ──
+  if (!currentUser) {
     return (
       <div className="min-h-screen bg-[#050D1A] flex items-center justify-center px-6">
-        <div className="w-full max-w-xs">
+        <div className="w-full max-w-sm">
           <div className="text-center mb-8">
-            <p className="font-sans text-[10px] tracking-[0.4em] uppercase text-[#C9A84C]/40 mb-3">Admin Access</p>
+            <p className="font-sans text-[10px] tracking-[0.4em] uppercase text-[#C9A84C]/60 mb-2">Portal Access</p>
             <h1 className="font-serif text-2xl text-[#F5ECD7]">Arpit's 40th & Diwali Bash</h1>
+            <p className="text-xs text-white/30 mt-1">Guest Management Portal</p>
           </div>
-          <div className="glass rounded-sm p-6 flex flex-col gap-4">
-            <input type="password" placeholder="Password" value={pass}
-              onChange={e => setPass(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              className="bg-transparent border-b border-[#C9A84C]/20 pb-2 text-[#F5ECD7] font-sans placeholder-white/20 outline-none focus:border-[#C9A84C]/50" />
-            <button onClick={handleLogin} className="btn-primary py-3 text-sm tracking-widest uppercase">Enter</button>
-          </div>
+          <form onSubmit={handleLogin} className="glass rounded-sm p-6 flex flex-col gap-4">
+            <div>
+              <label className="text-[10px] uppercase tracking-widest text-[#C9A84C]/80 block mb-1">Username / Name</label>
+              <input
+                type="text"
+                placeholder="e.g. admin, tanvi, vipul, arpit"
+                value={usernameInput}
+                onChange={e => setUsernameInput(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-[#F5ECD7] font-sans placeholder-white/20 outline-none focus:border-[#C9A84C]/50"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-widest text-[#C9A84C]/80 block mb-1">Password</label>
+              <input
+                type="password"
+                placeholder="Password"
+                value={passwordInput}
+                onChange={e => setPasswordInput(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-[#F5ECD7] font-sans placeholder-white/20 outline-none focus:border-[#C9A84C]/50"
+              />
+            </div>
+
+            {loginError && <p className="text-xs text-red-400 font-medium">{loginError}</p>}
+
+            <button type="submit" className="btn-primary py-3 text-xs tracking-widest uppercase mt-2">
+              Log In to Portal
+            </button>
+
+            <div className="border-t border-white/10 pt-4 mt-2">
+              <p className="text-[10px] text-white/40 uppercase tracking-widest mb-2 text-center">Available Users:</p>
+              <div className="flex flex-wrap gap-1.5 justify-center">
+                {portalUsers.map(u => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => { setUsernameInput(u.username); setPasswordInput(u.password) }}
+                    className="text-[10px] bg-white/5 hover:bg-[#C9A84C]/20 border border-white/10 px-2 py-1 rounded text-white/60 hover:text-[#C9A84C] transition-all"
+                  >
+                    {u.name} ({u.username})
+                  </button>
+                ))}
+              </div>
+            </div>
+          </form>
         </div>
       </div>
     )
@@ -604,21 +812,39 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen w-full bg-[#050D1A] text-white font-sans pb-24 overflow-y-auto">
       {/* Header */}
-      <div className="border-b border-[#C9A84C]/10 px-6 py-4 flex justify-between items-center">
+      <div className="border-b border-[#C9A84C]/10 px-6 py-4 flex justify-between items-center flex-wrap gap-3">
         <div>
-          <h1 className="font-serif text-xl text-[#C9A84C]">Arpit's 40th & Diwali Bash</h1>
-          <p className="text-[10px] tracking-widest uppercase text-white/30 mt-0.5">Guest Management</p>
+          <div className="flex items-center gap-2">
+            <h1 className="font-serif text-xl text-[#C9A84C]">Arpit's 40th & Diwali Bash</h1>
+            <span className={`text-[9px] px-2 py-0.5 rounded border uppercase tracking-wider font-semibold ${currentUser.role === 'super_admin' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-blue-500/20 text-blue-400 border-blue-500/30'}`}>
+              {currentUser.role === 'super_admin' ? '👑 Super Admin' : '👤 Host User'}
+            </span>
+          </div>
+          <p className="text-[11px] text-white/50 mt-0.5">
+            Logged in as <strong className="text-[#F5ECD7] font-semibold">{currentUser.name}</strong> ({currentUser.username})
+          </p>
         </div>
-        <div className="text-right">
-          <p className="text-2xl font-serif text-[#C9A84C]">{guests.length}</p>
-          <p className="text-[10px] text-white/30 tracking-widest uppercase">Records</p>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowUsersModal(true)}
+            className="btn-outline px-3.5 py-1.5 text-xs flex items-center gap-1.5 border-[#C9A84C]/40 text-[#C9A84C]"
+          >
+            <span>👥</span> Portal Users ({portalUsers.length})
+          </button>
+          <button
+            onClick={handleLogout}
+            className="px-3 py-1.5 border border-red-500/20 text-red-400/80 hover:text-red-400 hover:bg-red-500/10 rounded-sm text-xs transition-all"
+          >
+            Logout ➔
+          </button>
         </div>
       </div>
 
       {/* Stats Bar */}
       <div className="grid grid-cols-6 border-b border-[#C9A84C]/10">
         {[
-          { label: 'Total', val: guests.length, color: 'text-[#C9A84C]' },
+          { label: 'Total Guests', val: visibleGuests.length, color: 'text-[#C9A84C]' },
           { label: 'Pending', val: pendingCount, color: 'text-white/40' },
           { label: 'Message Sent', val: messageSentCount, color: 'text-blue-400' },
           { label: 'Message Seen', val: messageSeenCount, color: 'text-yellow-400' },
@@ -634,8 +860,26 @@ export default function AdminPage() {
 
       {/* Toolbar */}
       <div className="px-4 py-3 flex gap-2 items-center flex-wrap border-b border-[#C9A84C]/10">
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..."
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search guests by name, mobile, host..."
           className="flex-1 min-w-[150px] bg-white/5 border border-white/10 rounded-sm px-4 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-[#C9A84C]/40" />
+
+        {/* Super Admin Host Filter */}
+        {currentUser.role === 'super_admin' && (
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-wider text-[#C9A84C]/70">Filter Host:</span>
+            <select
+              value={hostFilter}
+              onChange={e => setHostFilter(e.target.value)}
+              className="bg-[#0A1931] border border-[#C9A84C]/30 text-[#C9A84C] rounded-sm px-3 py-2 text-xs outline-none font-medium"
+            >
+              <option value="all">🌟 All Hosts ({guests.length})</option>
+              {distinctHosts.map(h => (
+                <option key={h} value={h}>👤 {h}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <button onClick={() => { setShowForm(true); setForm(emptyForm()) }}
           className="btn-primary px-4 py-2 text-sm tracking-wider whitespace-nowrap">+ Add Guest</button>
         <button onClick={exportCSV}
@@ -661,24 +905,23 @@ export default function AdminPage() {
               <th className="px-4 py-3 text-left text-[#C9A84C]/90">Attendance</th>
               <th className="px-4 py-3 text-left">Food</th>
               <th className="px-4 py-3 text-left">Drinks</th>
-              <th className="px-4 py-3 text-left">Via</th>
+              <th className="px-4 py-3 text-left">Invited By (Host)</th>
               <th className="px-4 py-3 text-left">Group</th>
               <th className="px-4 py-3 text-left">Msg Status</th>
               <th className="px-4 py-3 text-left">Send As</th>
-              <th className="px-4 py-3 text-left">Video</th>
               <th className="px-4 py-3 text-left">Code</th>
               <th className="px-4 py-3 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={15} className="px-4 py-16 text-center text-white/30">Loading...</td></tr>
-            ) : filtered.length === 0 ? (
-              <tr><td colSpan={15} className="px-4 py-16 text-center text-white/30">
-                <p className="font-serif text-lg mb-1">No guests yet</p>
-                <p className="text-xs">Click "+ Add Guest" to get started</p>
+              <tr><td colSpan={14} className="px-4 py-16 text-center text-white/30">Loading...</td></tr>
+            ) : visibleGuests.length === 0 ? (
+              <tr><td colSpan={14} className="px-4 py-16 text-center text-white/30">
+                <p className="font-serif text-lg mb-1">No guests found</p>
+                <p className="text-xs">Click "+ Add Guest" to add your guests</p>
               </td></tr>
-            ) : filtered.map(g => {
+            ) : visibleGuests.map(g => {
               const info = getStatusInfo(g.invitation_status)
               const st = (g.invitation_status || '').toLowerCase()
               const isYes = st === 'rsvp_yes' || st === 'attending' || st === 'yes'
@@ -698,7 +941,7 @@ export default function AdminPage() {
                     {g.partner_mobile || (g.linked_guest_id && guestMap[g.linked_guest_id]?.mobile) || '—'}
                   </td>
 
-                  {/* DEDICATED ATTENDANCE COLUMN */}
+                  {/* ATTENDANCE COLUMN */}
                   <td className="px-4 py-3 whitespace-nowrap">
                     {isYes ? (
                       <span className="text-[10px] font-semibold bg-green-500/15 text-green-400 border border-green-500/30 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
@@ -729,7 +972,7 @@ export default function AdminPage() {
                       </span>
                     ) : <span className="text-white/20">—</span>}
                   </td>
-                  <td className="px-4 py-3 text-[#C9A84C]/40 text-xs">{g.guest_of || '—'}</td>
+                  <td className="px-4 py-3 text-[#C9A84C] font-medium text-xs whitespace-nowrap">{g.guest_of || '—'}</td>
                   <td className="px-4 py-3 text-white/40 text-xs capitalize">{g.relationship_group || '—'}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`text-[9px] font-semibold px-2 py-0.5 border rounded-sm tracking-wider whitespace-nowrap ${info.color}`}>
@@ -744,38 +987,27 @@ export default function AdminPage() {
                       </button>
                     ) : <span className="text-white/15 text-[10px]">—</span>}
                   </td>
-                  <td className="px-4 py-3">
-                    {g.video_url ? (
-                      <a href={g.video_url} target="_blank" rel="noreferrer" className="text-[#C9A84C] hover:underline flex items-center gap-1 text-[11px]">
-                        🎬 Custom
-                      </a>
-                    ) : (
-                      <span className="text-white/20 text-[10px]" title="Uses default video or /videos/video_<code.mp4>">
-                        🌐 Default
-                      </span>
-                    )}
-                  </td>
                   <td className="px-4 py-3 font-mono text-[11px] text-[#C9A84C]/60">{g.invite_code}</td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-1.5 items-center">
+                    <div className="flex gap-1 items-center">
+                      <button onClick={() => copyLink(g.invite_code)} title="Copy Card link (/i/code)"
+                        className={`px-2 py-1 border rounded-sm text-[10px] transition-all whitespace-nowrap ${copied === g.invite_code ? 'border-green-500/40 text-green-400' : 'border-[#C9A84C]/40 text-[#C9A84C] hover:bg-[#C9A84C]/10'}`}>
+                        {copied === g.invite_code ? '✓ Copied' : '📋 Copy Link'}
+                      </button>
                       <button onClick={() => sendWhatsApp(g)} title="Send via WhatsApp"
-                        className="px-3 py-1 bg-green-600/80 hover:bg-green-600 text-white font-medium rounded-sm text-[11px] transition-all whitespace-nowrap flex items-center gap-1">
-                        <span>💬</span> Send WhatsApp
+                        className="px-2 py-1 border border-green-500/20 text-green-400/60 hover:text-green-400 rounded-sm text-[10px] transition-all whitespace-nowrap">
+                        WA
                       </button>
-                      <button onClick={() => window.open(`${BASE_URL}/i/${g.invite_code}`, '_blank')} title="View / Preview Invitation"
-                        className="px-2.5 py-1 border border-blue-500/30 text-blue-400 hover:border-blue-400 hover:bg-blue-500/10 rounded-sm text-[11px] transition-all flex items-center gap-1 whitespace-nowrap font-medium">
-                        👁️ View
+                      <button onClick={() => window.open(`${BASE_URL}/i/${g.invite_code}`, '_blank')} title="Preview Full Invitation Card"
+                        className="px-2 py-1 border border-white/10 text-white/30 hover:text-white/60 rounded-sm text-[10px] transition-all">
+                        👁
                       </button>
-                      <button onClick={() => copyLink(g.invite_code)} title="Copy Invitation Link"
-                        className={`px-2 py-1 border rounded-sm text-[10px] transition-all whitespace-nowrap ${copied === g.invite_code ? 'border-green-500/40 text-green-400 bg-green-500/10' : 'border-white/15 text-white/50 hover:border-[#C9A84C]/40 hover:text-[#C9A84C]'}`}>
-                        {copied === g.invite_code ? '✓ Copied' : '🔗 Link'}
-                      </button>
-                      <button onClick={() => startEdit(g)} title="Edit Guest"
-                        className="px-2 py-1 border border-[#C9A84C]/20 text-[#C9A84C]/60 hover:text-[#C9A84C] hover:border-[#C9A84C]/50 rounded-sm text-[10px] transition-all">
+                      <button onClick={() => startEdit(g)} title="Edit"
+                        className="px-2 py-1 border border-[#C9A84C]/20 text-[#C9A84C]/50 hover:text-[#C9A84C] rounded-sm text-[10px] transition-all">
                         ✏️
                       </button>
-                      <button onClick={() => deleteGuest(g.id)} title="Delete Guest"
-                        className="px-2 py-1 border border-red-500/10 text-red-400/40 hover:text-red-400 hover:border-red-500/30 rounded-sm text-[10px] transition-all">
+                      <button onClick={() => deleteGuest(g.id)} title="Delete"
+                        className="px-2 py-1 border border-red-500/10 text-red-400/30 hover:text-red-400 hover:border-red-500/30 rounded-sm text-[10px] transition-all">
                         ✕
                       </button>
                     </div>
@@ -822,8 +1054,8 @@ export default function AdminPage() {
               )}
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Invited By</label>
-                  <input value={form.guest_of} onChange={e => setForm(f => ({ ...f, guest_of: e.target.value }))} placeholder="Arpit / Tanvi"
+                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Invited By (Host)</label>
+                  <input value={form.guest_of} onChange={e => setForm(f => ({ ...f, guest_of: e.target.value }))} placeholder="e.g. Arpit / Tanvi / Vipul"
                     className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40" />
                 </div>
                 <div className="col-span-2">
@@ -888,7 +1120,7 @@ export default function AdminPage() {
                   <PhoneInputWithPrefix value={editForm.partner_mobile || ''} onChange={val => setEditForm(f => ({ ...f, partner_mobile: val }))} />
                 </div>
                 <div>
-                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Invited By</label>
+                  <label className="text-[9px] uppercase tracking-widest text-white/30 block mb-1">Invited By (Host)</label>
                   <input value={editForm.guest_of || ''} onChange={e => setEditForm(f => ({ ...f, guest_of: e.target.value }))}
                     className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40" />
                 </div>
@@ -946,6 +1178,124 @@ export default function AdminPage() {
                 <button onClick={handleEditSave} className="btn-primary flex-1 py-3 text-sm">Save Changes</button>
                 <button onClick={() => setEditingGuest(null)} className="btn-outline px-6 py-3 text-sm">Cancel</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MANAGE PORTAL USERS MODAL ══ */}
+      {showUsersModal && (
+        <div className="fixed inset-0 bg-black/80 z-50 overflow-y-auto py-8 px-4 flex items-center justify-center">
+          <div className="glass w-full max-w-2xl mx-auto rounded-sm p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-6 border-b border-[#C9A84C]/20 pb-3">
+              <div>
+                <h2 className="font-serif text-xl text-[#F5ECD7] flex items-center gap-2">
+                  <span>👥</span> Portal Users & Host Accounts
+                </h2>
+                <p className="text-xs text-white/40 mt-0.5">
+                  Create and manage users who can log in to add and manage their own guests.
+                </p>
+              </div>
+              <button onClick={() => setShowUsersModal(false)} className="text-white/30 hover:text-white text-xl">✕</button>
+            </div>
+
+            {/* List Existing Users */}
+            <div className="mb-6">
+              <h3 className="text-xs uppercase tracking-widest text-[#C9A84C]/80 mb-3 font-semibold">
+                Existing Portal Users ({portalUsers.length}):
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-60 overflow-y-auto pr-1">
+                {portalUsers.map(u => (
+                  <div key={u.id} className="border border-white/10 bg-white/5 rounded-sm p-3 flex justify-between items-center">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-[#F5ECD7]">{u.name}</p>
+                        <span className={`text-[8px] px-1.5 py-0.5 rounded uppercase font-semibold ${u.role === 'super_admin' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'}`}>
+                          {u.role === 'super_admin' ? 'Super Admin' : 'Host User'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-white/40 font-mono mt-0.5">Username: <strong className="text-white/70">{u.username}</strong></p>
+                      <p className="text-xs text-white/30 font-mono">Password: <strong className="text-[#C9A84C]/70">{u.password}</strong></p>
+                    </div>
+                    {u.id !== 'user-admin' && (
+                      <button
+                        onClick={() => handleDeleteUser(u.id)}
+                        className="text-red-400/50 hover:text-red-400 text-xs px-2 py-1 border border-red-500/10 hover:border-red-500/30 rounded"
+                        title="Delete User"
+                      >
+                        ✕ Delete
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Form to Add New User */}
+            <div className="border-t border-[#C9A84C]/20 pt-5">
+              <h3 className="text-xs uppercase tracking-widest text-[#C9A84C] mb-3 font-semibold">
+                + Create New Portal User / Host:
+              </h3>
+              <form onSubmit={handleCreateUser} className="flex flex-col gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-1">Full Name (Host Name) *</label>
+                    <input
+                      required
+                      placeholder="e.g. Rahul, Sneha"
+                      value={newUserName}
+                      onChange={e => setNewUserName(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-1">Login Username *</label>
+                    <input
+                      required
+                      placeholder="e.g. rahul"
+                      value={newUserUsername}
+                      onChange={e => setNewUserUsername(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-1">Password *</label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="e.g. rahul123"
+                      value={newUserPassword}
+                      onChange={e => setNewUserPassword(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C]/40 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-1">User Role / Rights</label>
+                    <select
+                      value={newUserRole}
+                      onChange={e => setNewUserRole(e.target.value as 'super_admin' | 'user')}
+                      className="w-full bg-[#0A1931] border border-white/10 rounded-sm px-3 py-2 text-sm text-white outline-none"
+                    >
+                      <option value="user">Host User (Manages Own Guests)</option>
+                      <option value="super_admin">Super Admin (Sees All Guests)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {userMsg && <p className="text-xs text-green-400 font-medium">{userMsg}</p>}
+
+                <div className="flex gap-3 mt-2">
+                  <button type="submit" className="btn-primary py-2.5 px-6 text-xs uppercase tracking-widest flex-1">
+                    + Add New User Account
+                  </button>
+                  <button type="button" onClick={() => setShowUsersModal(false)} className="btn-outline py-2.5 px-6 text-xs uppercase tracking-widest">
+                    Close
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
