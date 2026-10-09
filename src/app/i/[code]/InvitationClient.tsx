@@ -51,7 +51,7 @@ export default function InvitationClient({ guest, inviteCode }: Props) {
   function getDisplayName(nickname?: string, fullName?: string): string {
     if (nickname && nickname.trim()) return nickname.trim()
     if (!fullName || !fullName.trim()) return ''
-    return fullName.trim().split(' ')[0]
+    return fullName.trim()
   }
 
   const primaryDisplay = getDisplayName(guest.nickname, guest.first_name)

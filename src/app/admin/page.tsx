@@ -586,7 +586,7 @@ export default function AdminPage() {
 
     const pDisplay = (g.nickname && g.nickname.trim())
       ? g.nickname.trim()
-      : (g.first_name || '').trim().split(' ')[0]
+      : (g.first_name || '').trim()
 
     let partDisplay = ''
     if (g.linked_guest_id) {
@@ -594,7 +594,7 @@ export default function AdminPage() {
       if (linkedPartner) {
         partDisplay = (linkedPartner.nickname && linkedPartner.nickname.trim())
           ? linkedPartner.nickname.trim()
-          : (linkedPartner.first_name || '').trim().split(' ')[0]
+          : (linkedPartner.first_name || '').trim()
       }
     }
 
@@ -607,9 +607,9 @@ export default function AdminPage() {
       if (matched) {
         partDisplay = (matched.nickname && matched.nickname.trim())
           ? matched.nickname.trim()
-          : (matched.first_name || '').trim().split(' ')[0]
+          : (matched.first_name || '').trim()
       } else {
-        partDisplay = g.partner_name.trim().split(' ')[0]
+        partDisplay = g.partner_name.trim()
       }
     }
 
