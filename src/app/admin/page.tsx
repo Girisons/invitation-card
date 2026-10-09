@@ -419,6 +419,9 @@ export default function AdminPage() {
   // ── CREATE NEW PORTAL USER ──
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (currentUser?.role !== 'super_admin') {
+      return alert('Only Super Admin can create new user accounts!')
+    }
     if (!newUserName.trim() || !newUserUsername.trim() || !newUserPassword.trim()) {
       return setUserMsg('Please fill all user fields!')
     }
@@ -449,6 +452,7 @@ export default function AdminPage() {
   }
 
   const handleDeleteUser = async (userId: string) => {
+    if (currentUser?.role !== 'super_admin') return alert('Only Super Admin can delete user accounts!')
     if (userId === 'user-admin') return alert('Super Admin cannot be deleted!')
     if (!confirm('Delete this user account?')) return
     const updated = portalUsers.filter(u => u.id !== userId)
@@ -826,12 +830,14 @@ export default function AdminPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowUsersModal(true)}
-            className="btn-outline px-3.5 py-1.5 text-xs flex items-center gap-1.5 border-[#C9A84C]/40 text-[#C9A84C]"
-          >
-            <span>👥</span> Portal Users ({portalUsers.length})
-          </button>
+          {currentUser.role === 'super_admin' && (
+            <button
+              onClick={() => setShowUsersModal(true)}
+              className="btn-outline px-3.5 py-1.5 text-xs flex items-center gap-1.5 border-[#C9A84C]/40 text-[#C9A84C]"
+            >
+              <span>👥</span> Portal Users ({portalUsers.length})
+            </button>
+          )}
           <button
             onClick={handleLogout}
             className="px-3 py-1.5 border border-red-500/20 text-red-400/80 hover:text-red-400 hover:bg-red-500/10 rounded-sm text-xs transition-all"
@@ -882,10 +888,12 @@ export default function AdminPage() {
 
         <button onClick={() => { setShowForm(true); setForm(emptyForm()) }}
           className="btn-primary px-4 py-2 text-sm tracking-wider whitespace-nowrap">+ Add Guest</button>
-        <button onClick={() => setShowUsersModal(true)}
-          className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-4 py-2 text-sm rounded-sm whitespace-nowrap font-medium flex items-center gap-1.5 transition-all">
-          <span>👥</span> + Add User / Manage Users
-        </button>
+        {currentUser.role === 'super_admin' && (
+          <button onClick={() => setShowUsersModal(true)}
+            className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-4 py-2 text-sm rounded-sm whitespace-nowrap font-medium flex items-center gap-1.5 transition-all">
+            <span>👥</span> + Add User / Manage Users
+          </button>
+        )}
         <button onClick={exportCSV}
           className="btn-outline px-4 py-2 text-sm whitespace-nowrap">↓ Export CSV</button>
         <label className="btn-outline px-4 py-2 text-sm whitespace-nowrap cursor-pointer">
@@ -1187,8 +1195,8 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ══ MANAGE PORTAL USERS MODAL ══ */}
-      {showUsersModal && (
+      {/* ══ MANAGE PORTAL USERS MODAL (Super Admin Only) ══ */}
+      {showUsersModal && currentUser?.role === 'super_admin' && (
         <div className="fixed inset-0 bg-black/80 z-50 overflow-y-auto py-8 px-4 flex items-center justify-center">
           <div className="glass w-full max-w-2xl mx-auto rounded-sm p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-6 border-b border-[#C9A84C]/20 pb-3">
