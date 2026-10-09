@@ -882,6 +882,10 @@ export default function AdminPage() {
 
         <button onClick={() => { setShowForm(true); setForm(emptyForm()) }}
           className="btn-primary px-4 py-2 text-sm tracking-wider whitespace-nowrap">+ Add Guest</button>
+        <button onClick={() => setShowUsersModal(true)}
+          className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-4 py-2 text-sm rounded-sm whitespace-nowrap font-medium flex items-center gap-1.5 transition-all">
+          <span>👥</span> + Add User / Manage Users
+        </button>
         <button onClick={exportCSV}
           className="btn-outline px-4 py-2 text-sm whitespace-nowrap">↓ Export CSV</button>
         <label className="btn-outline px-4 py-2 text-sm whitespace-nowrap cursor-pointer">
