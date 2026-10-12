@@ -528,22 +528,17 @@ export default function AdminPage() {
     } finally { setSaving(false) }
   }
 
-  // ── QUICK CHANGE ATTENDANCE STATUS ──
+  // ── QUICK CHANGE ATTENDANCE STATUS (Strictly individual per guest) ──
   const handleAttendanceChange = async (g: Guest, newStatus: string) => {
     const { error } = await supabase.from('guests').update({ invitation_status: newStatus }).eq('id', g.id)
     if (error) {
       alert('Error updating attendance: ' + error.message)
       return
     }
-
-    if (g.linked_guest_id && g.send_together) {
-      await supabase.from('guests').update({ invitation_status: newStatus }).eq('id', g.linked_guest_id)
-    }
-
     fetchGuests()
   }
 
-  // ── QUICK CHANGE ANY FIELD (FOOD, DRINKS, HOST, GROUP) ──
+  // ── QUICK CHANGE ANY FIELD (FOOD, DRINKS, HOST, GROUP - Strictly individual per guest) ──
   const handleFieldChange = async (g: Guest, field: string, value: string) => {
     const payload: Record<string, any> = { [field]: value || null }
     const { error } = await supabase.from('guests').update(payload).eq('id', g.id)
@@ -551,11 +546,6 @@ export default function AdminPage() {
       alert(`Error updating ${field}: ` + error.message)
       return
     }
-
-    if (g.linked_guest_id && g.send_together && ['guest_of', 'relationship_group'].includes(field)) {
-      await supabase.from('guests').update(payload).eq('id', g.linked_guest_id)
-    }
-
     fetchGuests()
   }
 
