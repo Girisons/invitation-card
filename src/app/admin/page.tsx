@@ -11,8 +11,10 @@ export interface PortalUser {
   password: string
   name: string
   role: 'super_admin' | 'user'
-  created_at: string
+  created_at?: string
 }
+
+export type MessageTemplateMode = 'invite' | 'save_date' | 'location' | 'photos'
 
 const DEFAULT_USERS: PortalUser[] = [
   { id: 'user-admin', username: 'admin', password: 'arpit40', name: 'Super Admin', role: 'super_admin', created_at: new Date().toISOString() },
@@ -315,10 +317,23 @@ export default function AdminPage() {
   const [newUserRole, setNewUserRole] = useState<'super_admin' | 'user'>('user')
   const [userMsg, setUserMsg] = useState('')
 
+  // Message Template & Custom Link States
+  const [messageTemplate, setMessageTemplate] = useState<'invite' | 'save_date' | 'location' | 'photos'>('invite')
+  const [customLinks, setCustomLinks] = useState<{ locationUrl: string; photoUrl: string; instaUrl: string }>({
+    locationUrl: 'https://maps.google.com/?q=Jaipur',
+    photoUrl: '',
+    instaUrl: 'https://instagram.com/'
+  })
+  const [showLinksModal, setShowLinksModal] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // ── LOAD PORTAL USERS & CURRENT USER FROM LOCALSTORAGE / SUPABASE ──
+  // ── LOAD PORTAL USERS, CURRENT USER & CUSTOM LINKS FROM LOCALSTORAGE ──
   useEffect(() => {
+    const savedLinks = localStorage.getItem('portal_custom_links')
+    if (savedLinks) {
+      try { setCustomLinks(JSON.parse(savedLinks)) } catch {}
+    }
+
     const loadUsers = async () => {
       try {
         const { data } = await supabase.from('portal_users').select('*')
@@ -671,7 +686,9 @@ export default function AdminPage() {
   }
 
   // ── WHATSAPP ──
-  const sendWhatsApp = async (g: Guest) => {
+  const sendWhatsApp = async (g: Guest, modeOverride?: MessageTemplateMode) => {
+    const activeMode = modeOverride || messageTemplate
+
     const currentSt = (g.invitation_status || '').toLowerCase()
     if (!currentSt || currentSt === 'pending' || currentSt === 'not_sent') {
       await supabase.from('guests').update({ invitation_status: 'sent' }).eq('id', g.id)
@@ -722,9 +739,24 @@ export default function AdminPage() {
       wink: String.fromCodePoint(0x1F61C),
       phone: String.fromCodePoint(0x1F4DE),
       gift: String.fromCodePoint(0x1F381),
+      camera: String.fromCodePoint(0x1F4F8),
     }
 
-    const msg = `${EMOJI.sparkles} *Four Decades. One Amazing Journey. And Now… One BIG Celebration!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my husband *ARPIT’s 40th Birthday & Diwali Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\n*${name} — no excuses, no “we’ll try”, and definitely no last-minute plans! ${EMOJI.wink}*\nWe are waiting to celebrate this beautiful evening with ${youTarget}. ${EMOJI.heart}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${link}`
+    let msg = ''
+
+    if (activeMode === 'save_date') {
+      msg = `${EMOJI.sparkles} *SAVE THE DATE!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nPlease mark your calendar for *ARPIT’s 40th Birthday & Diwali Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\nDetailed formal invitation to follow soon. We can’t wait to celebrate this special evening with ${youTarget}! ${EMOJI.heart}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*\n\n${EMOJI.gift} *Save The Date Link:*\n${link}`
+    } else if (activeMode === 'location') {
+      const loc = (customLinks.locationUrl || 'https://maps.google.com/?q=Jaipur').trim()
+      msg = `📍 *VENUE & LOCATION DETAILS* 📍\n\nDear *${name}*, ${EMOJI.heart}\n\nHere are the venue location details for *Arpit’s 40th & Diwali Bash*:\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\n🗺️ *Google Maps Location Link:*\n${loc}\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${link}\n\nSee ${youTarget} soon! ${EMOJI.heart}\n*Tanvi Khandelwal & Family*`
+    } else if (activeMode === 'photos') {
+      const pUrl = (customLinks.photoUrl || link).trim()
+      const iUrl = (customLinks.instaUrl || 'https://instagram.com').trim()
+      msg = `📸 *EVENT PHOTOS & INSTAGRAM LINK* 📸\n\nDear *${name}*, ${EMOJI.heart}\n\nThank you for making Arpit's 40th & Diwali Bash so special! Here are the event photos and Instagram link for ${youTarget}:\n\n🖼️ *Event Photo Gallery Link:*\n${pUrl}\n\n✨ *Instagram Reel / Story Link:*\n${iUrl}\n\n${EMOJI.gift} *Your Invitation Card:*\n${link}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*`
+    } else {
+      // Default 'invite'
+      msg = `${EMOJI.sparkles} *Four Decades. One Amazing Journey. And Now… One BIG Celebration!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my husband *ARPIT’s 40th Birthday & Diwali Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\n*${name} — no excuses, no “we’ll try”, and definitely no last-minute plans! ${EMOJI.wink}*\nWe are waiting to celebrate this beautiful evening with ${youTarget}. ${EMOJI.heart}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${link}`
+    }
 
     const phone = formatWhatsAppPhone(g.mobile || '')
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
@@ -990,6 +1022,29 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* Message Link Template Selector */}
+        <div className="flex items-center gap-1.5 bg-[#0A1931] border border-[#C9A84C]/30 px-3 py-2 rounded-sm">
+          <span className="text-[10px] uppercase tracking-wider text-[#C9A84C] font-semibold">Send Link:</span>
+          <select
+            value={messageTemplate}
+            onChange={e => setMessageTemplate(e.target.value as MessageTemplateMode)}
+            className="bg-transparent text-[#F5ECD7] text-xs outline-none font-medium cursor-pointer"
+          >
+            <option value="invite" className="bg-[#0A1931]">💌 Main Digital Invite</option>
+            <option value="save_date" className="bg-[#0A1931]">🗓️ Save The Date</option>
+            <option value="location" className="bg-[#0A1931]">📍 Venue & Location Link</option>
+            <option value="photos" className="bg-[#0A1931]">📸 Photos & Instagram Link</option>
+          </select>
+        </div>
+
+        <button
+          onClick={() => setShowLinksModal(true)}
+          className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 px-3 py-2 text-xs rounded-sm whitespace-nowrap font-medium flex items-center gap-1.5 transition-all"
+          title="Configure custom Venue Location, Photos, and Instagram links"
+        >
+          <span>⚙️</span> Custom Links
+        </button>
+
         <button onClick={() => { setShowForm(true); setForm(emptyForm()) }}
           className="btn-primary px-4 py-2 text-sm tracking-wider whitespace-nowrap">+ Add Guest</button>
         {currentUser.role === 'super_admin' && (
@@ -1181,10 +1236,26 @@ export default function AdminPage() {
                         className={`px-2 py-1 border rounded-sm text-[10px] transition-all whitespace-nowrap ${copied === g.invite_code ? 'border-green-500/40 text-green-400' : 'border-[#C9A84C]/40 text-[#C9A84C] hover:bg-[#C9A84C]/10'}`}>
                         {copied === g.invite_code ? '✓ Copied' : '📋 Copy Link'}
                       </button>
-                      <button onClick={() => sendWhatsApp(g)} title="Send via WhatsApp"
-                        className="px-2 py-1 border border-green-500/20 text-green-400/60 hover:text-green-400 rounded-sm text-[10px] transition-all whitespace-nowrap">
-                        WA
+                      <button onClick={() => sendWhatsApp(g)} title="Send active template via WhatsApp"
+                        className="px-2 py-1 border border-green-500/30 text-green-400 hover:bg-green-500/10 rounded-sm text-[10px] font-medium transition-all whitespace-nowrap">
+                        💬 WA
                       </button>
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            sendWhatsApp(g, e.target.value as MessageTemplateMode)
+                            e.target.value = ''
+                          }
+                        }}
+                        className="bg-[#0A1931] border border-green-500/30 text-green-400 text-[10px] px-1 py-1 rounded-sm outline-none cursor-pointer hover:border-green-400"
+                        title="Choose specific message link to send"
+                      >
+                        <option value="">▾ Link</option>
+                        <option value="invite">💌 Main Invite</option>
+                        <option value="save_date">🗓️ Save Date</option>
+                        <option value="location">📍 Location</option>
+                        <option value="photos">📸 Photos & Insta</option>
+                      </select>
                       <button onClick={() => window.open(`${BASE_URL}/i/${g.invite_code}`, '_blank')} title="Preview Full Invitation Card"
                         className="px-2 py-1 border border-white/10 text-white/30 hover:text-white/60 rounded-sm text-[10px] transition-all">
                         👁
@@ -1484,6 +1555,83 @@ export default function AdminPage() {
                 </div>
               </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ CUSTOM LINKS & TEMPLATES MODAL ══ */}
+      {showLinksModal && (
+        <div className="fixed inset-0 bg-black/80 z-50 overflow-y-auto py-8 px-4 flex items-center justify-center">
+          <div className="glass w-full max-w-xl mx-auto rounded-sm p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-6 border-b border-[#C9A84C]/20 pb-3">
+              <div>
+                <h2 className="font-serif text-xl text-[#F5ECD7] flex items-center gap-2">
+                  <span>⚙️</span> Event Links & WhatsApp Settings
+                </h2>
+                <p className="text-xs text-white/50 mt-1">
+                  Configure custom links sent in WhatsApp messages (Location, Photos & Instagram).
+                </p>
+              </div>
+              <button onClick={() => setShowLinksModal(false)} className="text-white/30 hover:text-white text-xl">✕</button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault()
+              localStorage.setItem('portal_custom_links', JSON.stringify(customLinks))
+              setShowLinksModal(false)
+              alert('✅ Custom links saved!')
+            }} className="flex flex-col gap-4">
+              <div>
+                <label className="text-[10px] uppercase tracking-widest text-[#C9A84C] block mb-1">
+                  📍 Venue Google Maps Location Link
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://maps.google.com/?q=..."
+                  value={customLinks.locationUrl}
+                  onChange={e => setCustomLinks(l => ({ ...l, locationUrl: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40 font-mono"
+                />
+                <p className="text-[9px] text-white/30 mt-1">Included in "Venue & Location" WhatsApp messages.</p>
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase tracking-widest text-[#C9A84C] block mb-1">
+                  📸 Event Photos Gallery Link (Google Drive / Photos)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://photos.app.goo.gl/... or https://drive.google.com/..."
+                  value={customLinks.photoUrl}
+                  onChange={e => setCustomLinks(l => ({ ...l, photoUrl: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40 font-mono"
+                />
+                <p className="text-[9px] text-white/30 mt-1">Included in "Photos & Instagram" WhatsApp messages.</p>
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase tracking-widest text-[#C9A84C] block mb-1">
+                  ✨ Instagram Reel / Filter / Profile Link
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://instagram.com/..."
+                  value={customLinks.instaUrl}
+                  onChange={e => setCustomLinks(l => ({ ...l, instaUrl: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-sm px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-[#C9A84C]/40 font-mono"
+                />
+                <p className="text-[9px] text-white/30 mt-1">Included in "Photos & Instagram" WhatsApp messages.</p>
+              </div>
+
+              <div className="flex gap-3 mt-4">
+                <button type="submit" className="btn-primary py-2.5 px-6 text-xs uppercase tracking-widest flex-1">
+                  Save Link Settings
+                </button>
+                <button type="button" onClick={() => setShowLinksModal(false)} className="btn-outline py-2.5 px-6 text-xs uppercase tracking-widest">
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
