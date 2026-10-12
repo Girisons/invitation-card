@@ -528,10 +528,41 @@ export default function AdminPage() {
     } finally { setSaving(false) }
   }
 
+  // ── QUICK CHANGE ATTENDANCE STATUS ──
+  const handleAttendanceChange = async (g: Guest, newStatus: string) => {
+    const { error } = await supabase.from('guests').update({ invitation_status: newStatus }).eq('id', g.id)
+    if (error) {
+      alert('Error updating attendance: ' + error.message)
+      return
+    }
+
+    if (g.linked_guest_id && g.send_together) {
+      await supabase.from('guests').update({ invitation_status: newStatus }).eq('id', g.linked_guest_id)
+    }
+
+    fetchGuests()
+  }
+
+  // ── QUICK CHANGE ANY FIELD (FOOD, DRINKS, HOST, GROUP) ──
+  const handleFieldChange = async (g: Guest, field: string, value: string) => {
+    const payload: Record<string, any> = { [field]: value || null }
+    const { error } = await supabase.from('guests').update(payload).eq('id', g.id)
+    if (error) {
+      alert(`Error updating ${field}: ` + error.message)
+      return
+    }
+
+    if (g.linked_guest_id && g.send_together && ['guest_of', 'relationship_group'].includes(field)) {
+      await supabase.from('guests').update(payload).eq('id', g.linked_guest_id)
+    }
+
+    fetchGuests()
+  }
+
   // ── EDIT GUEST ──
   const startEdit = (g: Guest) => {
     setEditingGuest(g)
-    setEditForm({ first_name: g.first_name, last_name: g.last_name || '', nickname: g.nickname || '', mobile: g.mobile || '', partner_name: g.partner_name || '', partner_mobile: g.partner_mobile || '', food_preference: g.food_preference || '', liquor_preference: g.liquor_preference || '', guest_of: g.guest_of || '', relationship_group: g.relationship_group || '', invite_code: g.invite_code, video_url: g.video_url || '' })
+    setEditForm({ first_name: g.first_name, last_name: g.last_name || '', nickname: g.nickname || '', mobile: g.mobile || '', partner_name: g.partner_name || '', partner_mobile: g.partner_mobile || '', food_preference: g.food_preference || '', liquor_preference: g.liquor_preference || '', guest_of: g.guest_of || '', relationship_group: g.relationship_group || '', invite_code: g.invite_code, video_url: g.video_url || '', invitation_status: g.invitation_status || 'pending' })
   }
 
   const handleEditSave = async () => {
@@ -955,37 +986,83 @@ export default function AdminPage() {
 
                   {/* ATTENDANCE COLUMN */}
                   <td className="px-4 py-3 whitespace-nowrap">
-                    {isYes ? (
-                      <span className="text-[10px] font-semibold bg-green-500/15 text-green-400 border border-green-500/30 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
-                        <span>🎉</span> Attending
-                      </span>
-                    ) : isNo ? (
-                      <span className="text-[10px] font-semibold bg-red-500/15 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
-                        <span>❌</span> Declined
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-white/35 bg-white/5 border border-white/10 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
-                        <span>⏳</span> Pending
-                      </span>
-                    )}
+                    <select
+                      value={isYes ? 'rsvp_yes' : isNo ? 'rsvp_no' : 'pending'}
+                      onChange={(e) => handleAttendanceChange(g, e.target.value)}
+                      className={`text-[11px] font-semibold px-2.5 py-1 rounded-full outline-none cursor-pointer transition-all border ${
+                        isYes
+                          ? 'bg-green-500/20 text-green-400 border-green-500/40 hover:bg-green-500/30'
+                          : isNo
+                          ? 'bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/30'
+                          : 'bg-white/5 text-amber-300/80 border-white/15 hover:border-[#C9A84C]/50'
+                      }`}
+                    >
+                      <option value="pending" className="bg-[#0A1931] text-white/80">⏳ Pending</option>
+                      <option value="rsvp_yes" className="bg-[#0A1931] text-green-400 font-semibold">🎉 Attending</option>
+                      <option value="rsvp_no" className="bg-[#0A1931] text-red-400 font-semibold">❌ Declined</option>
+                    </select>
                   </td>
 
-                  <td className="px-4 py-3">
-                    {g.food_preference ? (
-                      <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full text-white/50 capitalize whitespace-nowrap">
-                        {g.food_preference === 'vegetarian' ? 'Veg' : g.food_preference === 'non-vegetarian' ? 'Non-Veg' : g.food_preference}
-                      </span>
-                    ) : <span className="text-white/20">—</span>}
+                  {/* FOOD COLUMN */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <select
+                      value={g.food_preference || ''}
+                      onChange={(e) => handleFieldChange(g, 'food_preference', e.target.value)}
+                      className="bg-white/5 border border-white/10 text-white/80 text-[11px] px-2.5 py-1 rounded-full outline-none cursor-pointer hover:border-[#C9A84C]/40 transition-all font-sans"
+                    >
+                      <option value="" className="bg-[#0A1931] text-white/40">— None</option>
+                      <option value="vegetarian" className="bg-[#0A1931] text-green-400 font-medium">🥗 Veg</option>
+                      <option value="jain" className="bg-[#0A1931] text-amber-300 font-medium">🥦 Jain</option>
+                      <option value="non-vegetarian" className="bg-[#0A1931] text-red-400 font-medium">🍗 Non-Veg</option>
+                      <option value="other" className="bg-[#0A1931] text-blue-300 font-medium">🍽️ Other</option>
+                    </select>
                   </td>
-                  <td className="px-4 py-3">
-                    {g.liquor_preference ? (
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap ${g.liquor_preference === 'yes' ? 'bg-amber-500/10 text-amber-400' : g.liquor_preference === 'no' ? 'bg-white/5 text-white/30' : 'bg-blue-500/10 text-blue-400'}`}>
-                        🥂 {g.liquor_preference}
-                      </span>
-                    ) : <span className="text-white/20">—</span>}
+
+                  {/* DRINKS COLUMN */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <select
+                      value={g.liquor_preference || ''}
+                      onChange={(e) => handleFieldChange(g, 'liquor_preference', e.target.value)}
+                      className="bg-white/5 border border-white/10 text-white/80 text-[11px] px-2.5 py-1 rounded-full outline-none cursor-pointer hover:border-[#C9A84C]/40 transition-all font-sans"
+                    >
+                      <option value="" className="bg-[#0A1931] text-white/40">— None</option>
+                      <option value="yes" className="bg-[#0A1931] text-amber-400 font-medium">🥂 Yes</option>
+                      <option value="no" className="bg-[#0A1931] text-white/50 font-medium">🥤 No</option>
+                      <option value="maybe" className="bg-[#0A1931] text-blue-400 font-medium">🍸 Maybe</option>
+                    </select>
                   </td>
-                  <td className="px-4 py-3 text-[#C9A84C] font-medium text-xs whitespace-nowrap">{g.guest_of || '—'}</td>
-                  <td className="px-4 py-3 text-white/40 text-xs capitalize">{g.relationship_group || '—'}</td>
+
+                  {/* INVITED BY (HOST) COLUMN */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <select
+                      value={g.guest_of || ''}
+                      onChange={(e) => handleFieldChange(g, 'guest_of', e.target.value)}
+                      className="bg-[#0A1931] border border-[#C9A84C]/30 text-[#C9A84C] font-semibold text-xs px-2.5 py-1 rounded outline-none cursor-pointer hover:border-[#C9A84C]"
+                    >
+                      {portalUsers.map(u => (
+                        <option key={u.id} value={u.name} className="bg-[#0A1931] text-[#C9A84C]">👤 {u.name}</option>
+                      ))}
+                      {!portalUsers.some(u => u.name === g.guest_of) && g.guest_of && (
+                        <option value={g.guest_of} className="bg-[#0A1931] text-[#C9A84C]">👤 {g.guest_of}</option>
+                      )}
+                    </select>
+                  </td>
+
+                  {/* GROUP COLUMN */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <select
+                      value={g.relationship_group || ''}
+                      onChange={(e) => handleFieldChange(g, 'relationship_group', e.target.value)}
+                      className="bg-white/5 border border-white/10 text-white/70 text-xs px-2 py-1 rounded outline-none cursor-pointer hover:border-[#C9A84C]/40 capitalize"
+                    >
+                      <option value="" className="bg-[#0A1931] text-white/40">— None</option>
+                      <option value="Family" className="bg-[#0A1931] text-white">Family</option>
+                      <option value="Friends" className="bg-[#0A1931] text-white">Friends</option>
+                      <option value="Relatives" className="bg-[#0A1931] text-white">Relatives</option>
+                      <option value="VIP" className="bg-[#0A1931] text-amber-400">VIP</option>
+                      <option value="Work" className="bg-[#0A1931] text-white">Work</option>
+                    </select>
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`text-[9px] font-semibold px-2 py-0.5 border rounded-sm tracking-wider whitespace-nowrap ${info.color}`}>
                       {info.label}

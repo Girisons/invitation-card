@@ -11,7 +11,7 @@ interface Props {
   onBack: () => void
 }
 
-export default function ConfirmationScreen({ guest, guestName, status }: Props) {
+export default function ConfirmationScreen({ guest, guestName, status, onBack }: Props) {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -57,6 +57,9 @@ export default function ConfirmationScreen({ guest, guestName, status }: Props) 
 
           <button onClick={handleWhatsApp} className="btn-outline w-full py-4 text-sm tracking-[0.2em] uppercase mb-4">
             Message Tanvi
+          </button>
+          <button onClick={onBack} className="text-xs text-[#C9A84C]/80 hover:text-[#C9A84C] underline tracking-wider uppercase mb-6 transition-all">
+            🔄 Change Response
           </button>
           <p className="font-sans text-xs text-[#C9A84C]/60 tracking-wide">
             Plans can change… and we'll be waiting to celebrate with you.
@@ -114,6 +117,9 @@ export default function ConfirmationScreen({ guest, guestName, status }: Props) 
             </button>
             <button onClick={handleWhatsApp} className="btn-outline w-full py-4 text-sm tracking-[0.2em] uppercase">
               💬 Message Tanvi
+            </button>
+            <button onClick={onBack} className="text-xs text-[#C9A84C]/70 hover:text-[#C9A84C] underline tracking-wider uppercase py-2 transition-all">
+              🔄 Change RSVP Selection
             </button>
           </div>
 
