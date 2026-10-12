@@ -1146,17 +1146,25 @@ export default function AdminPage() {
                   </td>
                   {/* MSG STATUS COLUMN */}
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <select
-                      value={(g.invitation_status || 'pending').toLowerCase()}
-                      onChange={(e) => handleAttendanceChange(g, e.target.value)}
-                      className={`text-[9px] font-semibold px-2 py-1 border rounded-sm tracking-wider whitespace-nowrap outline-none cursor-pointer ${info.color}`}
-                    >
-                      <option value="pending" className="bg-[#0A1931] text-white/50">PENDING</option>
-                      <option value="sent" className="bg-[#0A1931] text-blue-400">MESSAGE SENT</option>
-                      <option value="seen" className="bg-[#0A1931] text-yellow-400">MESSAGE SEEN</option>
-                      <option value="rsvp_yes" className="bg-[#0A1931] text-green-400">RSVP YES</option>
-                      <option value="rsvp_no" className="bg-[#0A1931] text-red-400">RSVP NO</option>
-                    </select>
+                    {(() => {
+                      const st = (g.invitation_status || '').toLowerCase()
+                      const msgVal = ['seen', 'message_seen', 'entered', 'opened', 'rsvp_yes', 'rsvp_no', 'attending', 'declined', 'yes', 'no'].includes(st)
+                        ? 'seen'
+                        : ['sent', 'message_sent'].includes(st)
+                        ? 'sent'
+                        : 'pending'
+                      return (
+                        <select
+                          value={msgVal}
+                          onChange={(e) => handleFieldChange(g, 'invitation_status', e.target.value)}
+                          className={`text-[9px] font-semibold px-2 py-1 border rounded-sm tracking-wider whitespace-nowrap outline-none cursor-pointer ${info.color}`}
+                        >
+                          <option value="pending" className="bg-[#0A1931] text-white/50">PENDING</option>
+                          <option value="sent" className="bg-[#0A1931] text-blue-400 font-semibold">MESSAGE SENT</option>
+                          <option value="seen" className="bg-[#0A1931] text-yellow-400 font-semibold">MESSAGE SEEN</option>
+                        </select>
+                      )
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     {g.linked_guest_id ? (
