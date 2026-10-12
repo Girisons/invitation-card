@@ -1079,7 +1079,7 @@ export default function AdminPage() {
                   {/* FOOD COLUMN */}
                   <td className="px-4 py-3 whitespace-nowrap">
                     <select
-                      value={g.food_preference || ''}
+                      value={(g.food_preference || '').toLowerCase()}
                       onChange={(e) => handleFieldChange(g, 'food_preference', e.target.value)}
                       className="bg-white/5 border border-white/10 text-white/80 text-[11px] px-2.5 py-1 rounded-full outline-none cursor-pointer hover:border-[#C9A84C]/40 transition-all font-sans"
                     >
@@ -1094,7 +1094,7 @@ export default function AdminPage() {
                   {/* DRINKS COLUMN */}
                   <td className="px-4 py-3 whitespace-nowrap">
                     <select
-                      value={g.liquor_preference || ''}
+                      value={(g.liquor_preference || '').toLowerCase()}
                       onChange={(e) => handleFieldChange(g, 'liquor_preference', e.target.value)}
                       className="bg-white/5 border border-white/10 text-white/80 text-[11px] px-2.5 py-1 rounded-full outline-none cursor-pointer hover:border-[#C9A84C]/40 transition-all font-sans"
                     >
@@ -1123,18 +1123,26 @@ export default function AdminPage() {
 
                   {/* GROUP COLUMN */}
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <select
-                      value={g.relationship_group || ''}
-                      onChange={(e) => handleFieldChange(g, 'relationship_group', e.target.value)}
-                      className="bg-white/5 border border-white/10 text-white/70 text-xs px-2 py-1 rounded outline-none cursor-pointer hover:border-[#C9A84C]/40 capitalize"
-                    >
-                      <option value="" className="bg-[#0A1931] text-white/40">— None</option>
-                      <option value="Family" className="bg-[#0A1931] text-white">Family</option>
-                      <option value="Friends" className="bg-[#0A1931] text-white">Friends</option>
-                      <option value="Relatives" className="bg-[#0A1931] text-white">Relatives</option>
-                      <option value="VIP" className="bg-[#0A1931] text-amber-400">VIP</option>
-                      <option value="Work" className="bg-[#0A1931] text-white">Work</option>
-                    </select>
+                    {(() => {
+                      const rawGrp = (g.relationship_group || '').trim()
+                      const options = ['Family', 'Friends', 'Relatives', 'Business', 'VIP', 'Work', 'School', 'College']
+                      const matchedOpt = options.find(o => o.toLowerCase() === rawGrp.toLowerCase()) || rawGrp
+                      return (
+                        <select
+                          value={matchedOpt}
+                          onChange={(e) => handleFieldChange(g, 'relationship_group', e.target.value)}
+                          className="bg-white/5 border border-white/10 text-white/80 text-xs px-2 py-1 rounded outline-none cursor-pointer hover:border-[#C9A84C]/40 capitalize font-medium"
+                        >
+                          <option value="" className="bg-[#0A1931] text-white/40">— None</option>
+                          {options.map(opt => (
+                            <option key={opt} value={opt} className="bg-[#0A1931] text-white">{opt}</option>
+                          ))}
+                          {rawGrp && !options.some(o => o.toLowerCase() === rawGrp.toLowerCase()) && (
+                            <option value={rawGrp} className="bg-[#0A1931] text-white">{rawGrp}</option>
+                          )}
+                        </select>
+                      )
+                    })()}
                   </td>
                   {/* MSG STATUS COLUMN */}
                   <td className="px-4 py-3 whitespace-nowrap">
