@@ -1063,10 +1063,19 @@ export default function AdminPage() {
                       <option value="Work" className="bg-[#0A1931] text-white">Work</option>
                     </select>
                   </td>
+                  {/* MSG STATUS COLUMN */}
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`text-[9px] font-semibold px-2 py-0.5 border rounded-sm tracking-wider whitespace-nowrap ${info.color}`}>
-                      {info.label}
-                    </span>
+                    <select
+                      value={(g.invitation_status || 'pending').toLowerCase()}
+                      onChange={(e) => handleAttendanceChange(g, e.target.value)}
+                      className={`text-[9px] font-semibold px-2 py-1 border rounded-sm tracking-wider whitespace-nowrap outline-none cursor-pointer ${info.color}`}
+                    >
+                      <option value="pending" className="bg-[#0A1931] text-white/50">PENDING</option>
+                      <option value="sent" className="bg-[#0A1931] text-blue-400">MESSAGE SENT</option>
+                      <option value="seen" className="bg-[#0A1931] text-yellow-400">MESSAGE SEEN</option>
+                      <option value="rsvp_yes" className="bg-[#0A1931] text-green-400">RSVP YES</option>
+                      <option value="rsvp_no" className="bg-[#0A1931] text-red-400">RSVP NO</option>
+                    </select>
                   </td>
                   <td className="px-4 py-3">
                     {g.linked_guest_id ? (
