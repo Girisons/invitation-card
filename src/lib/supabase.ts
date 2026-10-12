@@ -35,6 +35,7 @@ export interface Guest {
   linked_guest_id?: string
   send_together?: boolean
   video_url?: string
+  std_video_url?: string
 }
 
 export interface RSVP {
