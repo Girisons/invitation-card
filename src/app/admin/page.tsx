@@ -26,6 +26,18 @@ function generateCode(): string {
   return Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
 
+function getUniqueCode(usedCodes?: Set<string>): string {
+  let code = generateCode()
+  if (!usedCodes) return code
+  let attempts = 0
+  while (usedCodes.has(code.toUpperCase()) && attempts < 200) {
+    code = generateCode()
+    attempts++
+  }
+  usedCodes.add(code.toUpperCase())
+  return code
+}
+
 const COUNTRY_CODES = [
   { code: '+91', label: '+91 (IN)' },
   { code: '+65', label: '+65 (SG)' },
@@ -270,16 +282,27 @@ export default function AdminPage() {
   const [guestMap, setGuestMap] = useState<Record<string, { name: string; mobile: string }>>({})
 
   // Form states
-  const emptyPerson = (): PersonForm => ({
-    first_name: '', last_name: '', nickname: '', mobile: '',
-    food_preference: '', liquor_preference: '', invite_code: generateCode(),
-  })
-  const emptyForm = (): FormState => ({
-    primary: emptyPerson(), spouse: { ...emptyPerson(), invite_code: generateCode() },
-    has_spouse: false, send_together: true,
-    guest_of: currentUser ? (currentUser.role === 'super_admin' ? '' : currentUser.name) : '',
-    relationship_group: '',
-  })
+  const getExistingCodesSet = () => new Set<string>(guests.map(g => g.invite_code?.toUpperCase()).filter(Boolean))
+
+  const emptyPerson = (usedSet?: Set<string>): PersonForm => {
+    const used = usedSet || getExistingCodesSet()
+    return {
+      first_name: '', last_name: '', nickname: '', mobile: '',
+      food_preference: '', liquor_preference: '', invite_code: getUniqueCode(used),
+    }
+  }
+
+  const emptyForm = (): FormState => {
+    const used = getExistingCodesSet()
+    const primary = emptyPerson(used)
+    const spouse = emptyPerson(used)
+    return {
+      primary, spouse,
+      has_spouse: false, send_together: true,
+      guest_of: currentUser ? (currentUser.role === 'super_admin' ? '' : currentUser.name) : '',
+      relationship_group: '',
+    }
+  }
 
   const [form, setForm] = useState<FormState>(emptyForm())
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null)
@@ -465,57 +488,111 @@ export default function AdminPage() {
     if (!form.primary.first_name.trim()) return alert('First name required')
     setSaving(true)
     try {
+      // Fetch latest codes from Supabase DB to prevent collisions across multiple sessions
+      const { data: existingCodesData } = await supabase.from('guests').select('invite_code')
+      const usedCodes = new Set<string>(
+        (existingCodesData || []).map(r => r.invite_code?.toUpperCase()).filter(Boolean)
+      )
+
+      let primaryCode = (form.primary.invite_code || '').trim().toUpperCase()
+      if (!primaryCode || usedCodes.has(primaryCode)) {
+        primaryCode = getUniqueCode(usedCodes)
+      } else {
+        usedCodes.add(primaryCode)
+      }
+
       const guestOfName = form.guest_of.trim() || (currentUser?.name || '')
       const shared = { guest_of: guestOfName, relationship_group: form.relationship_group }
+
       if (!form.has_spouse) {
-        const { error } = await supabase.from('guests').insert({
-          ...shared,
-          first_name: form.primary.first_name.trim(),
-          last_name: form.primary.last_name.trim() || null,
-          nickname: form.primary.nickname.trim() || null,
-          mobile: form.primary.mobile.trim(),
-          food_preference: form.primary.food_preference || null,
-          liquor_preference: form.primary.liquor_preference || null,
-          invite_code: form.primary.invite_code,
-          invited_count: 1
-        })
-        if (error) throw error
+        let insertErr: any = null
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { error } = await supabase.from('guests').insert({
+            ...shared,
+            first_name: form.primary.first_name.trim(),
+            last_name: form.primary.last_name.trim() || null,
+            nickname: form.primary.nickname.trim() || null,
+            mobile: form.primary.mobile.trim(),
+            food_preference: form.primary.food_preference || null,
+            liquor_preference: form.primary.liquor_preference || null,
+            invite_code: primaryCode,
+            invited_count: 1
+          })
+          if (!error) { insertErr = null; break }
+          if (error.message?.includes('guests_invite_code_key') || error.code === '23505') {
+            primaryCode = getUniqueCode(usedCodes)
+            insertErr = error
+          } else {
+            throw error
+          }
+        }
+        if (insertErr) throw insertErr
       } else {
+        let spouseCode = (form.spouse.invite_code || '').trim().toUpperCase()
+        if (!spouseCode || usedCodes.has(spouseCode) || spouseCode === primaryCode) {
+          spouseCode = getUniqueCode(usedCodes)
+        } else {
+          usedCodes.add(spouseCode)
+        }
+
         const partnerName = form.spouse.nickname.trim() || `${form.spouse.first_name.trim()}${form.spouse.last_name.trim() ? ' ' + form.spouse.last_name.trim() : ''}`
         const primaryName = form.primary.nickname.trim() || `${form.primary.first_name.trim()}${form.primary.last_name.trim() ? ' ' + form.primary.last_name.trim() : ''}`
         const isTogether = form.send_together
 
-        const { data: p, error: e1 } = await supabase.from('guests').insert({
-          ...shared,
-          first_name: form.primary.first_name.trim(),
-          last_name: form.primary.last_name.trim() || null,
-          nickname: form.primary.nickname.trim() || null,
-          mobile: form.primary.mobile.trim(),
-          food_preference: form.primary.food_preference || null,
-          liquor_preference: form.primary.liquor_preference || null,
-          partner_name: partnerName,
-          partner_mobile: form.spouse.mobile.trim() || null,
-          invite_code: form.primary.invite_code,
-          invited_count: isTogether ? 2 : 1,
-          send_together: isTogether
-        }).select().single()
-        if (e1) throw e1
+        let p: Guest | null = null
+        let s: Guest | null = null
 
-        const { data: s, error: e2 } = await supabase.from('guests').insert({
-          ...shared,
-          first_name: form.spouse.first_name.trim(),
-          last_name: form.spouse.last_name.trim() || null,
-          nickname: form.spouse.nickname.trim() || null,
-          mobile: form.spouse.mobile.trim(),
-          food_preference: form.spouse.food_preference || null,
-          liquor_preference: form.spouse.liquor_preference || null,
-          partner_name: primaryName,
-          partner_mobile: form.primary.mobile.trim() || null,
-          invite_code: form.spouse.invite_code,
-          invited_count: 1,
-          send_together: isTogether
-        }).select().single()
-        if (e2) throw e2
+        // Insert primary guest with retry on code collision
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { data, error } = await supabase.from('guests').insert({
+            ...shared,
+            first_name: form.primary.first_name.trim(),
+            last_name: form.primary.last_name.trim() || null,
+            nickname: form.primary.nickname.trim() || null,
+            mobile: form.primary.mobile.trim(),
+            food_preference: form.primary.food_preference || null,
+            liquor_preference: form.primary.liquor_preference || null,
+            partner_name: partnerName,
+            partner_mobile: form.spouse.mobile.trim() || null,
+            invite_code: primaryCode,
+            invited_count: isTogether ? 2 : 1,
+            send_together: isTogether
+          }).select().single()
+
+          if (!error && data) { p = data as Guest; break }
+          if (error?.message?.includes('guests_invite_code_key') || error?.code === '23505') {
+            primaryCode = getUniqueCode(usedCodes)
+          } else {
+            throw error
+          }
+        }
+
+        if (!p) throw new Error('Could not insert primary guest')
+
+        // Insert spouse guest with retry on code collision
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { data, error } = await supabase.from('guests').insert({
+            ...shared,
+            first_name: form.spouse.first_name.trim(),
+            last_name: form.spouse.last_name.trim() || null,
+            nickname: form.spouse.nickname.trim() || null,
+            mobile: form.spouse.mobile.trim(),
+            food_preference: form.spouse.food_preference || null,
+            liquor_preference: form.spouse.liquor_preference || null,
+            partner_name: primaryName,
+            partner_mobile: form.primary.mobile.trim() || null,
+            invite_code: spouseCode,
+            invited_count: 1,
+            send_together: isTogether
+          }).select().single()
+
+          if (!error && data) { s = data as Guest; break }
+          if (error?.message?.includes('guests_invite_code_key') || error?.code === '23505') {
+            spouseCode = getUniqueCode(usedCodes)
+          } else {
+            throw error
+          }
+        }
 
         if (p && s) {
           await supabase.from('guests').update({ linked_guest_id: s.id }).eq('id', p.id)
@@ -703,13 +780,19 @@ export default function AdminPage() {
     const lines = text.trim().split('\n').slice(1)
     let count = 0
     const defaultHost = currentUser?.role === 'super_admin' ? 'Arpit' : (currentUser?.name || '')
+    
+    const { data: existingCodesData } = await supabase.from('guests').select('invite_code')
+    const usedCodes = new Set<string>(
+      (existingCodesData || []).map(r => r.invite_code?.toUpperCase()).filter(Boolean)
+    )
+
     for (const line of lines) {
       const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, '').replace(/""/g, '"'))
       const [name, nickname, mobile, partner_name, partner_mobile, food_preference, liquor_preference, guest_of, relationship_group] = cols
       if (!name) continue
       const [first_name, ...rest] = name.split(' ')
       const last_name = rest.join(' ')
-      const code = generateCode()
+      const code = getUniqueCode(usedCodes)
       await supabase.from('guests').insert({
         first_name,
         last_name: last_name || null,
