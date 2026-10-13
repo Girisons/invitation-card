@@ -14,7 +14,7 @@ export interface PortalUser {
   created_at?: string
 }
 
-export type MessageTemplateMode = 'invite' | 'save_date' | 'location' | 'photos'
+export type MessageTemplateMode = 'invite' | 'save_date' | 'save_date_diwali' | 'location' | 'photos'
 
 const DEFAULT_USERS: PortalUser[] = [
   { id: 'user-admin', username: 'admin', password: 'arpit40', name: 'Super Admin', role: 'super_admin', created_at: new Date().toISOString() },
@@ -318,7 +318,7 @@ export default function AdminPage() {
   const [userMsg, setUserMsg] = useState('')
 
   // Message Template & Custom Link States
-  const [messageTemplate, setMessageTemplate] = useState<'invite' | 'save_date' | 'location' | 'photos'>('invite')
+  const [messageTemplate, setMessageTemplate] = useState<MessageTemplateMode>('invite')
   const [customLinks, setCustomLinks] = useState<{ locationUrl: string; photoUrl: string; instaUrl: string }>({
     locationUrl: 'https://maps.google.com/?q=Jaipur',
     photoUrl: '',
@@ -681,7 +681,9 @@ export default function AdminPage() {
 
   // ── COPY LINK ──
   const copyLink = (code: string) => {
-    const linkUrl = messageTemplate === 'save_date'
+    const linkUrl = messageTemplate === 'save_date_diwali'
+      ? `${BASE_URL}/i/${code}?type=save_date_diwali`
+      : messageTemplate === 'save_date'
       ? `${BASE_URL}/i/${code}?type=save_date`
       : `${BASE_URL}/i/${code}`
     navigator.clipboard.writeText(linkUrl)
@@ -701,6 +703,7 @@ export default function AdminPage() {
 
     const mainInviteLink = `${BASE_URL}/i/${g.invite_code}`
     const saveDateLink = `${BASE_URL}/i/${g.invite_code}?type=save_date`
+    const saveDateDiwaliLink = `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali`
     const isCouple = (g.send_together && !!g.partner_name) || (g.invited_count && g.invited_count > 1)
 
     const pDisplay = (g.nickname && g.nickname.trim())
@@ -748,7 +751,9 @@ export default function AdminPage() {
 
     let msg = ''
 
-    if (activeMode === 'save_date') {
+    if (activeMode === 'save_date_diwali') {
+      msg = `${EMOJI.sparkles} *SAVE THE DATE!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nPlease mark your calendar for a grand *Diwali Party Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\nDetailed formal invitation to follow soon. We can’t wait to celebrate the festival of lights with ${youTarget}! ${EMOJI.heart}\n\nWith lots of love,\n*Arpit, Vipul & Jitu*\n*Complete Khandelwal Family*\n\n${EMOJI.gift} *Save The Date Link:*\n${saveDateDiwaliLink}`
+    } else if (activeMode === 'save_date') {
       msg = `${EMOJI.sparkles} *SAVE THE DATE!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nPlease mark your calendar for *ARPIT’s 40th Birthday & Diwali Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\nDetailed formal invitation to follow soon. We can’t wait to celebrate this special evening with ${youTarget}! ${EMOJI.heart}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*\n\n${EMOJI.gift} *Save The Date Link:*\n${saveDateLink}`
     } else if (activeMode === 'location') {
       const loc = (customLinks.locationUrl || 'https://maps.google.com/?q=Jaipur').trim()
@@ -1019,7 +1024,8 @@ export default function AdminPage() {
             className="bg-transparent text-[#F5ECD7] text-xs outline-none font-medium cursor-pointer"
           >
             <option value="invite" className="bg-[#0A1931]">💌 Main Digital Invite</option>
-            <option value="save_date" className="bg-[#0A1931]">🗓️ Save The Date</option>
+            <option value="save_date" className="bg-[#0A1931]">🗓️ Save The Date (Arpit 40th)</option>
+            <option value="save_date_diwali" className="bg-[#0A1931]">🪔 Save The Date (Diwali Party)</option>
             <option value="location" className="bg-[#0A1931]">📍 Venue & Location Link</option>
             <option value="photos" className="bg-[#0A1931]">📸 Photos & Instagram Link</option>
           </select>
@@ -1240,12 +1246,17 @@ export default function AdminPage() {
                       >
                         <option value="">▾ Link</option>
                         <option value="invite">💌 Main Invite</option>
-                        <option value="save_date">🗓️ Save Date</option>
+                        <option value="save_date">🗓️ Save Date (40th)</option>
+                        <option value="save_date_diwali">🪔 Save Date (Diwali)</option>
                         <option value="location">📍 Location</option>
                         <option value="photos">📸 Photos & Insta</option>
                       </select>
                       <button onClick={() => {
-                        const previewUrl = messageTemplate === 'save_date' ? `${BASE_URL}/i/${g.invite_code}?type=save_date` : `${BASE_URL}/i/${g.invite_code}`
+                        const previewUrl = messageTemplate === 'save_date_diwali'
+                          ? `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali`
+                          : messageTemplate === 'save_date'
+                          ? `${BASE_URL}/i/${g.invite_code}?type=save_date`
+                          : `${BASE_URL}/i/${g.invite_code}`
                         window.open(previewUrl, '_blank')
                       }} title="Preview Active Video Card"
                         className="px-2 py-1 border border-white/10 text-white/30 hover:text-white/60 rounded-sm text-[10px] transition-all">

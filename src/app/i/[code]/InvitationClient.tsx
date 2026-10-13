@@ -18,17 +18,20 @@ export default function InvitationClient({ guest, inviteCode, inviteType }: Prop
   const [screen, setScreen] = useState<Screen>('video')
   const [rsvpStatus, setRsvpStatus] = useState<'attending' | 'declined' | null>(null)
 
-  const isSaveTheDate = inviteType === 'save_date' || inviteType === 'std' || inviteType === 'save-the-date'
-  const activeVideoUrl = isSaveTheDate
+  const isDiwaliSaveDate = inviteType === 'save_date_diwali' || inviteType === 'std_diwali' || inviteType === 'diwali' || inviteType === 'save-date-diwali'
+  const isSaveTheDate = isDiwaliSaveDate || inviteType === 'save_date' || inviteType === 'std' || inviteType === 'save-the-date'
+  const activeVideoUrl = isDiwaliSaveDate
+    ? (guest.std_video_url || '/videos/save-the-date-diwali.mp4')
+    : isSaveTheDate
     ? (guest.std_video_url || '/videos/save-the-date.mp4')
     : (guest.video_url || '/videos/main-invite.mp4')
 
   // Track invitation opened & entered video directly
   useEffect(() => {
-    trackEvent(guest.id, inviteCode, isSaveTheDate ? 'std_opened' : 'invitation_opened')
-    trackEvent(guest.id, inviteCode, isSaveTheDate ? 'std_entered' : 'invitation_entered')
+    trackEvent(guest.id, inviteCode, isDiwaliSaveDate ? 'std_diwali_opened' : isSaveTheDate ? 'std_opened' : 'invitation_opened')
+    trackEvent(guest.id, inviteCode, isDiwaliSaveDate ? 'std_diwali_entered' : isSaveTheDate ? 'std_entered' : 'invitation_entered')
     updateGuestStatus(guest.id, 'entered')
-  }, [guest.id, inviteCode, isSaveTheDate])
+  }, [guest.id, inviteCode, isSaveTheDate, isDiwaliSaveDate])
 
   const handleEnter = () => {
     trackEvent(guest.id, inviteCode, 'invitation_entered')
@@ -98,6 +101,7 @@ export default function InvitationClient({ guest, inviteCode, inviteType }: Prop
           guest={guest}
           guestName={guestDisplayName}
           status={rsvpStatus}
+          inviteType={inviteType}
           onBack={() => setScreen('video')}
         />
       </div>

@@ -8,10 +8,11 @@ interface Props {
   guest: Guest
   guestName: string
   status: 'attending' | 'declined' | null
+  inviteType?: string
   onBack: () => void
 }
 
-export default function ConfirmationScreen({ guest, guestName, status, onBack }: Props) {
+export default function ConfirmationScreen({ guest, guestName, status, inviteType, onBack }: Props) {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -35,11 +36,16 @@ export default function ConfirmationScreen({ guest, guestName, status, onBack }:
   const handleWhatsApp = () => {
     trackEvent(guest.id, '', 'whatsapp_clicked')
     const phone = EVENT.phone.replace(/\D/g, '')
+    const isDiwali = inviteType === 'save_date_diwali' || inviteType === 'std_diwali' || inviteType === 'diwali'
     let msg = ''
     if (status === 'attending') {
-      msg = `\u2728 Hi Tanvi!\nWe’re super excited to join in for Arpit’s 40th birthday and Diwali celebration. Looking forward to seeing you on Friday, 23rd October 2026 and being part of the double celebration!\n\n— ${guestName} \u2728`
+      msg = isDiwali
+        ? `\u2728 Hi!\nWe’re super excited to join in for the Diwali Party celebration. Looking forward to seeing everyone on Friday, 23rd October 2026 and celebrating with Arpit, Vipul, Jitu & the entire Khandelwal family!\n\n— ${guestName} \u2728`
+        : `\u2728 Hi Tanvi!\nWe’re super excited to join in for Arpit’s 40th birthday and Diwali celebration. Looking forward to seeing you on Friday, 23rd October 2026 and being part of the double celebration!\n\n— ${guestName} \u2728`
     } else {
-      msg = `Hi Tanvi! Unfortunately I won't be able to make it for Arpit's 40th & Diwali celebration. Sending my warmest wishes to Arpit & family!\n\n— ${guestName}`
+      msg = isDiwali
+        ? `Hi! Unfortunately I won't be able to make it for the Diwali Party celebration. Sending my warmest wishes to Arpit, Vipul, Jitu & the entire family!\n\n— ${guestName}`
+        : `Hi Tanvi! Unfortunately I won't be able to make it for Arpit's 40th & Diwali celebration. Sending my warmest wishes to Arpit & family!\n\n— ${guestName}`
     }
     const targetUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
     window.open(targetUrl, '_blank')
