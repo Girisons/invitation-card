@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { Guest, trackEvent, updateGuestStatus, submitRSVP } from '@/lib/supabase'
 import OpeningScreen from '@/components/OpeningScreen'
 import VideoScreen from '@/components/VideoScreen'
@@ -17,19 +16,13 @@ interface Props {
 export default function InvitationClient({ guest, inviteCode }: Props) {
   const [screen, setScreen] = useState<Screen>('video')
   const [rsvpStatus, setRsvpStatus] = useState<'attending' | 'declined' | null>(null)
-  const searchParams = useSearchParams()
-
-  const isSTD = searchParams?.get('type') === 'std' || searchParams?.get('mode') === 'save_date'
-  const activeVideoUrl = isSTD
-    ? (guest.std_video_url || '/videos/Save the date vedio.mp4')
-    : (guest.video_url || '/videos/teaser.mp4')
 
   // Track invitation opened & entered video directly
   useEffect(() => {
-    trackEvent(guest.id, inviteCode, isSTD ? 'std_opened' : 'invitation_opened')
-    trackEvent(guest.id, inviteCode, isSTD ? 'std_entered' : 'invitation_entered')
+    trackEvent(guest.id, inviteCode, 'invitation_opened')
+    trackEvent(guest.id, inviteCode, 'invitation_entered')
     updateGuestStatus(guest.id, 'entered')
-  }, [guest.id, inviteCode, isSTD])
+  }, [guest.id, inviteCode])
 
   const handleEnter = () => {
     trackEvent(guest.id, inviteCode, 'invitation_entered')
@@ -84,7 +77,7 @@ export default function InvitationClient({ guest, inviteCode }: Props) {
         <VideoScreen
           guestName={guestDisplayName}
           guestId={guest.id}
-          videoUrl={activeVideoUrl}
+          videoUrl={guest.video_url}
           inviteCode={guest.invite_code}
           onSelectYes={handleSelectYes}
           onSelectNo={handleSelectNo}
