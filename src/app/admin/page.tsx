@@ -14,7 +14,7 @@ export interface PortalUser {
   created_at?: string
 }
 
-export type MessageTemplateMode = 'invite' | 'save_date' | 'save_date_diwali' | 'location' | 'photos'
+export type MessageTemplateMode = 'invite' | 'save_date' | 'invite_diwali' | 'save_date_diwali' | 'location' | 'photos'
 
 const DEFAULT_USERS: PortalUser[] = [
   { id: 'user-admin', username: 'admin', password: 'arpit40', name: 'Super Admin', role: 'super_admin', created_at: new Date().toISOString() },
@@ -683,6 +683,8 @@ export default function AdminPage() {
   const copyLink = (code: string) => {
     const linkUrl = messageTemplate === 'save_date_diwali'
       ? `${BASE_URL}/i/${code}?type=save_date_diwali`
+      : messageTemplate === 'invite_diwali'
+      ? `${BASE_URL}/i/${code}?type=main_diwali`
       : messageTemplate === 'save_date'
       ? `${BASE_URL}/i/${code}?type=save_date`
       : `${BASE_URL}/i/${code}`
@@ -702,6 +704,7 @@ export default function AdminPage() {
     }
 
     const mainInviteLink = `${BASE_URL}/i/${g.invite_code}`
+    const mainDiwaliInviteLink = `${BASE_URL}/i/${g.invite_code}?type=main_diwali`
     const saveDateLink = `${BASE_URL}/i/${g.invite_code}?type=save_date`
     const saveDateDiwaliLink = `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali`
     const isCouple = (g.send_together && !!g.partner_name) || (g.invited_count && g.invited_count > 1)
@@ -753,6 +756,8 @@ export default function AdminPage() {
 
     if (activeMode === 'save_date_diwali') {
       msg = `${EMOJI.sparkles} *SAVE THE DATE!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nPlease mark your calendar for a grand *Diwali Party Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\nDetailed formal invitation to follow soon. We can’t wait to celebrate the festival of lights with ${youTarget}! ${EMOJI.heart}\n\nWith lots of love,\n*Arpit, Vipul & Jitu*\n*Complete Khandelwal Family*\n\n${EMOJI.gift} *Save The Date Link:*\n${saveDateDiwaliLink}`
+    } else if (activeMode === 'invite_diwali') {
+      msg = `🪔 *FESTIVAL OF LIGHTS • A GRAND CELEBRATION!* 🪔\n\nDear *${name}*, ${EMOJI.heart}\n\nWe warmly invite ${youTarget} to join us for a grand *Diwali Party Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\nCome celebrate the festival of lights with warmth, joy, music, and wonderful memories together! ✨\n\nWith lots of love,\n*Arpit, Vipul & Jitu*\n*Complete Khandelwal Family*\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${mainDiwaliInviteLink}`
     } else if (activeMode === 'save_date') {
       msg = `${EMOJI.sparkles} *SAVE THE DATE!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nPlease mark your calendar for *ARPIT’s 40th Birthday & Diwali Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\nDetailed formal invitation to follow soon. We can’t wait to celebrate this special evening with ${youTarget}! ${EMOJI.heart}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*\n\n${EMOJI.gift} *Save The Date Link:*\n${saveDateLink}`
     } else if (activeMode === 'location') {
@@ -1017,17 +1022,24 @@ export default function AdminPage() {
 
         {/* Message Link Template Selector */}
         <div className="flex items-center gap-1.5 bg-[#0A1931] border border-[#C9A84C]/30 px-3 py-2 rounded-sm">
-          <span className="text-[10px] uppercase tracking-wider text-[#C9A84C] font-semibold">Send Link:</span>
+          <span className="text-[10px] uppercase tracking-wider text-[#C9A84C] font-semibold">Invite:</span>
           <select
             value={messageTemplate}
             onChange={e => setMessageTemplate(e.target.value as MessageTemplateMode)}
             className="bg-transparent text-[#F5ECD7] text-xs outline-none font-medium cursor-pointer"
           >
-            <option value="invite" className="bg-[#0A1931]">💌 Main Digital Invite</option>
-            <option value="save_date" className="bg-[#0A1931]">🗓️ Save The Date (Arpit 40th)</option>
-            <option value="save_date_diwali" className="bg-[#0A1931]">🪔 Save The Date (Diwali Party)</option>
-            <option value="location" className="bg-[#0A1931]">📍 Venue & Location Link</option>
-            <option value="photos" className="bg-[#0A1931]">📸 Photos & Instagram Link</option>
+            <optgroup label="🎂 40 &amp; Festive">
+              <option value="save_date" className="bg-[#0A1931]">🗓️ 40 &amp; Festive - Save The Date</option>
+              <option value="invite" className="bg-[#0A1931]">💌 40 &amp; Festive - Main Invite</option>
+            </optgroup>
+            <optgroup label="🪔 Diwali Party (Family)">
+              <option value="save_date_diwali" className="bg-[#0A1931]">✨ Diwali Party - Save The Date</option>
+              <option value="invite_diwali" className="bg-[#0A1931]">🎉 Diwali Party - Main Invite</option>
+            </optgroup>
+            <optgroup label="📍 Other Links">
+              <option value="location" className="bg-[#0A1931]">📍 Venue &amp; Location Link</option>
+              <option value="photos" className="bg-[#0A1931]">📸 Photos &amp; Instagram Link</option>
+            </optgroup>
           </select>
         </div>
 
@@ -1055,6 +1067,109 @@ export default function AdminPage() {
         </label>
         <button onClick={fetchGuests} className="btn-outline px-3 py-2 text-sm">↻</button>
         {importMsg && <span className="text-[11px] text-green-400">{importMsg}</span>}
+      </div>
+
+      {/* ── ACTIVE INVITE SELECTION BAR ── */}
+      <div className="px-4 py-2.5 bg-gradient-to-r from-[#071326] via-[#0D1F3D] to-[#071326] border-b border-[#C9A84C]/25 flex flex-wrap items-center justify-between gap-3 shadow-inner">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-serif font-bold uppercase tracking-widest text-[#C9A84C] flex items-center gap-1.5">
+            <span className="text-sm">✉️</span> Active Invite To Send:
+          </span>
+          <span className="text-[11px] px-2.5 py-0.5 rounded bg-black/40 border border-[#C9A84C]/30 font-medium text-white/90">
+            {messageTemplate === 'save_date' && '🗓️ 40 & Festive — Save The Date'}
+            {messageTemplate === 'invite' && '💌 40 & Festive — Main Invite'}
+            {messageTemplate === 'save_date_diwali' && '✨ Diwali Party — Save The Date'}
+            {messageTemplate === 'invite_diwali' && '🎉 Diwali Party — Main Invite'}
+            {messageTemplate === 'location' && '📍 Venue & Location Link'}
+            {messageTemplate === 'photos' && '📸 Photos & Instagram Link'}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* 40 & Festive */}
+          <div className="flex items-center bg-[#050D1A] rounded p-1 border border-amber-500/30 gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 px-1.5">
+              🎂 40 &amp; Festive:
+            </span>
+            <button
+              onClick={() => setMessageTemplate('save_date')}
+              className={`px-2.5 py-1 text-xs font-semibold rounded transition-all ${
+                messageTemplate === 'save_date'
+                  ? 'bg-[#C9A84C] text-[#050D1A] font-bold shadow-md ring-1 ring-[#FFF8E1]'
+                  : 'text-amber-100/70 hover:text-white hover:bg-white/5'
+              }`}
+              title="Save The Date for Arpit's 40th Birthday & Diwali Bash"
+            >
+              🗓️ Save The Date
+            </button>
+            <button
+              onClick={() => setMessageTemplate('invite')}
+              className={`px-2.5 py-1 text-xs font-semibold rounded transition-all ${
+                messageTemplate === 'invite'
+                  ? 'bg-[#C9A84C] text-[#050D1A] font-bold shadow-md ring-1 ring-[#FFF8E1]'
+                  : 'text-amber-100/70 hover:text-white hover:bg-white/5'
+              }`}
+              title="Main Invite for Arpit's 40th Birthday & Diwali Bash"
+            >
+              💌 Main Invite
+            </button>
+          </div>
+
+          {/* Diwali Party */}
+          <div className="flex items-center bg-[#050D1A] rounded p-1 border border-orange-500/30 gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-orange-300 px-1.5">
+              🪔 Diwali Party:
+            </span>
+            <button
+              onClick={() => setMessageTemplate('save_date_diwali')}
+              className={`px-2.5 py-1 text-xs font-semibold rounded transition-all ${
+                messageTemplate === 'save_date_diwali'
+                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-[#050D1A] font-bold shadow-md ring-1 ring-[#FFF8E1]'
+                  : 'text-orange-100/70 hover:text-white hover:bg-white/5'
+              }`}
+              title="Save The Date for Diwali Party (Arpit, Vipul & Jitu)"
+            >
+              ✨ Save The Date
+            </button>
+            <button
+              onClick={() => setMessageTemplate('invite_diwali')}
+              className={`px-2.5 py-1 text-xs font-semibold rounded transition-all ${
+                messageTemplate === 'invite_diwali'
+                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-[#050D1A] font-bold shadow-md ring-1 ring-[#FFF8E1]'
+                  : 'text-orange-100/70 hover:text-white hover:bg-white/5'
+              }`}
+              title="Main Invite for Diwali Party (Arpit, Vipul & Jitu)"
+            >
+              🎉 Main Invite
+            </button>
+          </div>
+
+          {/* Other Links */}
+          <div className="flex items-center bg-[#050D1A] rounded p-1 border border-blue-500/30 gap-1">
+            <button
+              onClick={() => setMessageTemplate('location')}
+              className={`px-2 py-1 text-xs font-semibold rounded transition-all ${
+                messageTemplate === 'location'
+                  ? 'bg-blue-500 text-white font-bold shadow-md ring-1 ring-white/50'
+                  : 'text-blue-300/70 hover:text-white hover:bg-white/5'
+              }`}
+              title="Venue Location Google Maps link"
+            >
+              📍 Venue
+            </button>
+            <button
+              onClick={() => setMessageTemplate('photos')}
+              className={`px-2 py-1 text-xs font-semibold rounded transition-all ${
+                messageTemplate === 'photos'
+                  ? 'bg-purple-500 text-white font-bold shadow-md ring-1 ring-white/50'
+                  : 'text-purple-300/70 hover:text-white hover:bg-white/5'
+              }`}
+              title="Event Photos & Instagram link"
+            >
+              📸 Photos
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* ── TABLE ── */}
@@ -1241,21 +1356,30 @@ export default function AdminPage() {
                             e.target.value = ''
                           }
                         }}
-                        className="bg-[#0A1931] border border-green-500/30 text-green-400 text-[10px] px-1 py-1 rounded-sm outline-none cursor-pointer hover:border-green-400"
-                        title="Choose specific message link to send"
+                        className="bg-[#0A1931] border border-green-500/30 text-green-400 text-[10px] px-1 py-1 rounded-sm outline-none cursor-pointer hover:border-green-400 font-medium"
+                        title="Send specific invite to this guest"
                       >
-                        <option value="">▾ Link</option>
-                        <option value="invite">💌 Main Invite</option>
-                        <option value="save_date">🗓️ Save Date (40th)</option>
-                        <option value="save_date_diwali">🪔 Save Date (Diwali)</option>
-                        <option value="location">📍 Location</option>
-                        <option value="photos">📸 Photos & Insta</option>
+                        <option value="">▾ Send Specific</option>
+                        <optgroup label="🎂 40 &amp; Festive">
+                          <option value="save_date">🗓️ 40 &amp; Festive - Save The Date</option>
+                          <option value="invite">💌 40 &amp; Festive - Main Invite</option>
+                        </optgroup>
+                        <optgroup label="🪔 Diwali Party">
+                          <option value="save_date_diwali">✨ Diwali Party - Save The Date</option>
+                          <option value="invite_diwali">🎉 Diwali Party - Main Invite</option>
+                        </optgroup>
+                        <optgroup label="📍 Follow-up Links">
+                          <option value="location">📍 Venue Location</option>
+                          <option value="photos">📸 Photos &amp; Insta</option>
+                        </optgroup>
                       </select>
                       <button onClick={() => {
                         const previewUrl = messageTemplate === 'save_date_diwali'
                           ? `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali`
                           : messageTemplate === 'save_date'
                           ? `${BASE_URL}/i/${g.invite_code}?type=save_date`
+                          : messageTemplate === 'invite_diwali'
+                          ? `${BASE_URL}/i/${g.invite_code}?type=main_diwali`
                           : `${BASE_URL}/i/${g.invite_code}`
                         window.open(previewUrl, '_blank')
                       }} title="Preview Active Video Card"

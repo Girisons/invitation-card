@@ -16,8 +16,8 @@ const svg1 = `<svg width="576" height="1024" xmlns="http://www.w3.org/2000/svg">
     </linearGradient>
     <linearGradient id="vignette" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#000000" stop-opacity="0.6"/>
-      <stop offset="35%" stop-color="#000000" stop-opacity="0.45"/>
-      <stop offset="65%" stop-color="#000000" stop-opacity="0.45"/>
+      <stop offset="35%" stop-color="#000000" stop-opacity="0.4"/>
+      <stop offset="65%" stop-color="#000000" stop-opacity="0.4"/>
       <stop offset="100%" stop-color="#000000" stop-opacity="0.85"/>
     </linearGradient>
     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -29,11 +29,10 @@ const svg1 = `<svg width="576" height="1024" xmlns="http://www.w3.org/2000/svg">
   <rect width="576" height="1024" fill="url(#vignette)"/>
 
   <g text-anchor="middle" font-family="Georgia, serif">
-    <text x="288" y="420" font-family="Arial, sans-serif" font-size="13" font-weight="bold" letter-spacing="4" fill="#C9A84C" opacity="0.95">FESTIVAL OF LIGHTS</text>
-    <text x="288" y="480" font-size="46" font-weight="bold" fill="url(#goldGrad)" filter="url(#glow)">Diwali Party</text>
-    <line x1="180" y1="507" x2="396" y2="507" stroke="#C9A84C" stroke-width="1.5" opacity="0.6"/>
-    <text x="288" y="535" font-family="Arial, sans-serif" font-size="14" font-weight="bold" letter-spacing="3" fill="#F5ECD7" opacity="0.95">ARPIT · VIPUL · JITU</text>
-    <text x="288" y="560" font-family="Arial, sans-serif" font-size="11" font-weight="bold" letter-spacing="3" fill="#C9A84C" opacity="0.95">COMPLETE KHANDELWAL FAMILY</text>
+    <text x="288" y="445" font-family="Arial, sans-serif" font-size="13" font-weight="bold" letter-spacing="4" fill="#C9A84C" opacity="0.95">FESTIVAL OF LIGHTS</text>
+    <text x="288" y="510" font-size="46" font-weight="bold" fill="url(#goldGrad)" filter="url(#glow)">Diwali Party</text>
+    <line x1="200" y1="538" x2="376" y2="538" stroke="#C9A84C" stroke-width="1.5" opacity="0.6"/>
+    <text x="288" y="570" font-family="Arial, sans-serif" font-size="13" font-weight="bold" letter-spacing="4" fill="#F5ECD7" opacity="0.9">A GRAND CELEBRATION</text>
   </g>
 </svg>`
 
@@ -46,8 +45,8 @@ const svg2 = `<svg width="576" height="1024" xmlns="http://www.w3.org/2000/svg">
     </linearGradient>
     <linearGradient id="vignette" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#000000" stop-opacity="0.6"/>
-      <stop offset="35%" stop-color="#000000" stop-opacity="0.45"/>
-      <stop offset="65%" stop-color="#000000" stop-opacity="0.45"/>
+      <stop offset="35%" stop-color="#000000" stop-opacity="0.4"/>
+      <stop offset="65%" stop-color="#000000" stop-opacity="0.4"/>
       <stop offset="100%" stop-color="#000000" stop-opacity="0.85"/>
     </linearGradient>
     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -59,13 +58,12 @@ const svg2 = `<svg width="576" height="1024" xmlns="http://www.w3.org/2000/svg">
   <rect width="576" height="1024" fill="url(#vignette)"/>
 
   <g text-anchor="middle" font-family="Georgia, serif">
-    <text x="288" y="415" font-family="Arial, sans-serif" font-size="14" font-weight="bold" letter-spacing="5" fill="#C9A84C" opacity="0.95">SAVE THE DATE</text>
-    <text x="288" y="475" font-size="34" font-weight="bold" fill="url(#goldGrad)" filter="url(#glow)">DIWALI PARTY 2026</text>
-    <g transform="translate(288, 525)">
-      <rect x="-175" y="-18" width="350" height="36" rx="18" fill="#050D1A" fill-opacity="0.9" stroke="#C9A84C" stroke-width="1.5"/>
-      <text x="0" y="5" font-family="Arial, sans-serif" font-size="12" font-weight="bold" letter-spacing="2" fill="#F5ECD7">HOSTED BY ARPIT, VIPUL &amp; JITU</text>
+    <text x="288" y="440" font-family="Arial, sans-serif" font-size="14" font-weight="bold" letter-spacing="5" fill="#C9A84C" opacity="0.95">SAVE THE DATE</text>
+    <text x="288" y="505" font-size="34" font-weight="bold" fill="url(#goldGrad)" filter="url(#glow)">DIWALI PARTY 2026</text>
+    <g transform="translate(288, 555)">
+      <rect x="-170" y="-18" width="340" height="36" rx="18" fill="#050D1A" fill-opacity="0.9" stroke="#C9A84C" stroke-width="1.5"/>
+      <text x="0" y="5" font-family="Arial, sans-serif" font-size="11" font-weight="bold" letter-spacing="2" fill="#F5ECD7">JOIN US FOR THE FESTIVAL OF LIGHTS</text>
     </g>
-    <text x="288" y="582" font-family="Arial, sans-serif" font-size="12" font-weight="bold" letter-spacing="3" fill="#C9A84C" opacity="0.95">COMPLETE KHANDELWAL FAMILY</text>
   </g>
 </svg>`
 
@@ -94,9 +92,10 @@ const svg3 = `<svg width="576" height="1024" xmlns="http://www.w3.org/2000/svg">
     <text x="288" y="415" font-family="Arial, sans-serif" font-size="12" font-weight="bold" letter-spacing="4" fill="#C9A84C" opacity="0.95">DIWALI VIBES • CELEBRATION • MEMORIES</text>
     <text x="288" y="475" font-size="30" font-weight="bold" fill="url(#goldGrad)" filter="url(#glow)">FRIDAY | OCT 23, 2026</text>
     <text x="288" y="512" font-family="Arial, sans-serif" font-size="13" font-weight="bold" letter-spacing="3" fill="#FFFFFF" opacity="0.9">JAIPUR · RAJASTHAN</text>
-    <line x1="200" y1="534" x2="376" y2="534" stroke="#C9A84C" stroke-width="1.5" opacity="0.6"/>
-    <text x="288" y="558" font-family="Arial, sans-serif" font-size="12" font-weight="bold" letter-spacing="2.5" fill="#F5ECD7" opacity="0.95">ARPIT · VIPUL · JITU</text>
-    <text x="288" y="580" font-family="Arial, sans-serif" font-size="10.5" font-weight="bold" letter-spacing="2.5" fill="#C9A84C" opacity="0.95">COMPLETE KHANDELWAL FAMILY</text>
+    <line x1="200" y1="535" x2="376" y2="535" stroke="#C9A84C" stroke-width="1.5" opacity="0.6"/>
+    <text x="288" y="555" font-family="Arial, sans-serif" font-size="10" font-weight="bold" letter-spacing="3" fill="#C9A84C" opacity="0.85">HOSTED BY</text>
+    <text x="288" y="578" font-family="Arial, sans-serif" font-size="13" font-weight="bold" letter-spacing="2.5" fill="#F5ECD7" opacity="0.95">ARPIT · VIPUL · JITU</text>
+    <text x="288" y="600" font-family="Arial, sans-serif" font-size="10.5" font-weight="bold" letter-spacing="2.5" fill="#C9A84C" opacity="0.95">COMPLETE KHANDELWAL FAMILY</text>
   </g>
 </svg>`
 

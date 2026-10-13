@@ -36,7 +36,7 @@ export default function ConfirmationScreen({ guest, guestName, status, inviteTyp
   const handleWhatsApp = () => {
     trackEvent(guest.id, '', 'whatsapp_clicked')
     const phone = EVENT.phone.replace(/\D/g, '')
-    const isDiwali = inviteType === 'save_date_diwali' || inviteType === 'std_diwali' || inviteType === 'diwali'
+    const isDiwali = inviteType === 'save_date_diwali' || inviteType === 'std_diwali' || inviteType === 'diwali' || inviteType === 'main_diwali' || inviteType === 'invite_diwali' || inviteType === 'diwali_main'
     let msg = ''
     if (status === 'attending') {
       msg = isDiwali
