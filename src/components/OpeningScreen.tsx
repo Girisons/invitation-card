@@ -6,9 +6,10 @@ import { EVENT } from '@/lib/config'
 interface Props {
   guestName: string
   onEnter: () => void
+  isDiwali?: boolean
 }
 
-export default function OpeningScreen({ guestName, onEnter }: Props) {
+export default function OpeningScreen({ guestName, onEnter, isDiwali }: Props) {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -67,10 +68,10 @@ export default function OpeningScreen({ guestName, onEnter }: Props) {
         {/* Event details */}
         <div className={`flex flex-col gap-2 mb-10 transition-all duration-[1200ms] delay-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
           <p className="font-sans text-[11px] tracking-[0.3em] uppercase text-[#C9A84C]/50">
-            40 & Festive
+            {isDiwali ? 'FESTIVAL OF LIGHTS' : '40 & Festive'}
           </p>
           <p className="font-serif text-xl text-[#F5ECD7]/80 tracking-wide">
-            {EVENT.name}
+            {isDiwali ? 'Diwali Party Celebration' : EVENT.name}
           </p>
           <p className="font-sans text-xs tracking-[0.2em] uppercase text-[#F5ECD7]/35 mt-1">
             {EVENT.date} · {EVENT.city}

@@ -82,6 +82,7 @@ export default function InvitationClient({ guest, inviteCode, inviteType }: Prop
         <OpeningScreen
           guestName={guestDisplayName}
           onEnter={handleEnter}
+          isDiwali={isDiwali}
         />
       </div>
 
@@ -92,6 +93,9 @@ export default function InvitationClient({ guest, inviteCode, inviteType }: Prop
           guestId={guest.id}
           videoUrl={activeVideoUrl}
           inviteCode={guest.invite_code}
+          inviteType={inviteType}
+          isDiwali={isDiwali}
+          isSaveTheDate={isSaveTheDate}
           onSelectYes={handleSelectYes}
           onSelectNo={handleSelectNo}
           onStart={handleVideoStart}

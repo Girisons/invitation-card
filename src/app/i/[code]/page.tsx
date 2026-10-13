@@ -38,34 +38,41 @@ function getDisplayName(nickname?: string, fullName?: string): string {
   return fullName.trim().split(' ')[0]
 }
 
-export async function generateMetadata({ params }: Props) {
+export async function generateMetadata({ params, searchParams }: Props) {
   const { code } = await params
+  const sParams = searchParams ? await searchParams : {}
+  const rawType = Array.isArray(sParams.type) ? sParams.type[0] : sParams.type
+  const rawMode = Array.isArray(sParams.mode) ? sParams.mode[0] : sParams.mode
+  const inviteType = (rawType || rawMode || '').toLowerCase()
+  const isDiwali = inviteType.includes('diwali')
+
+  const title = isDiwali ? "Grand Diwali Party Celebration" : "Arpit's 40th & Diwali Bash"
   const ogImageUrl = 'https://khandelwalinvite.vercel.app/og.jpg'
 
   return {
     metadataBase: new URL('https://khandelwalinvite.vercel.app'),
-    title: "Arpit's 40th & Diwali Bash",
-    description: 'Invitation - Tap to open',
+    title,
+    description: isDiwali ? 'Diwali Invitation - Tap to open' : 'Invitation - Tap to open',
     openGraph: {
       type: 'website',
       url: `https://khandelwalinvite.vercel.app/i/${code}`,
-      title: "Arpit's 40th & Diwali Bash",
-      description: 'Invitation - Tap to open',
-      siteName: "Arpit's 40th & Diwali Bash",
+      title,
+      description: isDiwali ? 'Diwali Invitation - Tap to open' : 'Invitation - Tap to open',
+      siteName: title,
       images: [
         {
           url: ogImageUrl,
           width: 1200,
           height: 630,
           type: 'image/jpeg',
-          alt: "Arpit's 40th & Diwali Bash Video Invitation",
+          alt: `${title} Video Invitation`,
         },
       ],
     },
     twitter: {
       card: 'summary_large_image',
-      title: "Arpit's 40th & Diwali Bash",
-      description: 'Invitation - Tap to open',
+      title,
+      description: isDiwali ? 'Diwali Invitation - Tap to open' : 'Invitation - Tap to open',
       images: [ogImageUrl],
     },
   }
