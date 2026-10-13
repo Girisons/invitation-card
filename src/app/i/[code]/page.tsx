@@ -3,10 +3,15 @@ import { getGuestByCode, Guest } from '@/lib/supabase'
 
 interface Props {
   params: Promise<{ code: string }>
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-export default async function InvitationPage({ params }: Props) {
+export default async function InvitationPage({ params, searchParams }: Props) {
   const { code } = await params
+  const sParams = searchParams ? await searchParams : {}
+  const rawType = Array.isArray(sParams.type) ? sParams.type[0] : sParams.type
+  const rawMode = Array.isArray(sParams.mode) ? sParams.mode[0] : sParams.mode
+  const inviteType = (rawType || rawMode || '').toLowerCase()
 
   let guest: Guest | null = null
   try {
@@ -24,7 +29,7 @@ export default async function InvitationPage({ params }: Props) {
     invitation_status: 'pending',
   }
 
-  return <InvitationClient guest={activeGuest} inviteCode={code.toUpperCase()} />
+  return <InvitationClient guest={activeGuest} inviteCode={code.toUpperCase()} inviteType={inviteType} />
 }
 
 function getDisplayName(nickname?: string, fullName?: string): string {

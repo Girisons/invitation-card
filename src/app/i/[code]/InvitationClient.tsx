@@ -11,18 +11,24 @@ type Screen = 'opening' | 'video' | 'confirmation'
 interface Props {
   guest: Guest
   inviteCode: string
+  inviteType?: string
 }
 
-export default function InvitationClient({ guest, inviteCode }: Props) {
+export default function InvitationClient({ guest, inviteCode, inviteType }: Props) {
   const [screen, setScreen] = useState<Screen>('video')
   const [rsvpStatus, setRsvpStatus] = useState<'attending' | 'declined' | null>(null)
 
+  const isSaveTheDate = inviteType === 'save_date' || inviteType === 'std' || inviteType === 'save-the-date'
+  const activeVideoUrl = isSaveTheDate
+    ? (guest.std_video_url || '/videos/save-the-date.mp4')
+    : (guest.video_url || '/videos/main-invite.mp4')
+
   // Track invitation opened & entered video directly
   useEffect(() => {
-    trackEvent(guest.id, inviteCode, 'invitation_opened')
-    trackEvent(guest.id, inviteCode, 'invitation_entered')
+    trackEvent(guest.id, inviteCode, isSaveTheDate ? 'std_opened' : 'invitation_opened')
+    trackEvent(guest.id, inviteCode, isSaveTheDate ? 'std_entered' : 'invitation_entered')
     updateGuestStatus(guest.id, 'entered')
-  }, [guest.id, inviteCode])
+  }, [guest.id, inviteCode, isSaveTheDate])
 
   const handleEnter = () => {
     trackEvent(guest.id, inviteCode, 'invitation_entered')
@@ -77,7 +83,7 @@ export default function InvitationClient({ guest, inviteCode }: Props) {
         <VideoScreen
           guestName={guestDisplayName}
           guestId={guest.id}
-          videoUrl={guest.video_url}
+          videoUrl={activeVideoUrl}
           inviteCode={guest.invite_code}
           onSelectYes={handleSelectYes}
           onSelectNo={handleSelectNo}

@@ -681,7 +681,10 @@ export default function AdminPage() {
 
   // ── COPY LINK ──
   const copyLink = (code: string) => {
-    navigator.clipboard.writeText(`${BASE_URL}/i/${code}`)
+    const linkUrl = messageTemplate === 'save_date'
+      ? `${BASE_URL}/i/${code}?type=save_date`
+      : `${BASE_URL}/i/${code}`
+    navigator.clipboard.writeText(linkUrl)
     setCopied(code); setTimeout(() => setCopied(null), 2000)
   }
 
@@ -696,7 +699,8 @@ export default function AdminPage() {
       fetchGuests()
     }
 
-    const link = `${BASE_URL}/i/${g.invite_code}`
+    const mainInviteLink = `${BASE_URL}/i/${g.invite_code}`
+    const saveDateLink = `${BASE_URL}/i/${g.invite_code}?type=save_date`
     const isCouple = (g.send_together && !!g.partner_name) || (g.invited_count && g.invited_count > 1)
 
     const pDisplay = (g.nickname && g.nickname.trim())
@@ -745,17 +749,17 @@ export default function AdminPage() {
     let msg = ''
 
     if (activeMode === 'save_date') {
-      msg = `${EMOJI.sparkles} *SAVE THE DATE!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nPlease mark your calendar for *ARPIT’s 40th Birthday & Diwali Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\nDetailed formal invitation to follow soon. We can’t wait to celebrate this special evening with ${youTarget}! ${EMOJI.heart}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*\n\n${EMOJI.gift} *Save The Date Link:*\n${link}`
+      msg = `${EMOJI.sparkles} *SAVE THE DATE!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nPlease mark your calendar for *ARPIT’s 40th Birthday & Diwali Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\nDetailed formal invitation to follow soon. We can’t wait to celebrate this special evening with ${youTarget}! ${EMOJI.heart}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*\n\n${EMOJI.gift} *Save The Date Link:*\n${saveDateLink}`
     } else if (activeMode === 'location') {
       const loc = (customLinks.locationUrl || 'https://maps.google.com/?q=Jaipur').trim()
-      msg = `📍 *VENUE & LOCATION DETAILS* 📍\n\nDear *${name}*, ${EMOJI.heart}\n\nHere are the venue location details for *Arpit’s 40th & Diwali Bash*:\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\n🗺️ *Google Maps Location Link:*\n${loc}\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${link}\n\nSee ${youTarget} soon! ${EMOJI.heart}\n*Tanvi Khandelwal & Family*`
+      msg = `📍 *VENUE & LOCATION DETAILS* 📍\n\nDear *${name}*, ${EMOJI.heart}\n\nHere are the venue location details for *Arpit’s 40th & Diwali Bash*:\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\n🗺️ *Google Maps Location Link:*\n${loc}\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${mainInviteLink}\n\nSee ${youTarget} soon! ${EMOJI.heart}\n*Tanvi Khandelwal & Family*`
     } else if (activeMode === 'photos') {
-      const pUrl = (customLinks.photoUrl || link).trim()
+      const pUrl = (customLinks.photoUrl || mainInviteLink).trim()
       const iUrl = (customLinks.instaUrl || 'https://instagram.com').trim()
-      msg = `📸 *EVENT PHOTOS & INSTAGRAM LINK* 📸\n\nDear *${name}*, ${EMOJI.heart}\n\nThank you for making Arpit's 40th & Diwali Bash so special! Here are the event photos and Instagram link for ${youTarget}:\n\n🖼️ *Event Photo Gallery Link:*\n${pUrl}\n\n✨ *Instagram Reel / Story Link:*\n${iUrl}\n\n${EMOJI.gift} *Your Invitation Card:*\n${link}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*`
+      msg = `📸 *EVENT PHOTOS & INSTAGRAM LINK* 📸\n\nDear *${name}*, ${EMOJI.heart}\n\nThank you for making Arpit's 40th & Diwali Bash so special! Here are the event photos and Instagram link for ${youTarget}:\n\n🖼️ *Event Photo Gallery Link:*\n${pUrl}\n\n✨ *Instagram Reel / Story Link:*\n${iUrl}\n\n${EMOJI.gift} *Your Invitation Card:*\n${mainInviteLink}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*`
     } else {
       // Default 'invite'
-      msg = `${EMOJI.sparkles} *Four Decades. One Amazing Journey. And Now… One BIG Celebration!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my husband *ARPIT’s 40th Birthday & Diwali Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\n*${name} — no excuses, no “we’ll try”, and definitely no last-minute plans! ${EMOJI.wink}*\nWe are waiting to celebrate this beautiful evening with ${youTarget}. ${EMOJI.heart}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${link}`
+      msg = `${EMOJI.sparkles} *Four Decades. One Amazing Journey. And Now… One BIG Celebration!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my husband *ARPIT’s 40th Birthday & Diwali Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\n*${name} — no excuses, no “we’ll try”, and definitely no last-minute plans! ${EMOJI.wink}*\nWe are waiting to celebrate this beautiful evening with ${youTarget}. ${EMOJI.heart}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${mainInviteLink}`
     }
 
     const phone = formatWhatsAppPhone(g.mobile || '')
@@ -1240,7 +1244,10 @@ export default function AdminPage() {
                         <option value="location">📍 Location</option>
                         <option value="photos">📸 Photos & Insta</option>
                       </select>
-                      <button onClick={() => window.open(`${BASE_URL}/i/${g.invite_code}`, '_blank')} title="Preview Full Invitation Card"
+                      <button onClick={() => {
+                        const previewUrl = messageTemplate === 'save_date' ? `${BASE_URL}/i/${g.invite_code}?type=save_date` : `${BASE_URL}/i/${g.invite_code}`
+                        window.open(previewUrl, '_blank')
+                      }} title="Preview Active Video Card"
                         className="px-2 py-1 border border-white/10 text-white/30 hover:text-white/60 rounded-sm text-[10px] transition-all">
                         👁
                       </button>
@@ -1565,6 +1572,25 @@ export default function AdminPage() {
               setShowLinksModal(false)
               alert('✅ Custom links saved!')
             }} className="flex flex-col gap-4">
+              {/* Video Folders Guide */}
+              <div className="bg-[#C9A84C]/5 border border-[#C9A84C]/25 rounded-sm p-3.5">
+                <p className="text-[11px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  📁 Video Folder Location & File Names:
+                </p>
+                <div className="space-y-1.5 text-xs text-white/80 font-mono">
+                  <div className="flex justify-between items-center bg-black/40 px-2.5 py-1.5 rounded">
+                    <span>🗓️ Save The Date Video:</span>
+                    <span className="text-[#C9A84C] font-semibold">public/videos/save-the-date.mp4</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-black/40 px-2.5 py-1.5 rounded">
+                    <span>💌 Main Digital Invite:</span>
+                    <span className="text-green-400 font-semibold">public/videos/main-invite.mp4</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-white/40 mt-2 font-sans">
+                  💡 Jab aap toolbar mein <strong>Save The Date</strong> choose karke send karenge toh guest ko <code>save-the-date.mp4</code> dikhegi. Jab <strong>Main Digital Invite</strong> choose karenge toh <code>main-invite.mp4</code> dikhegi.
+                </p>
+              </div>
               <div>
                 <label className="text-[10px] uppercase tracking-widest text-[#C9A84C] block mb-1">
                   📍 Venue Google Maps Location Link
