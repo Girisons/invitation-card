@@ -21,6 +21,7 @@ const DEFAULT_USERS: PortalUser[] = [
   { id: 'user-arpit', username: 'arpit', password: 'arpit40', name: 'Arpit', role: 'user', created_at: new Date().toISOString() },
   { id: 'user-tanvi', username: 'tanvi', password: 'tanvi40', name: 'Tanvi', role: 'user', created_at: new Date().toISOString() },
   { id: 'user-vipul', username: 'vipul', password: 'vipul40', name: 'Vipul', role: 'user', created_at: new Date().toISOString() },
+  { id: 'user-jitu', username: 'jitu', password: 'jitu40', name: 'Jitu', role: 'user', created_at: new Date().toISOString() },
 ]
 
 function generateCode(): string {
@@ -334,21 +335,34 @@ export default function AdminPage() {
       try { setCustomLinks(JSON.parse(savedLinks)) } catch {}
     }
 
+    const mergeWithDefaults = (list: PortalUser[]): PortalUser[] => {
+      const merged = [...list]
+      for (const def of DEFAULT_USERS) {
+        if (!merged.some(u => u.username.toLowerCase() === def.username.toLowerCase())) {
+          merged.push(def)
+        }
+      }
+      return merged
+    }
+
     const loadUsers = async () => {
       try {
         const { data } = await supabase.from('portal_users').select('*')
         if (data && data.length > 0) {
-          setPortalUsers(data)
-          localStorage.setItem('portal_users', JSON.stringify(data))
+          const merged = mergeWithDefaults(data)
+          setPortalUsers(merged)
+          localStorage.setItem('portal_users', JSON.stringify(merged))
         } else {
           const saved = localStorage.getItem('portal_users')
-          if (saved) setPortalUsers(JSON.parse(saved))
-          else localStorage.setItem('portal_users', JSON.stringify(DEFAULT_USERS))
+          const merged = saved ? mergeWithDefaults(JSON.parse(saved)) : DEFAULT_USERS
+          setPortalUsers(merged)
+          localStorage.setItem('portal_users', JSON.stringify(merged))
         }
       } catch {
         const saved = localStorage.getItem('portal_users')
-        if (saved) setPortalUsers(JSON.parse(saved))
-        else localStorage.setItem('portal_users', JSON.stringify(DEFAULT_USERS))
+        const merged = saved ? mergeWithDefaults(JSON.parse(saved)) : DEFAULT_USERS
+        setPortalUsers(merged)
+        localStorage.setItem('portal_users', JSON.stringify(merged))
       }
 
       const activeUser = localStorage.getItem('portal_current_user')
@@ -422,21 +436,29 @@ export default function AdminPage() {
     setLoginError('')
 
     const uInput = usernameInput.trim().toLowerCase()
-    const pInput = passwordInput.trim()
+    const pInput = passwordInput.trim().toLowerCase()
 
-    // 1. Try matching Username & Password
-    let matched = portalUsers.find(u =>
-      (u.username.toLowerCase() === uInput || u.name.toLowerCase() === uInput) && u.password === pInput
+    // Combine current state with DEFAULT_USERS so all 5 accounts are always available
+    const allUsers = [...portalUsers]
+    for (const def of DEFAULT_USERS) {
+      if (!allUsers.some(u => u.username.toLowerCase() === def.username.toLowerCase())) {
+        allUsers.push(def)
+      }
+    }
+
+    // 1. Try matching Username & Password (case-insensitive for mobile keyboards)
+    let matched = allUsers.find(u =>
+      (u.username.toLowerCase() === uInput || u.name.toLowerCase() === uInput) && u.password.toLowerCase() === pInput
     )
 
-    // 2. Fallback: if only Password entered or matches Super Admin pass
-    if (!matched && pInput === ADMIN_PASS) {
-      matched = portalUsers.find(u => u.role === 'super_admin') || DEFAULT_USERS[0]
+    // 2. Fallback: if only Password entered or matches Super Admin pass when username is empty/admin
+    if (!matched && (!uInput || uInput === 'admin' || uInput === 'super admin') && pInput === ADMIN_PASS.toLowerCase()) {
+      matched = allUsers.find(u => u.role === 'super_admin') || DEFAULT_USERS[0]
     }
 
     // 3. Fallback: match password alone against any user
     if (!matched && pInput) {
-      matched = portalUsers.find(u => u.password === pInput)
+      matched = allUsers.find(u => u.password.toLowerCase() === pInput)
     }
 
     if (matched) {
