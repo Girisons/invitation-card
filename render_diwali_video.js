@@ -86,20 +86,17 @@ async function main() {
     </defs>
   `
 
-  // BEAT 1 (0:00 – 0:04): KHANDELWAL FESTIVE / The Festive Soirée / KHANDELWAL DIWALI BASH
-  const pathSoiree1 = textToSvgPath(fontGreatVibes, 'The Festive Soirée', 288, 515, 72)
+  // BEAT 1 (0:00 – 0:04): KHANDELWAL FESTIVE / The Festive Soirée
+  const pathSoiree1 = textToSvgPath(fontGreatVibes, 'The Festive Soirée', 288, 525, 74)
   const svg1 = `<svg width="576" height="1024" xmlns="http://www.w3.org/2000/svg">
     ${commonDefs}
     <rect width="576" height="1024" fill="url(#vignette)"/>
-    <ellipse cx="288" cy="510" rx="250" ry="130" fill="url(#centerDark)"/>
+    <ellipse cx="288" cy="500" rx="250" ry="125" fill="url(#centerDark)"/>
     <g text-anchor="middle">
-      <text x="288" y="435" font-family="Arial, sans-serif" font-size="12" font-weight="bold" letter-spacing="5" fill="#D4AF37" opacity="0.95" filter="url(#softGlow)">KHANDELWAL FESTIVE</text>
-      <line x1="210" y1="448" x2="366" y2="448" stroke="#D4AF37" stroke-width="1" opacity="0.5"/>
+      <text x="288" y="440" font-family="Arial, sans-serif" font-size="12" font-weight="bold" letter-spacing="5" fill="#D4AF37" opacity="0.95" filter="url(#softGlow)">KHANDELWAL FESTIVE</text>
+      <line x1="210" y1="454" x2="366" y2="454" stroke="#D4AF37" stroke-width="1" opacity="0.5"/>
 
       <path d="${pathSoiree1}" fill="url(#goldGrad)" filter="url(#glow)"/>
-
-      <line x1="200" y1="548" x2="376" y2="548" stroke="#D4AF37" stroke-width="1" opacity="0.5"/>
-      <text x="288" y="578" font-family="Arial, sans-serif" font-size="12" font-weight="bold" letter-spacing="4" fill="#FBF6E9" opacity="0.95" filter="url(#softGlow)">KHANDELWAL DIWALI BASH</text>
     </g>
   </svg>`
 
@@ -110,7 +107,7 @@ async function main() {
     <ellipse cx="288" cy="510" rx="250" ry="140" fill="url(#centerDark)"/>
   </svg>`
 
-  // BEAT 3 (0:10 – 0:14): DRINKS · DANCE · CELEBRATION / FRIDAY | OCT 23, 2026 / JAIPUR · RAJASTHAN
+  // BEAT 3 (0:10 – 0:14): DRINKS · DANCE · CELEBRATION / FRIDAY | OCT 23, 2026 / JAIPUR
   const pathDate3 = textToSvgPath(fontCinzel, 'FRIDAY | OCT 23, 2026', 288, 490, 26)
   const svg3 = `<svg width="576" height="1024" xmlns="http://www.w3.org/2000/svg">
     ${commonDefs}
@@ -121,8 +118,8 @@ async function main() {
       
       <path d="${pathDate3}" fill="url(#goldGrad)" filter="url(#glow)"/>
       
-      <text x="288" y="535" font-family="Arial, sans-serif" font-size="13" font-weight="bold" letter-spacing="3.5" fill="#FFFFFF" opacity="0.95" filter="url(#softGlow)">JAIPUR  ·  RAJASTHAN</text>
-      <line x1="190" y1="558" x2="386" y2="558" stroke="#D4AF37" stroke-width="1.2" opacity="0.6"/>
+      <text x="288" y="535" font-family="Arial, sans-serif" font-size="13" font-weight="bold" letter-spacing="4" fill="#FFFFFF" opacity="0.95" filter="url(#softGlow)">JAIPUR</text>
+      <line x1="210" y1="556" x2="366" y2="556" stroke="#D4AF37" stroke-width="1.2" opacity="0.6"/>
     </g>
   </svg>`
 

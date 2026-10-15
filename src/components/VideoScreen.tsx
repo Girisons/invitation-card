@@ -403,7 +403,7 @@ export default function VideoScreen({
                   FRIDAY | OCT 23, 2026
                 </h3>
                 <p className="font-sans text-[11px] tracking-[0.25em] uppercase text-white/60 mb-6">
-                  JAIPUR  ·  RAJASTHAN
+                  {isDiwali ? 'JAIPUR' : 'JAIPUR · RAJASTHAN'}
                 </p>
               </>
             )}
