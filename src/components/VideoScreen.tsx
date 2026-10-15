@@ -43,6 +43,8 @@ export default function VideoScreen({
   const startedRef = useRef(false)
   const endedCalledRef = useRef(false)
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const endTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [showRsvpPrompt, setShowRsvpPrompt] = useState(false)
 
   const hasBurnedText = Boolean(isSaveTheDate || (customVideoUrl && (customVideoUrl.includes('save-the-date') || customVideoUrl.includes('save_date') || customVideoUrl.includes('diwali'))))
 
@@ -64,8 +66,27 @@ export default function VideoScreen({
     }
   }
 
+  // Skip video to reveal RSVP CTAs immediately
+  const handleSkip = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (endTimerRef.current) clearTimeout(endTimerRef.current)
+    const video = videoRef.current
+    if (video) video.pause()
+    const audio = audioRef.current
+    if (audio) audio.pause()
+    endedCalledRef.current = true
+    setVideoState('ended')
+    setShowRsvpPrompt(true)
+  }
+
   useEffect(() => {
-    if (!active) return
+    if (!active) {
+      setShowRsvpPrompt(false)
+      startedRef.current = false
+      endedCalledRef.current = false
+      if (endTimerRef.current) clearTimeout(endTimerRef.current)
+      return
+    }
 
     const targetUrl = customVideoUrl || EVENT.videoUrl || '/videos/teaser.mp4'
     const video = videoRef.current
@@ -124,6 +145,10 @@ export default function VideoScreen({
           if (next >= duration && !endedCalledRef.current) {
             endedCalledRef.current = true
             setVideoState('ended')
+            if (endTimerRef.current) clearTimeout(endTimerRef.current)
+            endTimerRef.current = setTimeout(() => {
+              setShowRsvpPrompt(true)
+            }, 2500)
           }
           return next
         })
@@ -144,10 +169,18 @@ export default function VideoScreen({
       endedCalledRef.current = true
       setVideoState('ended')
       if (audio) audio.pause()
+
+      // User constraint: Wait 2.5 seconds after video ends before presenting RSVP buttons
+      if (endTimerRef.current) clearTimeout(endTimerRef.current)
+      endTimerRef.current = setTimeout(() => {
+        setShowRsvpPrompt(true)
+      }, 2500)
     }
 
     const handleError = (e: Event) => {
       console.warn('Video load error:', e)
+      setVideoState('unavailable')
+      setShowRsvpPrompt(true)
     }
 
     video.addEventListener('timeupdate', handleTimeUpdate)
@@ -157,6 +190,7 @@ export default function VideoScreen({
     return () => {
       clearTimeout(skipTimer)
       if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current)
+      if (endTimerRef.current) clearTimeout(endTimerRef.current)
       clearInterval(fallbackTicker)
       video.removeEventListener('timeupdate', handleTimeUpdate)
       video.removeEventListener('ended', handleEnded)
@@ -219,7 +253,8 @@ export default function VideoScreen({
 
   const isBeat1 = videoState !== 'ended' && currentTime < beat1End
   const isBeat2 = videoState !== 'ended' && currentTime >= beat1End && currentTime < beat2End
-  const isBeat3 = videoState === 'ended' || currentTime >= beat2End
+  // Beat 3 (RSVP Buttons): only appears 2.5 seconds AFTER video ends (or if explicitly skipped)
+  const isBeat3 = showRsvpPrompt
 
   return (
     <div
@@ -233,6 +268,16 @@ export default function VideoScreen({
         playsInline
         preload="auto"
         poster={EVENT.poster || undefined}
+        onEnded={() => {
+          if (endedCalledRef.current) return
+          endedCalledRef.current = true
+          setVideoState('ended')
+          if (audioRef.current) audioRef.current.pause()
+          if (endTimerRef.current) clearTimeout(endTimerRef.current)
+          endTimerRef.current = setTimeout(() => {
+            setShowRsvpPrompt(true)
+          }, 2500)
+        }}
       />
 
       {/* Optional Audio Element */}
@@ -242,6 +287,13 @@ export default function VideoScreen({
 
       {/* Dark Vignette Overlay for Crisp Typography Contrast */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/25 to-black/80 pointer-events-none" />
+
+      {/* Dimming overlay when RSVP buttons appear (2.5s after video ends) */}
+      <div
+        className={`absolute inset-0 bg-black/65 backdrop-blur-[2px] transition-opacity duration-1000 pointer-events-none z-10 ${
+          isBeat3 ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
 
       {/* ── BIG CENTER "TAP FOR SOUND" OVERLAY PROMPT (AUTO DISMISSES IN 3s OR IMMEDIATELY ON TAP) ── */}
       {soundPromptVisible && (
@@ -259,7 +311,7 @@ export default function VideoScreen({
               TAP FOR SOUND
             </h2>
             <p className="font-sans text-[11px] tracking-[0.25em] uppercase text-[#C9A84C] font-semibold">
-              {isDiwali ? 'GRAND DIWALI CELEBRATION' : "ARPIT'S 40TH & DIWALI CELEBRATION"}
+              {isDiwali ? 'KHANDELWAL DIWALI BASH' : "ARPIT'S 40TH & DIWALI CELEBRATION"}
             </p>
           </div>
         </div>
@@ -268,8 +320,18 @@ export default function VideoScreen({
       {/* ── MOVIE TEASER DYNAMIC TEXT OVERLAY SEQUENCE ── */}
       <div className="absolute inset-0 flex flex-col justify-between p-6 sm:p-10 pointer-events-none z-20">
 
-        {/* Top Header — Clean space */}
-        <div className="w-full pt-4 pointer-events-none" />
+        {/* Top Header — Skip to RSVP button */}
+        <div className="w-full pt-4 px-2 flex justify-end pointer-events-auto z-30 min-h-[44px]">
+          {videoState === 'playing' && showSkip && !isBeat3 && (
+            <button
+              onClick={handleSkip}
+              className="glass px-3.5 py-1.5 rounded-full border border-[#C9A84C]/40 text-[10px] font-sans font-semibold tracking-[0.2em] uppercase text-[#F5ECD7]/80 hover:text-white hover:border-[#C9A84C] hover:bg-[#C9A84C]/15 transition-all active:scale-95 flex items-center gap-1.5 shadow-lg shadow-black/50"
+            >
+              <span>Skip to RSVP</span>
+              <span className="text-xs">⏭</span>
+            </button>
+          )}
+        </div>
 
         {/* CENTER STAGE: SEQUENTIAL TEASER BEATS */}
         <div className="relative w-full flex-1 flex flex-col items-center justify-center text-center">
@@ -300,13 +362,13 @@ export default function VideoScreen({
             </div>
           )}
 
-          {/* BEAT 2: Personalized Guest Card (Suppressed if video already has burned text) */}
-          {!hasBurnedText && (
+          {/* BEAT 2: Personalized Guest Card (Shown for Main Invite AND Diwali Save The Date so {guest.name} appears live from DB) */}
+          {(!hasBurnedText || isDiwali) && (
             <div className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ${
               isBeat2 ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
             }`}>
-              <p className="font-sans text-[10px] sm:text-xs tracking-[0.45em] uppercase text-[#C9A84C]/80 mb-4">
-                A FESTIVE WELCOME TO
+              <p className="font-sans text-[10px] sm:text-xs tracking-[0.45em] uppercase text-[#C9A84C]/90 mb-4 font-semibold">
+                {isDiwali ? 'A PERSONAL INVITATION FOR' : 'A FESTIVE WELCOME TO'}
               </p>
               <h2
                 className="font-serif font-bold text-3xl sm:text-5xl tracking-wide uppercase mb-4 px-4 leading-tight"
@@ -319,10 +381,10 @@ export default function VideoScreen({
               >
                 {guestName || 'HONORED GUEST'}
               </h2>
-              <div className="inline-flex items-center gap-2 px-4 py-2 border border-[#C9A84C]/40 bg-[#050D1A]/70 backdrop-blur-md rounded-full shadow-lg shadow-[#C9A84C]/10">
-                <span className="text-[#C9A84C] text-xs">🪔</span>
-                <span className="font-sans text-[10px] sm:text-[11px] tracking-[0.25em] uppercase text-[#F5ECD7]/90 font-medium">
-                  {isDiwali ? 'JOIN US FOR THE FESTIVAL OF LIGHTS' : 'JOIN US TO CELEBRATE 40 YEARS OF LIGHT'}
+              <div className="inline-flex items-center gap-2 px-4 py-2 border border-[#C9A84C]/60 bg-[#050D1A]/85 backdrop-blur-md rounded-full shadow-lg shadow-[#C9A84C]/15">
+                <span className="text-[#C9A84C] text-xs">{isDiwali ? '✨' : '🪔'}</span>
+                <span className="font-sans text-[10px] sm:text-[11px] tracking-[0.25em] uppercase text-[#F5ECD7]/95 font-bold">
+                  {isDiwali ? 'JOIN US IN THE LIGHT' : 'JOIN US TO CELEBRATE 40 YEARS OF LIGHT'}
                 </span>
               </div>
             </div>
@@ -332,16 +394,16 @@ export default function VideoScreen({
           <div className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ${
             isBeat3 ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
           }`}>
-            {!hasBurnedText && (
+            {(!hasBurnedText || isDiwali) && (
               <>
                 <p className="font-sans text-[10px] sm:text-xs tracking-[0.4em] uppercase text-[#C9A84C]/90 mb-2">
-                  {isDiwali ? 'DIWALI VIBES • CELEBRATION • MEMORIES' : 'DIWALI VIBES • FAB 40 • MEMORIES'}
+                  {isDiwali ? 'DRINKS  ·  DANCE  ·  CELEBRATION' : 'DIWALI VIBES • FAB 40 • MEMORIES'}
                 </p>
                 <h3 className="font-serif text-2xl sm:text-4xl text-[#F5ECD7] font-bold mb-2">
                   FRIDAY | OCT 23, 2026
                 </h3>
                 <p className="font-sans text-[11px] tracking-[0.25em] uppercase text-white/60 mb-6">
-                  JAIPUR · RAJASTHAN
+                  JAIPUR  ·  RAJASTHAN
                 </p>
               </>
             )}
@@ -364,7 +426,7 @@ export default function VideoScreen({
                 onClick={handleCalendar}
                 className="w-full py-3 px-6 glass border border-[#C9A84C]/40 text-[#C9A84C] font-sans font-medium text-xs tracking-[0.2em] uppercase rounded-sm hover:bg-[#C9A84C]/10 active:scale-95 transition-all flex items-center justify-center gap-2"
               >
-                <span>📅</span> ADD TO CALENDAR
+                <span>📅</span> {isDiwali ? 'ADD TO CALENDAR (iOS / ANDROID)' : 'ADD TO CALENDAR'}
               </button>
             </div>
           </div>
@@ -383,15 +445,17 @@ export default function VideoScreen({
             </span>
           </button>
 
-          <button
-            onClick={handleCalendar}
-            className="glass px-3.5 py-2 rounded-full border border-[#C9A84C]/60 bg-[#C9A84C]/15 flex items-center gap-1.5 hover:bg-[#C9A84C]/30 text-[#F5ECD7] transition-all active:scale-95 shadow-md shadow-[#C9A84C]/10"
-          >
-            <span className="text-xs">📅</span>
-            <span className="font-sans text-[10px] tracking-[0.15em] uppercase text-[#C9A84C] font-bold">
-              Add to Calendar
-            </span>
-          </button>
+          {!isBeat3 && (
+            <button
+              onClick={handleCalendar}
+              className="glass px-3.5 py-2 rounded-full border border-[#C9A84C]/60 bg-[#C9A84C]/15 flex items-center gap-1.5 hover:bg-[#C9A84C]/30 text-[#F5ECD7] transition-all active:scale-95 shadow-md shadow-[#C9A84C]/10"
+            >
+              <span className="text-xs">📅</span>
+              <span className="font-sans text-[10px] tracking-[0.15em] uppercase text-[#C9A84C] font-bold">
+                Add to Calendar
+              </span>
+            </button>
+          )}
         </div>
       </div>
 

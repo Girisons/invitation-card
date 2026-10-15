@@ -47,21 +47,26 @@ export async function generateMetadata({ params, searchParams }: Props) {
   const isDiwali = inviteType.includes('diwali')
 
   const title = isDiwali ? "Grand Diwali Party Celebration" : "Arpit's 40th & Diwali Bash"
-  const ogImageUrl = 'https://khandelwalinvite.vercel.app/og.jpg'
+  const description = isDiwali ? 'Diwali Invitation - Tap to open' : 'Invitation - Tap to open'
+  const ogImageUrl = isDiwali
+    ? 'https://khandelwalinvite.vercel.app/og-diwali.jpg?v=2'
+    : 'https://khandelwalinvite.vercel.app/og.jpg'
+  const pageUrl = `https://khandelwalinvite.vercel.app/i/${code}${isDiwali ? `?type=${inviteType}` : ''}`
 
   return {
     metadataBase: new URL('https://khandelwalinvite.vercel.app'),
     title,
-    description: isDiwali ? 'Diwali Invitation - Tap to open' : 'Invitation - Tap to open',
+    description,
     openGraph: {
       type: 'website',
-      url: `https://khandelwalinvite.vercel.app/i/${code}`,
+      url: pageUrl,
       title,
-      description: isDiwali ? 'Diwali Invitation - Tap to open' : 'Invitation - Tap to open',
+      description,
       siteName: title,
       images: [
         {
           url: ogImageUrl,
+          secureUrl: ogImageUrl,
           width: 1200,
           height: 630,
           type: 'image/jpeg',
@@ -72,7 +77,7 @@ export async function generateMetadata({ params, searchParams }: Props) {
     twitter: {
       card: 'summary_large_image',
       title,
-      description: isDiwali ? 'Diwali Invitation - Tap to open' : 'Invitation - Tap to open',
+      description,
       images: [ogImageUrl],
     },
   }
