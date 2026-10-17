@@ -44,6 +44,7 @@ export default function VideoScreen({
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null)
   const endTimerRef = useRef<NodeJS.Timeout | null>(null)
   const hedgeOverlayRef = useRef<HTMLDivElement>(null)
+  const stageOverlayRef = useRef<HTMLDivElement>(null)
   const [showRsvpPrompt, setShowRsvpPrompt] = useState(false)
 
   const targetUrl = customVideoUrl || EVENT.videoUrl || '/videos/main-invite.mp4'
@@ -240,6 +241,38 @@ export default function VideoScreen({
           el.style.transform = `translate3d(${translateX.toFixed(2)}vw, ${translateY.toFixed(2)}%, 0) scale(${scale.toFixed(3)})`
         }
       }
+
+      // 25.0s - 29.5s: Stick to the glowing LED Stage Screen, then fade up at 29s
+      const stageEl = stageOverlayRef.current
+      if (stageEl && video) {
+        const t = video.currentTime
+        if (t < 25.0 || t > 29.5 || video.paused) {
+          if (t < 25.0 || t > 29.5) {
+            stageEl.style.opacity = '0'
+          }
+        } else {
+          // Fade in (25.0s -> 25.6s), hold locked on LED screen (25.6s -> 28.7s), fade up (28.7s -> 29.4s)
+          let opacity = 1
+          let fadeUpOffsetY = 0
+          if (t < 25.6) {
+            opacity = Math.max(0, Math.min(1, (t - 25.0) / 0.6))
+          } else if (t > 28.7) {
+            const fadeOutProgress = Math.max(0, Math.min(1, (t - 28.7) / 0.7))
+            opacity = 1 - fadeOutProgress
+            fadeUpOffsetY = -fadeOutProgress * 2.8 // Smoothly fades UP at 29s
+          }
+
+          // Subtle camera push-in on the LED screen between 25.0s and 29.4s
+          const stageProgress = Math.max(0, Math.min(1, (t - 25.0) / 4.4))
+          const scale = 0.94 + stageProgress * 0.11
+          const translateX = 3.8
+          const translateY = 0.4 + fadeUpOffsetY
+
+          stageEl.style.opacity = opacity.toFixed(3)
+          stageEl.style.transform = `translate3d(${translateX.toFixed(2)}vw, ${translateY.toFixed(2)}%, 0) scale(${scale.toFixed(3)})`
+        }
+      }
+
       rafId = requestAnimationFrame(updateHedgeTransform)
     }
     rafId = requestAnimationFrame(updateHedgeTransform)
@@ -618,6 +651,57 @@ export default function VideoScreen({
                   }}
                 >
                   &amp; DIWALI CELEBRATION
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ── LED STAGE SCREEN OVERLAY (25.0s - 29.4s): GUEST NAME + THE NIGHT ISN'T COMPLETE WITHOUT YOU ── */}
+          {isMainInvite && (
+            <div
+              ref={stageOverlayRef}
+              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none px-4 text-center z-20 will-change-transform"
+              style={{
+                opacity: 0,
+                transform: 'translate3d(3.8vw, 0.4%, 0) scale(0.94)',
+              }}
+            >
+              {/* Fitted strictly inside the glowing LED Stage Screen */}
+              <div
+                className="relative flex flex-col items-center justify-center px-3 py-2.5 rounded-[2px] max-w-[165px] sm:max-w-[200px]"
+                style={{
+                  background: 'radial-gradient(ellipse at center, rgba(30,14,2,0.62) 0%, rgba(30,14,2,0.42) 70%, rgba(0,0,0,0.12) 100%)',
+                }}
+              >
+                {/* Personalized Guest Name on the LED Screen */}
+                <h2
+                  className="font-marcellus text-sm sm:text-xl font-bold tracking-wide leading-tight px-1"
+                  style={{
+                    background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF6D6 45%, #F0C45A 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    filter: 'drop-shadow(0 2px 2px rgba(26,10,0,0.95)) drop-shadow(0 0 4px rgba(0,0,0,0.75))',
+                  }}
+                >
+                  {formatGuestTitleCase(guestName)}
+                </h2>
+
+                {/* Delicate Gold Divider inside LED Screen */}
+                <div className="flex items-center justify-center w-20 sm:w-28 my-1.5 opacity-85">
+                  <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#FFF2BD] to-transparent shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+                  <span className="w-1 h-1 rounded-full bg-white mx-1.5" />
+                  <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#FFF2BD] to-transparent shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+                </div>
+
+                {/* Below Guest Name inside LED Screen: THE NIGHT ISN'T COMPLETE WITHOUT YOU */}
+                <p
+                  className="font-marcellus text-[7.5px] sm:text-[9.5px] font-bold tracking-[0.18em] uppercase text-[#FFFDF0] leading-snug"
+                  style={{
+                    filter: 'drop-shadow(0 1.5px 2px rgba(26,10,0,0.95)) drop-shadow(0 0 3px rgba(0,0,0,0.8))',
+                  }}
+                >
+                  THE NIGHT ISN&apos;T COMPLETE
+                  <span className="block text-[#FCE18F] mt-0.5 tracking-[0.22em]">WITHOUT YOU</span>
                 </p>
               </div>
             </div>
