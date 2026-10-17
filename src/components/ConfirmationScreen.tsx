@@ -19,28 +19,31 @@ export default function ConfirmationScreen({ guest, guestName, status, inviteTyp
     setTimeout(() => setVisible(true), 150)
   }, [])
 
-  const handleCalendar = () => {
-    trackEvent(guest.id, '', 'calendar_clicked')
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
-    if (isIOS) {
-      const ics = buildICSContent()
-      const blob = new Blob([ics], { type: 'text/calendar' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url; a.download = 'arpit40.ics'; a.click()
-    } else {
-      window.open(buildGoogleCalUrl(), '_blank')
-    }
-  }
-
   const isDiwali = Boolean(
     inviteType === 'save_date_diwali' ||
     inviteType === 'std_diwali' ||
     inviteType === 'diwali' ||
     inviteType === 'main_diwali' ||
     inviteType === 'invite_diwali' ||
-    inviteType === 'diwali_main'
+    inviteType === 'diwali_main' ||
+    inviteType?.includes('diwali')
   )
+
+  const handleCalendar = () => {
+    trackEvent(guest.id, '', 'calendar_clicked')
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    if (isIOS) {
+      const ics = buildICSContent(isDiwali)
+      const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = isDiwali ? 'diwali-celebration.ics' : 'arpit40.ics'
+      a.click()
+    } else {
+      window.open(buildGoogleCalUrl(isDiwali), '_blank')
+    }
+  }
 
   const handleWhatsApp = () => {
     trackEvent(guest.id, '', 'whatsapp_clicked')

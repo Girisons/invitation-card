@@ -18,19 +18,27 @@ export const WHATSAPP_URL = `https://wa.me/${EVENT.phone.replace(/\D/g, '')}?tex
   `Hi ${EVENT.contact}! I just RSVPed for Arpit's 40th & Diwali celebration. See you on ${EVENT.date}! 🎂🪔`
 )}`
 
-export function buildGoogleCalUrl() {
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(EVENT.name)}&dates=${EVENT.calStart}/${EVENT.calEnd}&location=${encodeURIComponent(EVENT.venue)}&details=${encodeURIComponent(`You are invited to ${EVENT.name} — ${EVENT.date}, ${EVENT.city}`)}`
+export function buildGoogleCalUrl(isDiwali?: boolean) {
+  const eventName = isDiwali ? 'Grand Diwali Party Celebration' : EVENT.name
+  const details = isDiwali
+    ? 'You are warmly invited to the Grand Diwali Party Celebration by the Khandelwal Family — Friday, 23 October 2026, Jaipur.'
+    : `You are invited to ${EVENT.name} — ${EVENT.date}, ${EVENT.city}`
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(eventName)}&dates=${EVENT.calStart}/${EVENT.calEnd}&location=${encodeURIComponent(EVENT.venue)}&details=${encodeURIComponent(details)}`
 }
 
-export function buildICSContent() {
+export function buildICSContent(isDiwali?: boolean) {
+  const eventName = isDiwali ? 'Grand Diwali Party Celebration' : EVENT.name
+  const description = isDiwali
+    ? 'You are warmly invited to the Grand Diwali Party Celebration by the Khandelwal Family.'
+    : `You are invited to ${EVENT.name}`
   return `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Arpit40//Invitation//EN
+PRODID:-//Khandelwal//Invitation//EN
 BEGIN:VEVENT
 DTSTART:${EVENT.calStart}
 DTEND:${EVENT.calEnd}
-SUMMARY:${EVENT.name}
-DESCRIPTION:You are invited to ${EVENT.name}
+SUMMARY:${eventName}
+DESCRIPTION:${description}
 LOCATION:${EVENT.venue}
 END:VEVENT
 END:VCALENDAR`
