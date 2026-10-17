@@ -34,8 +34,11 @@ body {
 }
 
 /* Typography */
-.font-serif { font-family: var(--font-serif), 'Georgia', serif; }
-.font-sans  { font-family: var(--font-sans), system-ui, sans-serif; }
+.font-serif     { font-family: var(--font-serif), 'Georgia', serif; }
+.font-cinzel    { font-family: var(--font-cinzel), 'Cinzel', 'Times New Roman', Georgia, serif; }
+.font-marcellus { font-family: var(--font-marcellus), 'Marcellus', 'Georgia', serif; }
+.font-script    { font-family: var(--font-script), 'Great Vibes', cursive, serif; }
+.font-sans      { font-family: var(--font-sans), system-ui, sans-serif; }
 
 /* Gold gradient text */
 .text-gold {

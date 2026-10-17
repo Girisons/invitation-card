@@ -1,10 +1,30 @@
 import type { Metadata, Viewport } from 'next'
-import { Playfair_Display, Inter } from 'next/font/google'
+import { Playfair_Display, Inter, Cinzel, Marcellus, Great_Vibes } from 'next/font/google'
 import './globals.css'
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
   variable: '--font-serif',
+  display: 'swap',
+})
+
+const cinzel = Cinzel({
+  subsets: ['latin'],
+  variable: '--font-cinzel',
+  display: 'swap',
+})
+
+const marcellus = Marcellus({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-marcellus',
+  display: 'swap',
+})
+
+const greatVibes = Great_Vibes({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-script',
   display: 'swap',
 })
 
@@ -52,7 +72,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${playfair.variable} ${inter.variable}`}>
+    <html lang="en" className={`${playfair.variable} ${cinzel.variable} ${marcellus.variable} ${greatVibes.variable} ${inter.variable}`}>
       <body className="bg-[#050D1A] text-white antialiased">
         {children}
       </body>
