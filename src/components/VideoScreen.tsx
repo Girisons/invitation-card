@@ -45,6 +45,7 @@ export default function VideoScreen({
   const endTimerRef = useRef<NodeJS.Timeout | null>(null)
   const hedgeOverlayRef = useRef<HTMLDivElement>(null)
   const stageOverlayRef = useRef<HTMLDivElement>(null)
+  const soulOverlayRef = useRef<HTMLDivElement>(null)
   const [showRsvpPrompt, setShowRsvpPrompt] = useState(false)
 
   const targetUrl = customVideoUrl || EVENT.videoUrl || '/videos/main-invite.mp4'
@@ -270,6 +271,36 @@ export default function VideoScreen({
 
           stageEl.style.opacity = opacity.toFixed(3)
           stageEl.style.transform = `translate3d(${translateX.toFixed(2)}vw, ${translateY.toFixed(2)}%, 0) scale(${scale.toFixed(3)})`
+        }
+      }
+
+      // 31.0s - 32.5s: WHERE MUSIC MEETS THE SOUL in the upper portion of the LED screen above the band
+      const soulEl = soulOverlayRef.current
+      if (soulEl && video) {
+        const t = video.currentTime
+        if (t < 31.0 || t > 32.6 || video.paused) {
+          if (t < 31.0 || t > 32.6) {
+            soulEl.style.opacity = '0'
+          }
+        } else {
+          // Fade in (31.0s -> 31.3s), hold (31.3s -> 32.1s), fade out (32.1s -> 32.5s)
+          let opacity = 1
+          let fadeUpY = 0
+          if (t < 31.3) {
+            opacity = Math.max(0, Math.min(1, (t - 31.0) / 0.3))
+          } else if (t > 32.1) {
+            const outProg = Math.max(0, Math.min(1, (t - 32.1) / 0.45))
+            opacity = 1 - outProg
+            fadeUpY = -outProg * 2.0
+          }
+
+          const soulProg = Math.max(0, Math.min(1, (t - 31.0) / 1.5))
+          const scale = 1.0 + soulProg * 0.04
+          const translateX = 5.4
+          const translateY = -10.2 + fadeUpY
+
+          soulEl.style.opacity = opacity.toFixed(3)
+          soulEl.style.transform = `translate3d(${translateX.toFixed(2)}vw, ${translateY.toFixed(2)}%, 0) scale(${scale.toFixed(3)})`
         }
       }
 
@@ -702,6 +733,38 @@ export default function VideoScreen({
                 >
                   THE NIGHT ISN&apos;T COMPLETE
                   <span className="block text-[#FCE18F] mt-0.5 tracking-[0.22em]">WITHOUT YOU</span>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ── UPPER LED SCREEN OVERLAY ABOVE BAND (31.0s - 32.5s): WHERE MUSIC MEETS THE SOUL ── */}
+          {isMainInvite && (
+            <div
+              ref={soulOverlayRef}
+              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none px-4 text-center z-20 will-change-transform"
+              style={{
+                opacity: 0,
+                transform: 'translate3d(5.4vw, -10.2%, 0) scale(1.0)',
+              }}
+            >
+              <div
+                className="relative flex flex-col items-center justify-center px-3 py-1.5 rounded-[2px] max-w-[175px] sm:max-w-[215px]"
+                style={{
+                  background: 'radial-gradient(ellipse at center, rgba(30,14,2,0.58) 0%, rgba(30,14,2,0.36) 75%, rgba(0,0,0,0) 100%)',
+                }}
+              >
+                <p
+                  className="font-marcellus text-[10px] sm:text-[13px] font-bold tracking-[0.22em] uppercase leading-snug"
+                  style={{
+                    background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF6D6 45%, #F0C45A 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    filter: 'drop-shadow(0 2px 2px rgba(26,10,0,0.95)) drop-shadow(0 0 4px rgba(0,0,0,0.75))',
+                  }}
+                >
+                  WHERE MUSIC
+                  <span className="block text-[#FCE18F] mt-0.5 tracking-[0.22em]">MEETS THE SOUL</span>
                 </p>
               </div>
             </div>
