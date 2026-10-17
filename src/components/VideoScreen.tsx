@@ -36,14 +36,18 @@ export default function VideoScreen({
   const [currentTime, setCurrentTime] = useState<number>(0)
   const [duration, setDuration] = useState<number>(10)
   const [showSkip, setShowSkip] = useState(false)
-  const [soundMuted, setSoundMuted] = useState(true)
+  const [soundMuted, setSoundMuted] = useState(false)
   const [hasTappedSound, setHasTappedSound] = useState(false)
   const [soundPromptVisible, setSoundPromptVisible] = useState(true)
   const startedRef = useRef(false)
   const endedCalledRef = useRef(false)
-  const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null)
   const endTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [showRsvpPrompt, setShowRsvpPrompt] = useState(false)
+  const onStartRef = useRef(onStart)
+
+  useEffect(() => {
+    onStartRef.current = onStart
+  }, [onStart])
 
   const isDiwaliSaveDate = Boolean(
     inviteType === 'save_date_diwali' ||
@@ -106,6 +110,8 @@ export default function VideoScreen({
       startedRef.current = false
       endedCalledRef.current = false
       if (endTimerRef.current) clearTimeout(endTimerRef.current)
+      const video = videoRef.current
+      if (video) video.pause()
       return
     }
 
@@ -119,71 +125,14 @@ export default function VideoScreen({
     const video = videoRef.current
     if (!video) return
 
-    video.muted = true
-    video.defaultMuted = true
-    // Aggressively pre-buffer the video frames so tap has 0s latency
-    video.load()
-
     // Show skip button after 2 seconds guaranteed
     const skipTimer = setTimeout(() => setShowSkip(true), 2000)
 
-    // For Save The Date, keep auto-dismiss. For Main Invite, stay on the gate until guest taps!
-    if (!isMainInvite) {
-      autoPlayTimerRef.current = setTimeout(() => {
-        setSoundPromptVisible(false)
-        if (video) {
-          video.muted = false
-          const playPromise = video.play()
-          if (playPromise !== undefined) {
-            playPromise.then(() => {
-              setSoundMuted(false)
-              setVideoState('playing')
-              if (!startedRef.current) {
-                startedRef.current = true
-                onStart()
-              }
-            }).catch(() => {
-              video.muted = true
-              video.play().then(() => {
-                setSoundMuted(true)
-                setVideoState('playing')
-                if (!startedRef.current) {
-                  startedRef.current = true
-                  onStart()
-                }
-              }).catch((err) => {
-                console.warn('Autoplay restricted:', err)
-                setVideoState('playing')
-              })
-            })
-          }
-        }
-      }, 3000)
-    }
-
-    // Fallback ticker timer to advance currentTime once video starts
-    const fallbackTicker = setInterval(() => {
-      if (video && !video.paused && video.currentTime > 0) {
-        setCurrentTime(video.currentTime)
-        if (video.duration && !isNaN(video.duration) && video.duration > 0) {
-          setDuration(video.duration)
-        }
-      } else if (startedRef.current) {
-        // Increment timer synthetically if video is playing but stuck
-        setCurrentTime((prev) => {
-          const next = prev + 0.25
-          if (next >= duration && !endedCalledRef.current) {
-            endedCalledRef.current = true
-            setVideoState('ended')
-            if (endTimerRef.current) clearTimeout(endTimerRef.current)
-            endTimerRef.current = setTimeout(() => {
-              setShowRsvpPrompt(true)
-            }, 2500)
-          }
-          return next
-        })
+    const handleLoadedMetadata = () => {
+      if (video && !isNaN(video.duration) && video.duration > 0) {
+        setDuration(video.duration)
       }
-    }, 250)
+    }
 
     const handleTimeUpdate = () => {
       if (video && !isNaN(video.currentTime)) {
@@ -212,21 +161,31 @@ export default function VideoScreen({
       setShowRsvpPrompt(true)
     }
 
+    video.addEventListener('loadedmetadata', handleLoadedMetadata)
     video.addEventListener('timeupdate', handleTimeUpdate)
     video.addEventListener('ended', handleEnded)
     video.addEventListener('error', handleError)
 
+    // Ticker to sync currentTime smoothly
+    const ticker = setInterval(() => {
+      if (video && !video.paused && !isNaN(video.currentTime)) {
+        setCurrentTime(video.currentTime)
+        if (video.duration && !isNaN(video.duration) && video.duration > 0) {
+          setDuration(video.duration)
+        }
+      }
+    }, 250)
+
     return () => {
       clearTimeout(skipTimer)
-      if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current)
       if (endTimerRef.current) clearTimeout(endTimerRef.current)
-      clearInterval(fallbackTicker)
+      clearInterval(ticker)
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata)
       video.removeEventListener('timeupdate', handleTimeUpdate)
       video.removeEventListener('ended', handleEnded)
       video.removeEventListener('error', handleError)
-      video.pause()
     }
-  }, [active, customVideoUrl, duration, onStart])
+  }, [active, targetUrl, hasVideo])
 
   // Handle user interaction (tap card or screen to start video immediately WITH AUDIO)
   const handleUserInteraction = (e?: React.SyntheticEvent) => {
@@ -235,42 +194,52 @@ export default function VideoScreen({
     }
     setHasTappedSound(true)
     setSoundPromptVisible(false)
-    setSoundMuted(false)
-
-    if (autoPlayTimerRef.current) {
-      clearTimeout(autoPlayTimerRef.current)
-      autoPlayTimerRef.current = null
-    }
 
     const video = videoRef.current
-
     if (video) {
       video.muted = false
+      video.defaultMuted = false
       video.volume = 1.0
+
       const playPromise = video.play()
       if (playPromise !== undefined) {
-        playPromise.then(() => {
-          video.muted = false
-          setSoundMuted(false)
-          setVideoState('playing')
-          if (!startedRef.current) {
-            startedRef.current = true
-            onStart()
-          }
-        }).catch((err) => {
-          console.warn('Unmuted play blocked by browser, trying fallback:', err)
-          video.muted = true
-          video.play().then(() => {
-            setSoundMuted(true)
+        playPromise
+          .then(() => {
+            video.muted = false
+            setSoundMuted(false)
             setVideoState('playing')
             if (!startedRef.current) {
               startedRef.current = true
-              onStart()
+              onStartRef.current()
             }
-          }).catch(() => {})
-        })
+          })
+          .catch((err) => {
+            console.warn('Unmuted play blocked by browser, trying fallback:', err)
+            video.muted = true
+            setSoundMuted(true)
+            video.play()
+              .then(() => {
+                setVideoState('playing')
+                if (!startedRef.current) {
+                  startedRef.current = true
+                  onStartRef.current()
+                }
+              })
+              .catch((err2) => {
+                console.error('Video play error:', err2)
+              })
+          })
       }
     }
+  }
+
+  const toggleSound = (e: React.SyntheticEvent) => {
+    e.stopPropagation()
+    const video = videoRef.current
+    if (!video) return
+    const nextMuted = !video.muted
+    video.muted = nextMuted
+    setSoundMuted(nextMuted)
   }
 
   // Teaser Beat calculations based on current time and total video duration
@@ -333,7 +302,7 @@ export default function VideoScreen({
         }`}
       />
 
-      {/* ── EMBOSSED GATE SCREEN (DESIGN 1: ROYAL MARCELLUS) OR FALLBACK TAP FOR SOUND ── */}
+      {/* ── EMBOSSED GATE SCREEN (DESIGN 1: ROYAL MARCELLUS) ── */}
       {hasVideo && soundPromptVisible && (
         <div
           onClick={handleUserInteraction}
@@ -342,92 +311,76 @@ export default function VideoScreen({
             background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0.88) 100%)'
           }}
         >
-          {isMainInvite ? (
-            /* DESIGN 1: ROYAL MARCELLUS ON CLOSED GATE */
-            <div className="flex flex-col items-center justify-center text-center max-w-xl w-full select-none px-4">
-              {/* Tagline with Gold Diamonds */}
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-[#C9A84C] text-[10px]">❖</span>
-                <p
-                  className="font-marcellus text-[11px] sm:text-xs tracking-[0.45em] uppercase text-[#C9A84C] font-semibold"
-                  style={{ filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.95)) drop-shadow(0 -1px 0.5px rgba(255,249,210,0.5))' }}
-                >
-                  A PERSONAL INVITATION
-                </p>
-                <span className="text-[#C9A84C] text-[10px]">❖</span>
-              </div>
-
-              {/* Guest Name in Marcellus Title Case (Without "Hi") */}
-              <h2
-                className="font-marcellus text-3xl sm:text-5xl font-bold tracking-wide mb-3 leading-tight px-2"
-                style={{
-                  background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF0BD 35%, #E2B755 75%, #9C6F16 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  filter: 'drop-shadow(0 3px 2px rgba(0,0,0,0.95)) drop-shadow(0 -1px 0.8px rgba(255,247,208,0.5))',
-                }}
-              >
-                {formatGuestTitleCase(guestName)}
-              </h2>
-
-              {/* Carved Gold Inlay Divider with Center Pearl Dot */}
-              <div className="relative w-48 sm:w-72 h-[3px] my-3 flex items-center justify-center">
-                <div className="absolute inset-0 bg-[#000000] translate-y-[1.5px] opacity-80 blur-[0.5px]" />
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#C9A84C] to-transparent h-[1.6px]" />
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#FFF5BD] to-transparent -translate-y-[1px] h-[0.8px] opacity-50" />
-                <div className="relative z-10 w-2 h-2 rounded-full bg-[#FFF5BD] shadow-[0_0_6px_rgba(201,168,76,0.8)]" />
-              </div>
-
-              {/* BIG: THE NIGHT AWAITS (Monumental 3D Embossed Marcellus) */}
-              <h1
-                className="font-marcellus text-4xl sm:text-6xl md:text-7xl font-bold tracking-[0.14em] uppercase my-2 leading-tight"
-                style={{
-                  background: 'linear-gradient(180deg, #FFFDF5 0%, #FCE18F 25%, #D4A63B 60%, #7A540D 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  filter: 'drop-shadow(0 4px 4px rgba(0,0,0,0.98)) drop-shadow(0 -1.8px 1px rgba(255,255,255,0.7)) drop-shadow(0 0 16px rgba(212,166,59,0.45))',
-                }}
-              >
-                THE NIGHT AWAITS
-              </h1>
-
-              {/* Event Subtitle */}
+          <div className="flex flex-col items-center justify-center text-center max-w-xl w-full select-none px-4">
+            {/* Tagline with Gold Diamonds */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-[#C9A84C] text-[10px]">❖</span>
               <p
-                className="font-marcellus text-[11px] sm:text-xs font-semibold tracking-[0.35em] uppercase text-[#E8D5A3] my-4"
-                style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.95))' }}
+                className="font-marcellus text-[11px] sm:text-xs tracking-[0.45em] uppercase text-[#C9A84C] font-semibold"
+                style={{ filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.95)) drop-shadow(0 -1px 0.5px rgba(255,249,210,0.5))' }}
               >
-                {isDiwaliEvent ? 'KHANDELWAL DIWALI CELEBRATION' : "ARPIT'S 40TH BIRTHDAY & DIWALI CELEBRATION"}
+                A PERSONAL INVITATION
               </p>
+              <span className="text-[#C9A84C] text-[10px]">❖</span>
+            </div>
 
-              {/* Antique Brass Plaque Button: TAP TO ENTER */}
-              <button
-                type="button"
-                onClick={handleUserInteraction}
-                className="group relative mt-2 px-9 py-3.5 rounded-full border border-[#AA822E] bg-gradient-to-b from-[#1A1108] to-[#0D0804] text-[#FFF6D6] shadow-[0_4px_20px_rgba(0,0,0,0.9),0_0_20px_rgba(170,130,46,0.25)] hover:shadow-[0_4px_25px_rgba(0,0,0,0.9),0_0_30px_rgba(170,130,46,0.45)] hover:scale-105 active:scale-95 transition-all duration-300 pointer-events-auto"
-                style={{
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.9), 0 0 25px rgba(170,130,46,0.3), inset 0 0 0 1px rgba(255,234,160,0.4)'
-                }}
-              >
-                <span className="font-marcellus text-xs sm:text-sm font-bold tracking-[0.25em] uppercase flex items-center gap-2">
-                  <span>TAP TO ENTER</span>
-                  <span className="transition-transform group-hover:translate-x-1">➔</span>
-                </span>
-              </button>
+            {/* Guest Name in Marcellus Title Case (Without "Hi") */}
+            <h2
+              className="font-marcellus text-3xl sm:text-5xl font-bold tracking-wide mb-3 leading-tight px-2"
+              style={{
+                background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF0BD 35%, #E2B755 75%, #9C6F16 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                filter: 'drop-shadow(0 3px 2px rgba(0,0,0,0.95)) drop-shadow(0 -1px 0.8px rgba(255,247,208,0.5))',
+              }}
+            >
+              {formatGuestTitleCase(guestName)}
+            </h2>
+
+            {/* Carved Gold Inlay Divider with Center Pearl Dot */}
+            <div className="relative w-48 sm:w-72 h-[3px] my-3 flex items-center justify-center">
+              <div className="absolute inset-0 bg-[#000000] translate-y-[1.5px] opacity-80 blur-[0.5px]" />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#C9A84C] to-transparent h-[1.6px]" />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#FFF5BD] to-transparent -translate-y-[1px] h-[0.8px] opacity-50" />
+              <div className="relative z-10 w-2 h-2 rounded-full bg-[#FFF5BD] shadow-[0_0_6px_rgba(201,168,76,0.8)]" />
             </div>
-          ) : (
-            /* Fallback for Save The Date */
-            <div className="flex flex-col items-center justify-center text-center px-8 py-10 rounded-2xl border-2 border-[#C9A84C] bg-[#050D1A]/95 text-[#F5ECD7] shadow-[0_0_60px_rgba(201,168,76,0.6)] hover:scale-105 active:scale-95 transition-all max-w-xs w-full">
-              <div className="w-20 h-20 rounded-full border-2 border-[#C9A84C]/80 bg-[#C9A84C]/10 flex items-center justify-center mb-6 shadow-inner">
-                <span className="text-4xl text-amber-400">🔊</span>
-              </div>
-              <h2 className="font-serif text-2xl font-bold tracking-wider text-[#FFF6D6] mb-3 uppercase">
-                TAP FOR SOUND
-              </h2>
-              <p className="font-sans text-[11px] tracking-[0.25em] uppercase text-[#C9A84C] font-semibold">
-                {isDiwali ? 'KHANDELWAL DIWALI BASH' : "ARPIT'S 40TH & DIWALI CELEBRATION"}
-              </p>
-            </div>
-          )}
+
+            {/* BIG: THE NIGHT AWAITS or SAVE THE DATE (Monumental 3D Embossed Marcellus) */}
+            <h1
+              className="font-marcellus text-4xl sm:text-6xl md:text-7xl font-bold tracking-[0.14em] uppercase my-2 leading-tight"
+              style={{
+                background: 'linear-gradient(180deg, #FFFDF5 0%, #FCE18F 25%, #D4A63B 60%, #7A540D 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                filter: 'drop-shadow(0 4px 4px rgba(0,0,0,0.98)) drop-shadow(0 -1.8px 1px rgba(255,255,255,0.7)) drop-shadow(0 0 16px rgba(212,166,59,0.45))',
+              }}
+            >
+              {isSaveDate ? 'SAVE THE DATE' : 'THE NIGHT AWAITS'}
+            </h1>
+
+            {/* Event Subtitle */}
+            <p
+              className="font-marcellus text-[11px] sm:text-xs font-semibold tracking-[0.35em] uppercase text-[#E8D5A3] my-4"
+              style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.95))' }}
+            >
+              {isDiwaliEvent ? 'KHANDELWAL DIWALI CELEBRATION' : "ARPIT'S 40TH BIRTHDAY & DIWALI CELEBRATION"}
+            </p>
+
+            {/* Antique Brass Plaque Button: TAP TO ENTER */}
+            <button
+              type="button"
+              onClick={handleUserInteraction}
+              className="group relative mt-2 px-9 py-3.5 rounded-full border border-[#AA822E] bg-gradient-to-b from-[#1A1108] to-[#0D0804] text-[#FFF6D6] shadow-[0_4px_20px_rgba(0,0,0,0.9),0_0_20px_rgba(170,130,46,0.25)] hover:shadow-[0_4px_25px_rgba(0,0,0,0.9),0_0_30px_rgba(170,130,46,0.45)] hover:scale-105 active:scale-95 transition-all duration-300 pointer-events-auto"
+              style={{
+                boxShadow: '0 4px 20px rgba(0,0,0,0.9), 0 0 25px rgba(170,130,46,0.3), inset 0 0 0 1px rgba(255,234,160,0.4)'
+              }}
+            >
+              <span className="font-marcellus text-xs sm:text-sm font-bold tracking-[0.25em] uppercase flex items-center gap-2">
+                <span>TAP TO ENTER</span>
+                <span className="transition-transform group-hover:translate-x-1">➔</span>
+              </span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -661,8 +614,8 @@ export default function VideoScreen({
         {hasVideo && (
           <div className="w-full pb-4 flex justify-between items-center pointer-events-auto gap-2">
             <button
-              onClick={handleUserInteraction}
-              className="glass px-3.5 py-2 rounded-full border border-[#C9A84C]/40 flex items-center gap-1.5 hover:bg-[#C9A84C]/10 transition-all active:scale-95 animate-pulse"
+              onClick={toggleSound}
+              className="glass px-3.5 py-2 rounded-full border border-[#C9A84C]/40 flex items-center gap-1.5 hover:bg-[#C9A84C]/10 transition-all active:scale-95 animate-pulse pointer-events-auto"
             >
               <span className="text-amber-400 text-xs">{soundMuted ? '🔇' : '🔊'}</span>
               <span className="font-sans text-[10px] tracking-[0.15em] uppercase text-[#C9A84C]">

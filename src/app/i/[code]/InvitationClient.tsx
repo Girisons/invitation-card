@@ -25,10 +25,10 @@ export default function InvitationClient({ guest, inviteCode, inviteType }: Prop
   const activeVideoUrl = isDiwaliSaveDate
     ? (guest.std_video_url || '/videos/save-the-date-diwali.mp4')
     : isDiwaliMain
-    ? (guest.video_url || '')
+    ? (guest.video_url || '/videos/main-invite.mp4')
     : isSaveTheDate
     ? (guest.std_video_url || '/videos/save-the-date.mp4')
-    : '/videos/main-invite.mp4?v=2'
+    : (guest.video_url || '/videos/main-invite.mp4')
 
   // Track invitation opened & entered video directly
   useEffect(() => {
