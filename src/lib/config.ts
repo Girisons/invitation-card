@@ -14,6 +14,12 @@ export const EVENT = {
   calEnd:   '20261023T230000',
 }
 
+export const DIWALI_EVENT = {
+  name: 'Grand Diwali Party Celebration',
+  contact: 'Vipul Khandelwal',
+  phone: process.env.NEXT_PUBLIC_DIWALI_RSVP_PHONE || '+919414036060',
+}
+
 export const WHATSAPP_URL = `https://wa.me/${EVENT.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
   `Hi ${EVENT.contact}! I just RSVPed for Arpit's 40th & Diwali celebration. See you on ${EVENT.date}! 🎂🪔`
 )}`

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Guest, trackEvent } from '@/lib/supabase'
-import { EVENT, WHATSAPP_URL, buildGoogleCalUrl, buildICSContent } from '@/lib/config'
+import { EVENT, DIWALI_EVENT, buildGoogleCalUrl, buildICSContent } from '@/lib/config'
 
 interface Props {
   guest: Guest
@@ -47,15 +47,15 @@ export default function ConfirmationScreen({ guest, guestName, status, inviteTyp
 
   const handleWhatsApp = () => {
     trackEvent(guest.id, '', 'whatsapp_clicked')
-    const phone = EVENT.phone.replace(/\D/g, '')
+    const phone = isDiwali ? DIWALI_EVENT.phone.replace(/\D/g, '') : EVENT.phone.replace(/\D/g, '')
     let msg = ''
     if (status === 'attending') {
       msg = isDiwali
-        ? `\u2728 Hi!\nWe’re super excited to join in for the Diwali Party celebration. Looking forward to seeing everyone on Friday, 23rd October 2026 and celebrating with Arpit, Vipul, Jitu & the entire Khandelwal family!\n\n— ${guestName} \u2728`
+        ? `\u2728 Hi Vipul!\nWe’re super excited to join in for the Diwali Party celebration. Looking forward to seeing everyone on Friday, 23rd October 2026 and celebrating with Arpit, Vipul, Jitu & the entire Khandelwal family!\n\n— ${guestName} \u2728`
         : `\u2728 Hi Tanvi!\nWe’re super excited to join in for Arpit’s 40th birthday and Diwali celebration. Looking forward to seeing you on Friday, 23rd October 2026 and being part of the double celebration!\n\n— ${guestName} \u2728`
     } else {
       msg = isDiwali
-        ? `Hi! Unfortunately I won't be able to make it for the Diwali Party celebration. Sending my warmest wishes to Arpit, Vipul, Jitu & the entire family!\n\n— ${guestName}`
+        ? `Hi Vipul! Unfortunately I won't be able to make it for the Diwali Party celebration. Sending my warmest wishes to Arpit, Vipul, Jitu & the entire family!\n\n— ${guestName}`
         : `Hi Tanvi! Unfortunately I won't be able to make it for Arpit's 40th & Diwali celebration. Sending my warmest wishes to Arpit & family!\n\n— ${guestName}`
     }
     const targetUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
@@ -73,7 +73,7 @@ export default function ConfirmationScreen({ guest, guestName, status, inviteTyp
           </p>
 
           <button onClick={handleWhatsApp} className="btn-outline w-full py-4 text-sm tracking-[0.2em] uppercase mb-4">
-            {isDiwali ? 'Message Khandelwal Family' : 'Message Tanvi'}
+            {isDiwali ? 'Message Vipul Khandelwal' : 'Message Tanvi'}
           </button>
           <button onClick={onBack} className="text-xs text-[#C9A84C]/80 hover:text-[#C9A84C] underline tracking-wider uppercase mb-6 transition-all">
             🔄 Change Response
@@ -133,7 +133,7 @@ export default function ConfirmationScreen({ guest, guestName, status, inviteTyp
               📅 Add to Calendar
             </button>
             <button onClick={handleWhatsApp} className="btn-outline w-full py-4 text-sm tracking-[0.2em] uppercase">
-              💬 {isDiwali ? 'Message Khandelwal Family' : 'Message Tanvi'}
+              💬 {isDiwali ? 'Message Vipul Khandelwal' : 'Message Tanvi'}
             </button>
             <button onClick={onBack} className="text-xs text-[#C9A84C]/70 hover:text-[#C9A84C] underline tracking-wider uppercase py-2 transition-all">
               🔄 Change RSVP Selection
