@@ -207,30 +207,37 @@ export default function VideoScreen({
             el.style.opacity = '0'
           }
         } else {
-          // 1. Opacity: fade in (10.0s -> 10.8s), hold (10.8s -> 17.6s), fade out as hedge exits left (17.6s -> 18.7s)
+          // 1. Opacity: fade in (10.0s -> 10.7s), hold (10.7s -> 17.7s), fade out as hedge exits left (17.7s -> 18.6s)
           let opacity = 1
-          if (t < 10.8) {
-            opacity = Math.max(0, Math.min(1, (t - 10.0) / 0.8))
-          } else if (t > 17.6) {
-            opacity = Math.max(0, Math.min(1, 1 - (t - 17.6) / 1.1))
+          if (t < 10.7) {
+            opacity = Math.max(0, Math.min(1, (t - 10.0) / 0.7))
+          } else if (t > 17.7) {
+            opacity = Math.max(0, Math.min(1, 1 - (t - 17.7) / 0.9))
           }
 
-          // 2. Scale: gently grows from 0.88 -> 1.06 as camera walks forward toward the hedge (10.0s -> 16.8s)
-          const walkProgress = Math.max(0, Math.min(1, (t - 10.0) / 6.8))
-          const scale = 0.88 + walkProgress * 0.18
+          // 2. 3D Perspective Scale: starts small inside the distant hedge (0.56 at 10s)
+          // and grows naturally as the camera walks right up to the hedge (1.32 at 18s)
+          const walkProgress = Math.max(0, Math.min(1, (t - 10.0) / 8.0))
+          const scale = 0.56 + Math.pow(walkProgress, 1.25) * 0.76
 
-          // 3. Horizontal pan (translateX): stays anchored on the hedge at center until 16.7s,
-          // then pans smoothly left as camera rotates right (16.7s -> 18.8s)
-          let translateX = 0
-          if (t > 16.7) {
-            const panProgress = Math.max(0, Math.min(1, (t - 16.7) / 2.1))
-            // Smooth ease-in-out curve matching the camera rotation right
+          // 3. Vertical & Horizontal anchor on the hedge wall:
+          // Gently shifts down slightly from +2% to +5.5% as camera approaches
+          const translateY = 2.0 + walkProgress * 3.5
+
+          // Stays centered on the hedge until 16.3s, drifts slightly left (16.3s -> 17.0s),
+          // then pans left with the hedge as the camera turns right (17.0s -> 18.7s)
+          let translateX = -0.5
+          if (t > 16.3 && t <= 17.0) {
+            const prePan = (t - 16.3) / 0.7
+            translateX = -0.5 - prePan * 4.0
+          } else if (t > 17.0) {
+            const panProgress = Math.max(0, Math.min(1, (t - 17.0) / 1.7))
             const easedPan = panProgress * panProgress * (3 - 2 * panProgress)
-            translateX = -easedPan * 68 // shifts left by up to 68vw with the hedge
+            translateX = -4.5 - easedPan * 52
           }
 
           el.style.opacity = opacity.toFixed(3)
-          el.style.transform = `translate3d(${translateX.toFixed(2)}vw, -2%, 0) scale(${scale.toFixed(3)})`
+          el.style.transform = `translate3d(${translateX.toFixed(2)}vw, ${translateY.toFixed(2)}%, 0) scale(${scale.toFixed(3)})`
         }
       }
       rafId = requestAnimationFrame(updateHedgeTransform)
@@ -548,55 +555,71 @@ export default function VideoScreen({
             </div>
           )}
 
-          {/* ── HEDGE SCENE-TRACKED OVERLAY (10.0s - 18.8s): 40 & FESTIVE — ARPIT'S 40 & DIWALI CELEBRATION ── */}
+          {/* ── HEDGE SCENE-TRACKED OVERLAY (10.0s - 18.8s): PHYSICALLY MOUNTED ON THE HEDGE ── */}
           {isMainInvite && (
             <div
               ref={hedgeOverlayRef}
-              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none px-6 text-center z-20 will-change-transform"
+              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none px-4 text-center z-20 will-change-transform"
               style={{
                 opacity: 0,
-                transform: 'translate3d(0vw, -2%, 0) scale(0.88)',
+                transform: 'translate3d(-0.5vw, 2%, 0) scale(0.56)',
               }}
             >
-              {/* Top Ornate Gold Flourish */}
-              <div className="flex items-center gap-2.5 text-[#D4AF37] text-xs sm:text-sm tracking-[0.35em] mb-1 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
-                <span>✦</span>
-                <span className="text-[10px]">❖</span>
-                <span>✦</span>
+              <div className="relative flex flex-col items-center justify-center py-2 px-5">
+                {/* Warm golden fairy-light glow cast onto the hedge foliage behind the sign */}
+                <div
+                  className="absolute inset-0 -z-10 rounded-full blur-xl pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(ellipse at center, rgba(245,166,35,0.32) 0%, rgba(201,130,18,0.14) 60%, rgba(0,0,0,0) 100%)',
+                  }}
+                />
+
+                {/* Line 1: 40 & Festive (Warm Glowing Gold Neon/Brass Script sitting on the upper hedge) */}
+                <h2
+                  className="font-script text-3xl sm:text-5xl tracking-normal leading-none px-2"
+                  style={{
+                    background: 'linear-gradient(180deg, #FFFDF5 0%, #FFEBA8 35%, #E5B546 75%, #A87414 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    filter: 'drop-shadow(0 3px 2px rgba(0,0,0,0.95)) drop-shadow(0 0 6px rgba(255,191,71,0.75)) drop-shadow(0 0 14px rgba(212,139,23,0.45))',
+                  }}
+                >
+                  40 &amp; Festive
+                </h2>
+
+                {/* Thin Brass Bar Divider */}
+                <div className="flex items-center justify-center w-28 sm:w-36 my-1.5 opacity-90">
+                  <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#FFE999] to-transparent shadow-[0_1px_2px_rgba(0,0,0,0.95)]" />
+                  <span className="w-1 h-1 rounded-full bg-[#FFFDF0] mx-1.5 shadow-[0_0_6px_rgba(255,191,71,0.9)]" />
+                  <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#FFE999] to-transparent shadow-[0_1px_2px_rgba(0,0,0,0.95)]" />
+                </div>
+
+                {/* Line 2: ARPIT'S 40TH */}
+                <p
+                  className="font-marcellus text-[10px] sm:text-xs font-bold tracking-[0.24em] uppercase leading-tight"
+                  style={{
+                    background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2C2 45%, #DDA938 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.95)) drop-shadow(0 0 6px rgba(255,191,71,0.6))',
+                  }}
+                >
+                  ARPIT&apos;S 40TH
+                </p>
+
+                {/* Line 3: & DIWALI CELEBRATION */}
+                <p
+                  className="font-marcellus text-[8.5px] sm:text-[10px] font-bold tracking-[0.2em] uppercase leading-tight mt-0.5"
+                  style={{
+                    background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2C2 45%, #DDA938 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.95)) drop-shadow(0 0 6px rgba(255,191,71,0.6))',
+                  }}
+                >
+                  &amp; DIWALI CELEBRATION
+                </p>
               </div>
-
-              {/* Main Luxury Title: 40 & Festive */}
-              <h2
-                className="font-script text-5xl sm:text-7xl md:text-8xl tracking-wide leading-tight px-4 py-1"
-                style={{
-                  background: 'linear-gradient(180deg, #FFFDF5 0%, #FFE89E 30%, #D4A63B 68%, #8A5E10 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.65)) drop-shadow(0 0 24px rgba(212,166,59,0.55))',
-                }}
-              >
-                40 &amp; Festive
-              </h2>
-
-              {/* Carved Gold Inlay Divider */}
-              <div className="flex items-center justify-center w-44 sm:w-64 my-2 opacity-90">
-                <div className="h-[1.5px] flex-1 bg-gradient-to-r from-transparent via-[#C9A84C] to-transparent shadow-[0_1px_2px_rgba(0,0,0,0.95)]" />
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FFF5BD] mx-2.5 shadow-[0_0_8px_rgba(201,168,76,0.9)]" />
-                <div className="h-[1.5px] flex-1 bg-gradient-to-r from-transparent via-[#C9A84C] to-transparent shadow-[0_1px_2px_rgba(0,0,0,0.95)]" />
-              </div>
-
-              {/* Embossed Royal Marcellus Subtitle: ARPIT'S 40 & DIWALI CELEBRATION */}
-              <p
-                className="font-marcellus text-sm sm:text-lg md:text-xl font-bold tracking-[0.28em] uppercase max-w-2xl leading-relaxed px-4 mt-1"
-                style={{
-                  background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF0BD 35%, #E2B755 75%, #9C6F16 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.98)) drop-shadow(0 -1px 0.8px rgba(255,247,208,0.55)) drop-shadow(0 0 14px rgba(212,166,59,0.4))',
-                }}
-              >
-                ARPIT&apos;S 40 &amp; DIWALI CELEBRATION
-              </p>
             </div>
           )}
 
