@@ -25,7 +25,7 @@ export default function InvitationClient({ guest, inviteCode, inviteType }: Prop
   const activeVideoUrl = isDiwaliSaveDate
     ? (guest.std_video_url || '/videos/save-the-date-diwali.mp4')
     : isDiwaliMain
-    ? (guest.video_url || '/videos/save-the-date-diwali.mp4')
+    ? (guest.video_url || '')
     : isSaveTheDate
     ? (guest.std_video_url || '/videos/save-the-date.mp4')
     : '/videos/main-invite.mp4?v=2'

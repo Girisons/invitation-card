@@ -42,3 +42,9 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# render & test assets
+*.ttf
+final_video_frame*.png
+preview_style_*.png
+generate_font_options.js

@@ -48,7 +48,14 @@ export default function VideoScreen({
   const soulOverlayRef = useRef<HTMLDivElement>(null)
   const [showRsvpPrompt, setShowRsvpPrompt] = useState(false)
 
-  const targetUrl = customVideoUrl || EVENT.videoUrl || '/videos/main-invite.mp4'
+  const isDiwaliMain = Boolean(
+    inviteType === 'main_diwali' ||
+    inviteType === 'invite_diwali' ||
+    inviteType === 'diwali_main' ||
+    inviteType === 'diwali_invite'
+  )
+  const targetUrl = customVideoUrl || (isDiwaliMain ? '' : (EVENT.videoUrl || '/videos/main-invite.mp4'))
+  const hasVideo = Boolean(targetUrl && targetUrl.trim().length > 0)
   const isMainInvite = Boolean(!isDiwali && !isSaveTheDate && inviteType !== 'save-the-date')
   const hasBurnedText = Boolean(isSaveTheDate || (customVideoUrl && (customVideoUrl.includes('save-the-date') || customVideoUrl.includes('save_date') || customVideoUrl.includes('diwali'))))
 
@@ -99,6 +106,13 @@ export default function VideoScreen({
       startedRef.current = false
       endedCalledRef.current = false
       if (endTimerRef.current) clearTimeout(endTimerRef.current)
+      return
+    }
+
+    if (!hasVideo) {
+      setVideoState('ended')
+      setShowRsvpPrompt(true)
+      setSoundPromptVisible(false)
       return
     }
 
@@ -373,8 +387,8 @@ export default function VideoScreen({
   const isBeat2 = videoState !== 'ended' && currentTime >= beat1End && currentTime < beat2End
   // Pathway Overlay (04s - 08s) on Main Invite
   const isPathwayBeat = isMainInvite && videoState === 'playing' && currentTime >= 4.0 && currentTime <= 8.0
-  // Beat 3 (RSVP Buttons): only appears 2.5 seconds AFTER video ends (or if explicitly skipped)
-  const isBeat3 = showRsvpPrompt
+  // Beat 3 (RSVP Buttons): only appears 2.5 seconds AFTER video ends (or if explicitly skipped, or immediately if video is unlinked)
+  const isBeat3 = !hasVideo || showRsvpPrompt
 
   return (
     <div
@@ -382,24 +396,35 @@ export default function VideoScreen({
       onClick={handleUserInteraction}
     >
       {/* Video Element */}
-      <video
-        ref={videoRef}
-        src={targetUrl}
-        className="absolute inset-0 w-full h-full object-cover"
-        playsInline
-        preload="auto"
-        muted
-        poster={EVENT.poster || undefined}
-        onEnded={() => {
-          if (endedCalledRef.current) return
-          endedCalledRef.current = true
-          setVideoState('ended')
-          if (endTimerRef.current) clearTimeout(endTimerRef.current)
-          endTimerRef.current = setTimeout(() => {
-            setShowRsvpPrompt(true)
-          }, 2500)
-        }}
-      />
+      {hasVideo ? (
+        <video
+          ref={videoRef}
+          src={targetUrl}
+          className="absolute inset-0 w-full h-full object-cover"
+          playsInline
+          preload="auto"
+          muted
+          poster={EVENT.poster || undefined}
+          onEnded={() => {
+            if (endedCalledRef.current) return
+            endedCalledRef.current = true
+            setVideoState('ended')
+            if (endTimerRef.current) clearTimeout(endTimerRef.current)
+            endTimerRef.current = setTimeout(() => {
+              setShowRsvpPrompt(true)
+            }, 2500)
+          }}
+        />
+      ) : (
+        <div
+          className="absolute inset-0 w-full h-full bg-[#050D1A]"
+          style={{
+            background: 'radial-gradient(ellipse at 50% 35%, rgba(201,168,76,0.18) 0%, rgba(139,26,40,0.12) 45%, #050D1A 100%)'
+          }}
+        >
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full pointer-events-none opacity-40 blur-3xl bg-amber-500/10" />
+        </div>
+      )}
 
       {/* Dark Vignette Overlay for Crisp Typography Contrast */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/25 to-black/80 pointer-events-none" />
@@ -412,7 +437,7 @@ export default function VideoScreen({
       />
 
       {/* ── EMBOSSED GATE SCREEN (DESIGN 1: ROYAL MARCELLUS) OR FALLBACK TAP FOR SOUND ── */}
-      {soundPromptVisible && (
+      {hasVideo && soundPromptVisible && (
         <div
           onClick={handleUserInteraction}
           className="absolute inset-0 z-50 flex items-center justify-center cursor-pointer p-4 transition-all duration-500 animate-fadeIn"
@@ -774,16 +799,45 @@ export default function VideoScreen({
           <div className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ${
             isBeat3 ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
           }`}>
-            {(!hasBurnedText || isDiwali) && (
+            {isDiwali ? (
+              <div className="flex flex-col items-center text-center px-4 max-w-sm mb-4">
+                <div className="text-amber-400 text-3xl mb-2 flame-animate" style={{ filter: 'drop-shadow(0 0 16px rgba(232,129,10,0.9))' }}>
+                  🪔
+                </div>
+                <p className="font-sans text-[10px] sm:text-xs tracking-[0.4em] uppercase text-[#C9A84C]/90 mb-1 font-semibold">
+                  FESTIVAL OF LIGHTS
+                </p>
+                <h2
+                  className="font-serif font-bold text-2xl sm:text-3xl text-[#F5ECD7] mb-2 leading-tight"
+                  style={{
+                    background: 'linear-gradient(135deg, #FFF6D6 0%, #E8D5A3 50%, #C9A84C 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  Diwali Party Celebration
+                </h2>
+                <div className="h-[1px] w-20 bg-gradient-to-r from-transparent via-[#C9A84C]/60 to-transparent my-1.5" />
+                <p className="font-serif italic text-sm sm:text-base text-[#F5ECD7]/90 mb-1">
+                  {guestName ? `A Warm Invitation For ${formatGuestTitleCase(guestName)}` : 'A Warm Invitation For You'}
+                </p>
+                <p className="font-sans text-xs tracking-[0.25em] uppercase text-[#C9A84C] font-semibold mb-1">
+                  Friday, 23rd October 2026 · Jaipur
+                </p>
+                <p className="font-sans text-[10px] tracking-[0.2em] uppercase text-white/50 mb-2">
+                  Drinks · Dance · Celebration
+                </p>
+              </div>
+            ) : (!hasBurnedText) && (
               <>
                 <p className="font-sans text-[10px] sm:text-xs tracking-[0.4em] uppercase text-[#C9A84C]/90 mb-2">
-                  {isDiwali ? 'DRINKS  ·  DANCE  ·  CELEBRATION' : 'DIWALI VIBES • FAB 40 • MEMORIES'}
+                  DIWALI VIBES • FAB 40 • MEMORIES
                 </p>
                 <h3 className="font-serif text-2xl sm:text-4xl text-[#F5ECD7] font-bold mb-2">
                   FRIDAY | OCT 23, 2026
                 </h3>
                 <p className="font-sans text-[11px] tracking-[0.25em] uppercase text-white/60 mb-6">
-                  {isDiwali ? 'JAIPUR' : 'JAIPUR · RAJASTHAN'}
+                  JAIPUR · RAJASTHAN
                 </p>
               </>
             )}
@@ -806,37 +860,44 @@ export default function VideoScreen({
                 onClick={handleCalendar}
                 className="w-full py-3 px-6 glass border border-[#C9A84C]/40 text-[#C9A84C] font-sans font-medium text-xs tracking-[0.2em] uppercase rounded-sm hover:bg-[#C9A84C]/10 active:scale-95 transition-all flex items-center justify-center gap-2"
               >
-                <span>📅</span> {isDiwali ? 'ADD TO CALENDAR (iOS / ANDROID)' : 'ADD TO CALENDAR'}
+                <span>📅</span> {isDiwali ? 'ADD TO CALENDAR' : 'ADD TO CALENDAR'}
               </button>
             </div>
+            {isDiwali && (
+              <p className="font-serif italic text-xs text-[#F5ECD7]/50 mt-4">
+                Warmly, The Khandelwal Family
+              </p>
+            )}
           </div>
 
         </div>
 
         {/* BOTTOM NAVIGATION BAR */}
-        <div className="w-full pb-4 flex justify-between items-center pointer-events-auto gap-2">
-          <button
-            onClick={handleUserInteraction}
-            className="glass px-3.5 py-2 rounded-full border border-[#C9A84C]/40 flex items-center gap-1.5 hover:bg-[#C9A84C]/10 transition-all active:scale-95 animate-pulse"
-          >
-            <span className="text-amber-400 text-xs">{soundMuted ? '🔇' : '🔊'}</span>
-            <span className="font-sans text-[10px] tracking-[0.15em] uppercase text-[#C9A84C]">
-              {soundMuted ? 'Tap for Sound' : 'Sound On'}
-            </span>
-          </button>
-
-          {!isBeat3 && (
+        {hasVideo && (
+          <div className="w-full pb-4 flex justify-between items-center pointer-events-auto gap-2">
             <button
-              onClick={handleCalendar}
-              className="glass px-3.5 py-2 rounded-full border border-[#C9A84C]/60 bg-[#C9A84C]/15 flex items-center gap-1.5 hover:bg-[#C9A84C]/30 text-[#F5ECD7] transition-all active:scale-95 shadow-md shadow-[#C9A84C]/10"
+              onClick={handleUserInteraction}
+              className="glass px-3.5 py-2 rounded-full border border-[#C9A84C]/40 flex items-center gap-1.5 hover:bg-[#C9A84C]/10 transition-all active:scale-95 animate-pulse"
             >
-              <span className="text-xs">📅</span>
-              <span className="font-sans text-[10px] tracking-[0.15em] uppercase text-[#C9A84C] font-bold">
-                Add to Calendar
+              <span className="text-amber-400 text-xs">{soundMuted ? '🔇' : '🔊'}</span>
+              <span className="font-sans text-[10px] tracking-[0.15em] uppercase text-[#C9A84C]">
+                {soundMuted ? 'Tap for Sound' : 'Sound On'}
               </span>
             </button>
-          )}
-        </div>
+
+            {!isBeat3 && (
+              <button
+                onClick={handleCalendar}
+                className="glass px-3.5 py-2 rounded-full border border-[#C9A84C]/60 bg-[#C9A84C]/15 flex items-center gap-1.5 hover:bg-[#C9A84C]/30 text-[#F5ECD7] transition-all active:scale-95 shadow-md shadow-[#C9A84C]/10"
+              >
+                <span className="text-xs">📅</span>
+                <span className="font-sans text-[10px] tracking-[0.15em] uppercase text-[#C9A84C] font-bold">
+                  Add to Calendar
+                </span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
     </div>

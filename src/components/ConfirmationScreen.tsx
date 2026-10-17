@@ -33,10 +33,18 @@ export default function ConfirmationScreen({ guest, guestName, status, inviteTyp
     }
   }
 
+  const isDiwali = Boolean(
+    inviteType === 'save_date_diwali' ||
+    inviteType === 'std_diwali' ||
+    inviteType === 'diwali' ||
+    inviteType === 'main_diwali' ||
+    inviteType === 'invite_diwali' ||
+    inviteType === 'diwali_main'
+  )
+
   const handleWhatsApp = () => {
     trackEvent(guest.id, '', 'whatsapp_clicked')
     const phone = EVENT.phone.replace(/\D/g, '')
-    const isDiwali = inviteType === 'save_date_diwali' || inviteType === 'std_diwali' || inviteType === 'diwali' || inviteType === 'main_diwali' || inviteType === 'invite_diwali' || inviteType === 'diwali_main'
     let msg = ''
     if (status === 'attending') {
       msg = isDiwali
@@ -62,7 +70,7 @@ export default function ConfirmationScreen({ guest, guestName, status, inviteTyp
           </p>
 
           <button onClick={handleWhatsApp} className="btn-outline w-full py-4 text-sm tracking-[0.2em] uppercase mb-4">
-            Message Tanvi
+            {isDiwali ? 'Message Khandelwal Family' : 'Message Tanvi'}
           </button>
           <button onClick={onBack} className="text-xs text-[#C9A84C]/80 hover:text-[#C9A84C] underline tracking-wider uppercase mb-6 transition-all">
             🔄 Change Response
@@ -122,7 +130,7 @@ export default function ConfirmationScreen({ guest, guestName, status, inviteTyp
               📅 Add to Calendar
             </button>
             <button onClick={handleWhatsApp} className="btn-outline w-full py-4 text-sm tracking-[0.2em] uppercase">
-              💬 Message Tanvi
+              💬 {isDiwali ? 'Message Khandelwal Family' : 'Message Tanvi'}
             </button>
             <button onClick={onBack} className="text-xs text-[#C9A84C]/70 hover:text-[#C9A84C] underline tracking-wider uppercase py-2 transition-all">
               🔄 Change RSVP Selection
