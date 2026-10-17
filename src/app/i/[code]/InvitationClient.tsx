@@ -28,7 +28,7 @@ export default function InvitationClient({ guest, inviteCode, inviteType }: Prop
     ? (guest.video_url || '/videos/save-the-date-diwali.mp4')
     : isSaveTheDate
     ? (guest.std_video_url || '/videos/save-the-date.mp4')
-    : (guest.video_url || '/videos/main-invite.mp4')
+    : '/videos/main-invite.mp4?v=2'
 
   // Track invitation opened & entered video directly
   useEffect(() => {
@@ -76,8 +76,12 @@ export default function InvitationClient({ guest, inviteCode, inviteType }: Prop
     : primaryDisplay
 
   return (
-    <div className="grain relative w-full full-viewport-height overflow-hidden bg-[#050D1A]">
-      {/* Opening — always rendered, hidden when not active */}
+    <>
+      {activeVideoUrl && (
+        <link rel="preload" as="video" href={activeVideoUrl} type="video/mp4" />
+      )}
+      <div className="grain relative w-full full-viewport-height overflow-hidden bg-[#050D1A]">
+        {/* Opening — always rendered, hidden when not active */}
       <div className={`absolute inset-0 transition-opacity duration-1000 ${screen === 'opening' ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none z-0'}`}>
         <OpeningScreen
           guestName={guestDisplayName}
@@ -114,5 +118,6 @@ export default function InvitationClient({ guest, inviteCode, inviteType }: Prop
         />
       </div>
     </div>
+  </>
   )
 }
