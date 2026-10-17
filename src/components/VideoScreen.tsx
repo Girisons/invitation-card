@@ -49,7 +49,7 @@ export default function VideoScreen({
   const [showRsvpPrompt, setShowRsvpPrompt] = useState(false)
 
   const targetUrl = customVideoUrl || EVENT.videoUrl || '/videos/main-invite.mp4'
-  const isMainInvite = Boolean(!isSaveTheDate && inviteType !== 'save-the-date')
+  const isMainInvite = Boolean(!isDiwali && !isSaveTheDate && inviteType !== 'save-the-date')
   const hasBurnedText = Boolean(isSaveTheDate || (customVideoUrl && (customVideoUrl.includes('save-the-date') || customVideoUrl.includes('save_date') || customVideoUrl.includes('diwali'))))
 
   function formatGuestTitleCase(name?: string): string {

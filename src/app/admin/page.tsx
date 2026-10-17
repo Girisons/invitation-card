@@ -14,7 +14,7 @@ export interface PortalUser {
   created_at?: string
 }
 
-export type MessageTemplateMode = 'invite' | 'save_date' | 'invite_diwali' | 'save_date_diwali' | 'location' | 'photos'
+export type MessageTemplateMode = 'invite' | 'save_date' | 'invite_diwali' | 'save_date_diwali'
 
 const DEFAULT_USERS: PortalUser[] = [
   { id: 'user-admin', username: 'admin', password: 'arpit40', name: 'Super Admin', role: 'super_admin', created_at: new Date().toISOString() },
@@ -409,13 +409,17 @@ export default function AdminPage() {
         }
       }
 
-      // Fetch RSVPs to sync status
+      // Fetch RSVPs to sync status only if guest doesn't already have an explicit RSVP status
       const { data: rsvps } = await supabase.from('rsvps').select('*')
       if (rsvps && rsvps.length > 0) {
         for (const g of data) {
           const rsvp = rsvps.find((r: any) => r.guest_id === g.id || (g.linked_guest_id && r.guest_id === g.linked_guest_id))
           if (rsvp && rsvp.status) {
-            g.invitation_status = rsvp.status
+            const current = (g.invitation_status || '').toLowerCase()
+            const hasExplicitRsvp = current === 'rsvp_yes' || current === 'rsvp_no' || current === 'attending' || current === 'declined' || current === 'yes' || current === 'no'
+            if (!hasExplicitRsvp) {
+              g.invitation_status = rsvp.status
+            }
           }
         }
       }
@@ -644,11 +648,58 @@ export default function AdminPage() {
 
   // ── QUICK CHANGE ATTENDANCE STATUS (Strictly individual per guest) ──
   const handleAttendanceChange = async (g: Guest, newStatus: string) => {
-    const { error } = await supabase.from('guests').update({ invitation_status: newStatus }).eq('id', g.id)
-    if (error) {
-      alert('Error updating attendance: ' + error.message)
+    // 1. Optimistic UI update so the dropdown changes immediately without any lag
+    setGuests(prev => prev.map(item => item.id === g.id ? { ...item, invitation_status: newStatus } : item))
+
+    // 2. Update guests table
+    const { error: guestErr } = await supabase.from('guests').update({ invitation_status: newStatus }).eq('id', g.id)
+    if (guestErr) {
+      alert('Error updating attendance: ' + guestErr.message)
+      fetchGuests()
       return
     }
+
+    // 3. Sync rsvps table so fetchGuests and online RSVPs remain 100% consistent
+    const rsvpStatus = (newStatus === 'rsvp_yes' || newStatus === 'attending' || newStatus === 'yes')
+      ? 'attending'
+      : (newStatus === 'rsvp_no' || newStatus === 'declined' || newStatus === 'no')
+      ? 'declined'
+      : null
+
+    try {
+      if (rsvpStatus) {
+        const { data: existingRsvp } = await supabase
+          .from('rsvps')
+          .select('id')
+          .eq('guest_id', g.id)
+          .maybeSingle()
+
+        if (existingRsvp) {
+          await supabase
+            .from('rsvps')
+            .update({
+              status: rsvpStatus,
+              number_attending: rsvpStatus === 'attending' ? (g.invited_count || 1) : 0,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingRsvp.id)
+        } else {
+          await supabase
+            .from('rsvps')
+            .insert({
+              guest_id: g.id,
+              status: rsvpStatus,
+              number_attending: rsvpStatus === 'attending' ? (g.invited_count || 1) : 0
+            })
+        }
+      } else {
+        // If set to pending, remove from rsvps table
+        await supabase.from('rsvps').delete().eq('guest_id', g.id)
+      }
+    } catch (e) {
+      console.warn('Syncing rsvps table error:', e)
+    }
+
     fetchGuests()
   }
 
@@ -1060,20 +1111,8 @@ export default function AdminPage() {
               <option value="save_date_diwali" className="bg-[#0A1931]">✨ Diwali Party - Save The Date</option>
               <option value="invite_diwali" className="bg-[#0A1931]">🎉 Diwali Party - Main Invite</option>
             </optgroup>
-            <optgroup label="📍 Other Links">
-              <option value="location" className="bg-[#0A1931]">📍 Venue &amp; Location Link</option>
-              <option value="photos" className="bg-[#0A1931]">📸 Photos &amp; Instagram Link</option>
-            </optgroup>
           </select>
         </div>
-
-        <button
-          onClick={() => setShowLinksModal(true)}
-          className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 px-3 py-2 text-xs rounded-sm whitespace-nowrap font-medium flex items-center gap-1.5 transition-all"
-          title="Configure custom Venue Location, Photos, and Instagram links"
-        >
-          <span>⚙️</span> Custom Links
-        </button>
 
         <button onClick={() => { setShowForm(true); setForm(emptyForm()) }}
           className="btn-primary px-4 py-2 text-sm tracking-wider whitespace-nowrap">+ Add Guest</button>
@@ -1104,8 +1143,6 @@ export default function AdminPage() {
             {messageTemplate === 'invite' && '💌 40 & Festive — Main Invite'}
             {messageTemplate === 'save_date_diwali' && '✨ Diwali Party — Save The Date'}
             {messageTemplate === 'invite_diwali' && '🎉 Diwali Party — Main Invite'}
-            {messageTemplate === 'location' && '📍 Venue & Location Link'}
-            {messageTemplate === 'photos' && '📸 Photos & Instagram Link'}
           </span>
         </div>
 
@@ -1165,32 +1202,6 @@ export default function AdminPage() {
               title="Main Invite for Diwali Party (Arpit, Vipul & Jitu)"
             >
               🎉 Main Invite
-            </button>
-          </div>
-
-          {/* Other Links */}
-          <div className="flex items-center bg-[#050D1A] rounded p-1 border border-blue-500/30 gap-1">
-            <button
-              onClick={() => setMessageTemplate('location')}
-              className={`px-2 py-1 text-xs font-semibold rounded transition-all ${
-                messageTemplate === 'location'
-                  ? 'bg-blue-500 text-white font-bold shadow-md ring-1 ring-white/50'
-                  : 'text-blue-300/70 hover:text-white hover:bg-white/5'
-              }`}
-              title="Venue Location Google Maps link"
-            >
-              📍 Venue
-            </button>
-            <button
-              onClick={() => setMessageTemplate('photos')}
-              className={`px-2 py-1 text-xs font-semibold rounded transition-all ${
-                messageTemplate === 'photos'
-                  ? 'bg-purple-500 text-white font-bold shadow-md ring-1 ring-white/50'
-                  : 'text-purple-300/70 hover:text-white hover:bg-white/5'
-              }`}
-              title="Event Photos & Instagram link"
-            >
-              📸 Photos
             </button>
           </div>
         </div>
@@ -1391,10 +1402,6 @@ export default function AdminPage() {
                         <optgroup label="🪔 Diwali Party">
                           <option value="save_date_diwali">✨ Diwali Party - Save The Date</option>
                           <option value="invite_diwali">🎉 Diwali Party - Main Invite</option>
-                        </optgroup>
-                        <optgroup label="📍 Follow-up Links">
-                          <option value="location">📍 Venue Location</option>
-                          <option value="photos">📸 Photos &amp; Insta</option>
                         </optgroup>
                       </select>
                       <button onClick={() => {
