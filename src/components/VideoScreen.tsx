@@ -40,7 +40,7 @@ export default function VideoScreen({
   const [hasTappedSound, setHasTappedSound] = useState(false)
   const [soundPromptVisible, setSoundPromptVisible] = useState(true)
   const [rotatePromptActive, setRotatePromptActive] = useState(true)
-  const [rotateCountdown, setRotateCountdown] = useState(3)
+  const [rotateCountdown, setRotateCountdown] = useState(5)
   const startedRef = useRef(false)
   const endedCalledRef = useRef(false)
   const endTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -54,12 +54,12 @@ export default function VideoScreen({
     onStartRef.current = onStart
   }, [onStart])
 
-  // Show 3-sec rotate phone prompt before TAP TO ENTER on initial load
+  // Show 5-sec rotate phone prompt before TAP TO ENTER on initial load
   useEffect(() => {
     if (!active) return
 
     setRotatePromptActive(true)
-    setRotateCountdown(3)
+    setRotateCountdown(5)
   }, [active])
 
   // Countdown timer and live physical rotation detection
