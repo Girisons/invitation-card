@@ -39,7 +39,7 @@ export default function VideoScreen({
   const [soundMuted, setSoundMuted] = useState(false)
   const [hasTappedSound, setHasTappedSound] = useState(false)
   const [soundPromptVisible, setSoundPromptVisible] = useState(true)
-  const [rotatePromptActive, setRotatePromptActive] = useState(false)
+  const [rotatePromptActive, setRotatePromptActive] = useState(true)
   const [rotateCountdown, setRotateCountdown] = useState(3)
   const startedRef = useRef(false)
   const endedCalledRef = useRef(false)
@@ -54,25 +54,12 @@ export default function VideoScreen({
     onStartRef.current = onStart
   }, [onStart])
 
-  // Check if device starts in portrait mode on mobile/tablet (to show 3-sec rotate phone prompt)
+  // Show 3-sec rotate phone prompt before TAP TO ENTER on initial load
   useEffect(() => {
     if (!active) return
 
-    const checkIsPortraitMobile = () => {
-      if (typeof window === 'undefined') return false
-      const isPortrait = window.innerHeight > window.innerWidth
-      const isMobile =
-        window.innerWidth <= 900 ||
-        /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-      return isPortrait && isMobile
-    }
-
-    if (checkIsPortraitMobile()) {
-      setRotatePromptActive(true)
-      setRotateCountdown(3)
-    } else {
-      setRotatePromptActive(false)
-    }
+    setRotatePromptActive(true)
+    setRotateCountdown(3)
   }, [active])
 
   // Countdown timer and live physical rotation detection
@@ -80,8 +67,8 @@ export default function VideoScreen({
     if (!rotatePromptActive) return
 
     const handleOrientationChange = () => {
-      if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
-        // Rotated to landscape! Instantly dismiss rotation prompt
+      // If mobile device is physically rotated to landscape, dismiss immediately
+      if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerWidth <= 900) {
         setRotatePromptActive(false)
       }
     }
@@ -544,7 +531,7 @@ export default function VideoScreen({
               }}
               className="text-[#C9A84C]/70 hover:text-[#C9A84C] text-[11px] font-marcellus tracking-[0.25em] uppercase underline underline-offset-4 transition-colors"
             >
-              Continue in Portrait ➔
+              Continue ➔
             </button>
           </div>
         </div>
