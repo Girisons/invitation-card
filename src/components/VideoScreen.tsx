@@ -256,7 +256,7 @@ export default function VideoScreen({
           }
         }
 
-        // 2. LED Stage Screen (25.0s - 29.5s): Guest Name + The Night Isn't Complete Without You
+        // 2. LED Stage Screen (25.0s - 29.5s): Rock-solid stick to LED screen (NO dancing/moving)
         const stageEl = stageOverlayRef.current
         if (stageEl) {
           if (t < 25.0 || t > 29.5 || video.paused) {
@@ -265,22 +265,16 @@ export default function VideoScreen({
             }
           } else {
             let opacity = 1
-            let fadeUpOffsetY = 0
             if (t < 25.6) {
               opacity = Math.max(0, Math.min(1, (t - 25.0) / 0.6))
             } else if (t > 28.7) {
               const fadeOutProgress = Math.max(0, Math.min(1, (t - 28.7) / 0.7))
               opacity = 1 - fadeOutProgress
-              fadeUpOffsetY = -fadeOutProgress * 2.8
             }
 
-            const stageProgress = Math.max(0, Math.min(1, (t - 25.0) / 4.4))
-            const scale = 0.94 + stageProgress * 0.11
-            const translateX = 3.8
-            const translateY = 0.4 + fadeUpOffsetY
-
+            // Fixed position stuck to the LED screen (no scaling or dancing)
             stageEl.style.opacity = opacity.toFixed(3)
-            stageEl.style.transform = `translate3d(${translateX.toFixed(2)}vw, ${translateY.toFixed(2)}%, 0) scale(${scale.toFixed(3)})`
+            stageEl.style.transform = 'translate3d(3.8vw, 0.4%, 0) scale(0.98)'
           }
         }
 
@@ -765,16 +759,11 @@ export default function VideoScreen({
               className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none px-4 text-center z-20 will-change-transform"
               style={{
                 opacity: 0,
-                transform: 'translate3d(3.8vw, 0.4%, 0) scale(0.94)',
+                transform: 'translate3d(3.8vw, 0.4%, 0) scale(0.98)',
               }}
             >
-              {/* Fitted strictly inside the glowing LED Stage Screen */}
-              <div
-                className="relative flex flex-col items-center justify-center px-3 py-2.5 rounded-[2px] max-w-[165px] sm:max-w-[200px]"
-                style={{
-                  background: 'radial-gradient(ellipse at center, rgba(30,14,2,0.62) 0%, rgba(30,14,2,0.42) 70%, rgba(0,0,0,0.12) 100%)',
-                }}
-              >
+              {/* Fitted strictly inside the glowing LED Stage Screen with transparent background */}
+              <div className="relative flex flex-col items-center justify-center px-1 py-1 max-w-[170px] sm:max-w-[210px] bg-transparent">
                 {/* Personalized Guest Name on the LED Screen */}
                 <h2
                   className="font-marcellus text-sm sm:text-xl font-bold tracking-wide leading-tight px-1"
