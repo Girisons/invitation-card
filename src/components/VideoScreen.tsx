@@ -56,6 +56,31 @@ export default function VideoScreen({
     onStartRef.current = onStart
   }, [onStart])
 
+  // Live Digital Countdown to Grand Celebration (Friday, Oct 23, 2026, 8:00 PM IST)
+  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number }>({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0
+  })
+
+  useEffect(() => {
+    const targetTime = new Date('2026-10-23T20:00:00+05:30').getTime()
+    const updateCountdown = () => {
+      const now = Date.now()
+      const diff = Math.max(0, targetTime - now)
+      setTimeLeft({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((diff % (1000 * 60)) / 1000)
+      })
+    }
+    updateCountdown()
+    const interval = setInterval(updateCountdown, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
   const isDiwaliSaveDate = Boolean(
     inviteType === 'save_date_diwali' ||
     inviteType === 'std_diwali' ||
@@ -367,10 +392,10 @@ export default function VideoScreen({
   const isSpiritsBeat = isMainInvite && videoState === 'playing' && currentTime >= 35.0 && currentTime <= 37.0
   // DJ Stage Overlay (40.0s - 42.0s) on Main Invite: WHEN THE NIGHT COMES ALIVE
   const isStageBeat = isMainInvite && videoState === 'playing' && currentTime >= 40.0 && currentTime <= 42.0
-  // Grand Finale Overlay (47.0s - 50.0s) on Main Invite: YOUR PRESENCE. THE PERFECT FINALE
-  const isFinaleBeat = isMainInvite && videoState === 'playing' && currentTime >= 47.0 && currentTime <= 50.0
   // Beat 3 (RSVP Buttons): appears right after video ends (or if explicitly skipped, or immediately if video is unlinked)
   const isBeat3 = !hasVideo || showRsvpPrompt
+  // Grand Finale Overlay (47.0s - 50.0s) on Main Invite: YOUR PRESENCE. THE PERFECT FINALE
+  const isFinaleBeat = isMainInvite && !isBeat3 && videoState === 'playing' && currentTime >= 47.0 && currentTime <= 50.0
 
   // Personalized Save The Date reply status checks
   const isAttending = prevRsvpStatus === 'attending'
@@ -861,7 +886,7 @@ export default function VideoScreen({
           )}
 
           {/* ── GRAND FINALE OVERLAY (47.0s - 50.0s): YOUR PRESENCE. THE PERFECT FINALE ── */}
-          {isMainInvite && (
+          {isMainInvite && !isBeat3 && (
             <div
               className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 pointer-events-none select-none px-6 text-center z-20 ${
                 isFinaleBeat ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
@@ -1075,6 +1100,114 @@ export default function VideoScreen({
                 <p className="font-serif italic text-xs sm:text-[13px] text-[#FCE18F]/80 mt-3 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                   {isDiwali ? 'Warmly, The Khandelwal Family' : 'Warmly, Arpit & Tanvi'}
                 </p>
+
+                {/* ── DIGITAL COUNTDOWN CLOCK STRUCTURE DOWN THERE ── */}
+                <div className="w-full max-w-sm sm:max-w-md mx-auto mt-3.5 mb-1 flex flex-col items-center select-none">
+                  {/* Pulsing micro-badge */}
+                  <div className="flex items-center gap-1.5 mb-1.5 px-3 py-0.5 rounded-full bg-[#C9A84C]/10 border border-[#C9A84C]/35">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#FCE18F] animate-ping" />
+                    <span className="font-sans text-[9px] sm:text-[10px] tracking-[0.22em] uppercase font-semibold text-[#FCE18F]">
+                      TIME LEFT FOR GRAND CELEBRATION
+                    </span>
+                  </div>
+
+                  {/* Digital Clock Structure Container */}
+                  <div className="flex items-center justify-center gap-1 sm:gap-2 px-3 py-2 rounded-xl border border-[#C9A84C]/60 bg-gradient-to-b from-[#0A1324]/95 via-black/95 to-[#070D18]/95 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.15)]">
+                    {/* DAYS */}
+                    <div className="flex flex-col items-center min-w-[50px] sm:min-w-[62px]">
+                      <div className="relative w-full py-1.5 px-1.5 rounded-md bg-gradient-to-b from-[#141C2B] to-[#0A0F1A] border border-[#C9A84C]/45 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] overflow-hidden">
+                        {/* Horizontal split-flap line */}
+                        <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 pointer-events-none z-10" />
+                        <span
+                          className="font-mono text-xl sm:text-2xl md:text-3xl font-extrabold tracking-wider tabular-nums leading-none z-0"
+                          style={{
+                            background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2BD 50%, #E2BE5A 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            filter: 'drop-shadow(0 0 8px rgba(226,190,90,0.6))',
+                          }}
+                        >
+                          {String(timeLeft.days).padStart(2, '0')}
+                        </span>
+                      </div>
+                      <span className="font-sans text-[8px] sm:text-[9px] tracking-[0.2em] uppercase font-bold text-[#C9A84C] mt-1">
+                        DAYS
+                      </span>
+                    </div>
+
+                    {/* Separator Colon */}
+                    <span className="text-[#FCE18F] text-base sm:text-xl font-bold pb-3.5 animate-pulse">:</span>
+
+                    {/* HOURS */}
+                    <div className="flex flex-col items-center min-w-[50px] sm:min-w-[62px]">
+                      <div className="relative w-full py-1.5 px-1.5 rounded-md bg-gradient-to-b from-[#141C2B] to-[#0A0F1A] border border-[#C9A84C]/45 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] overflow-hidden">
+                        <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 pointer-events-none z-10" />
+                        <span
+                          className="font-mono text-xl sm:text-2xl md:text-3xl font-extrabold tracking-wider tabular-nums leading-none z-0"
+                          style={{
+                            background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2BD 50%, #E2BE5A 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            filter: 'drop-shadow(0 0 8px rgba(226,190,90,0.6))',
+                          }}
+                        >
+                          {String(timeLeft.hours).padStart(2, '0')}
+                        </span>
+                      </div>
+                      <span className="font-sans text-[8px] sm:text-[9px] tracking-[0.2em] uppercase font-bold text-[#C9A84C] mt-1">
+                        HOURS
+                      </span>
+                    </div>
+
+                    {/* Separator Colon */}
+                    <span className="text-[#FCE18F] text-base sm:text-xl font-bold pb-3.5 animate-pulse">:</span>
+
+                    {/* MINUTES */}
+                    <div className="flex flex-col items-center min-w-[50px] sm:min-w-[62px]">
+                      <div className="relative w-full py-1.5 px-1.5 rounded-md bg-gradient-to-b from-[#141C2B] to-[#0A0F1A] border border-[#C9A84C]/45 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] overflow-hidden">
+                        <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 pointer-events-none z-10" />
+                        <span
+                          className="font-mono text-xl sm:text-2xl md:text-3xl font-extrabold tracking-wider tabular-nums leading-none z-0"
+                          style={{
+                            background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2BD 50%, #E2BE5A 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            filter: 'drop-shadow(0 0 8px rgba(226,190,90,0.6))',
+                          }}
+                        >
+                          {String(timeLeft.minutes).padStart(2, '0')}
+                        </span>
+                      </div>
+                      <span className="font-sans text-[8px] sm:text-[9px] tracking-[0.2em] uppercase font-bold text-[#C9A84C] mt-1">
+                        MINS
+                      </span>
+                    </div>
+
+                    {/* Separator Colon */}
+                    <span className="text-[#FCE18F] text-base sm:text-xl font-bold pb-3.5 animate-pulse">:</span>
+
+                    {/* SECONDS */}
+                    <div className="flex flex-col items-center min-w-[50px] sm:min-w-[62px]">
+                      <div className="relative w-full py-1.5 px-1.5 rounded-md bg-gradient-to-b from-[#141C2B] to-[#0A0F1A] border border-[#C9A84C]/45 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] overflow-hidden">
+                        <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 pointer-events-none z-10" />
+                        <span
+                          className="font-mono text-xl sm:text-2xl md:text-3xl font-extrabold tracking-wider tabular-nums leading-none z-0"
+                          style={{
+                            background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2BD 50%, #E2BE5A 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            filter: 'drop-shadow(0 0 8px rgba(226,190,90,0.6))',
+                          }}
+                        >
+                          {String(timeLeft.seconds).padStart(2, '0')}
+                        </span>
+                      </div>
+                      <span className="font-sans text-[8px] sm:text-[9px] tracking-[0.2em] uppercase font-bold text-[#C9A84C] mt-1">
+                        SECS
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
