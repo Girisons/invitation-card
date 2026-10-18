@@ -1035,9 +1035,6 @@ export default function VideoScreen({
                     <p className="italic">
                       Get ready for <strong className="font-bold not-italic text-[#FCE18F]">40 &amp; FESTIVE</strong> — an unforgettable evening of Diwali sparkle, incredible music and magical moments as we celebrate Arpit&rsquo;s 40th Birthday.
                     </p>
-                    <p className="font-sans text-[11px] sm:text-xs font-bold tracking-[0.18em] uppercase text-[#FCE18F] pt-0.5">
-                      23 October 2026 · Jaipur
-                    </p>
                     <p className="font-semibold text-[#FFFDF0]">
                       The night shines brighter with you! ❤️
                     </p>
