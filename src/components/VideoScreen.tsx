@@ -227,41 +227,7 @@ export default function VideoScreen({
       if (video) {
         const t = video.currentTime
 
-        // 1. Hedge scene-tracked overlay (10.0s - 18.8s)
-        const hedgeEl = hedgeOverlayRef.current
-        if (hedgeEl) {
-          if (t < 10.0 || t > 18.8 || video.paused) {
-            if (t < 10.0 || t > 18.8) {
-              hedgeEl.style.opacity = '0'
-            }
-          } else {
-            let opacity = 1
-            if (t < 10.7) {
-              opacity = Math.max(0, Math.min(1, (t - 10.0) / 0.7))
-            } else if (t > 17.7) {
-              opacity = Math.max(0, Math.min(1, 1 - (t - 17.7) / 0.9))
-            }
-
-            const walkProgress = Math.max(0, Math.min(1, (t - 10.0) / 8.0))
-            const scale = 0.56 + Math.pow(walkProgress, 1.25) * 0.76
-            const translateY = 2.0 + walkProgress * 3.5
-
-            let translateX = -0.5
-            if (t > 16.3 && t <= 17.0) {
-              const prePan = (t - 16.3) / 0.7
-              translateX = -0.5 - prePan * 4.0
-            } else if (t > 17.0) {
-              const panProgress = Math.max(0, Math.min(1, (t - 17.0) / 1.7))
-              const easedPan = panProgress * panProgress * (3 - 2 * panProgress)
-              translateX = -4.5 - easedPan * 52
-            }
-
-            hedgeEl.style.opacity = opacity.toFixed(3)
-            hedgeEl.style.transform = `translate3d(${translateX.toFixed(2)}vw, ${translateY.toFixed(2)}%, 0) scale(${scale.toFixed(3)})`
-          }
-        }
-
-        // 2. LED Stage Screen (25.0s - 29.5s): Guest Name + The Night Isn't Complete Without You
+        // 1. LED Stage Screen (25.0s - 29.5s): Guest Name + The Night Isn't Complete Without You
         const stageEl = stageOverlayRef.current
         if (stageEl) {
           if (t < 25.0 || t > 29.5 || video.paused) {
@@ -396,6 +362,8 @@ export default function VideoScreen({
   const isBeat2 = videoState !== 'ended' && currentTime >= beat1End && currentTime < beat2End
   // Pathway Overlay (04s - 08s) on Main Invite
   const isPathwayBeat = isMainInvite && videoState === 'playing' && currentTime >= 4.0 && currentTime <= 8.0
+  // Hedge Overlay (10.0s - 18.8s) on Main Invite: 40 & FESTIVE
+  const isHedgeBeat = isMainInvite && videoState === 'playing' && currentTime >= 10.0 && currentTime <= 18.8
   // Stage LED Backdrop Overlay (40s - 42s) on Main Invite
   const isStageBeat = isMainInvite && videoState === 'playing' && currentTime >= 40.0 && currentTime <= 42.0
   // Beat 3 (RSVP Buttons): only appears 2.5 seconds AFTER video ends (or if explicitly skipped, or immediately if video is unlinked)
@@ -699,13 +667,6 @@ export default function VideoScreen({
                 isPathwayBeat ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
               }`}
             >
-              {/* Top delicate gold stars */}
-              <div className="flex items-center gap-3 text-[#D4AF37] text-xs sm:text-sm tracking-[0.4em] mb-3 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                <span>✦</span>
-                <span className="text-[10px]">❖</span>
-                <span>✦</span>
-              </div>
-
               {/* Title: ONE NIGHT. TWO REASONS TO CELEBRATE */}
               <h2
                 className="font-marcellus text-2xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase max-w-4xl leading-tight px-4"
@@ -719,81 +680,30 @@ export default function VideoScreen({
                 <span className="block sm:inline">ONE NIGHT. </span>
                 <span className="block sm:inline">TWO REASONS TO CELEBRATE</span>
               </h2>
-
-              {/* Carved Gold Inlay Divider */}
-              <div className="flex items-center justify-center w-48 sm:w-72 mt-4 opacity-85">
-                <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#C9A84C] to-transparent shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FFF2BD] mx-2 shadow-[0_0_6px_rgba(201,168,76,0.8)]" />
-                <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#C9A84C] to-transparent shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
-              </div>
             </div>
           )}
 
-          {/* ── HEDGE SCENE-TRACKED OVERLAY (10.0s - 18.8s): PHYSICALLY MOUNTED ON THE HEDGE ── */}
+          {/* ── 40 & FESTIVE OVERLAY (10.0s - 18.8s): SAME AS 2ND IMAGE ONLY (16:9 WIDESCREEN) ── */}
           {isMainInvite && (
             <div
-              ref={hedgeOverlayRef}
-              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none px-4 text-center z-20 will-change-transform"
-              style={{
-                opacity: 0,
-                transform: 'translate3d(-0.5vw, 2%, 0) scale(0.56)',
-              }}
+              className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-1000 pointer-events-none select-none px-6 text-center z-20 ${
+                isHedgeBeat ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
+              }`}
             >
-              <div className="relative flex flex-col items-center justify-center py-2 px-5">
-                {/* Warm golden fairy-light glow cast onto the hedge foliage behind the sign */}
-                <div
-                  className="absolute inset-0 -z-10 rounded-full blur-xl pointer-events-none"
-                  style={{
-                    background: 'radial-gradient(ellipse at center, rgba(245,166,35,0.32) 0%, rgba(201,130,18,0.14) 60%, rgba(0,0,0,0) 100%)',
-                  }}
-                />
-
-                {/* Line 1: 40 & Festive (Warm Glowing Gold Neon/Brass Script sitting on the upper hedge) */}
-                <h2
-                  className="font-script text-3xl sm:text-5xl tracking-normal leading-none px-2"
-                  style={{
-                    background: 'linear-gradient(180deg, #FFFDF5 0%, #FFEBA8 35%, #E5B546 75%, #A87414 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    filter: 'drop-shadow(0 3px 2px rgba(0,0,0,0.95)) drop-shadow(0 0 6px rgba(255,191,71,0.75)) drop-shadow(0 0 14px rgba(212,139,23,0.45))',
-                  }}
-                >
-                  {isDiwaliEvent ? 'Diwali Party' : '40 & Festive'}
-                </h2>
-
-                {/* Thin Brass Bar Divider */}
-                <div className="flex items-center justify-center w-28 sm:w-36 my-1.5 opacity-90">
-                  <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#FFE999] to-transparent shadow-[0_1px_2px_rgba(0,0,0,0.95)]" />
-                  <span className="w-1 h-1 rounded-full bg-[#FFFDF0] mx-1.5 shadow-[0_0_6px_rgba(255,191,71,0.9)]" />
-                  <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#FFE999] to-transparent shadow-[0_1px_2px_rgba(0,0,0,0.95)]" />
-                </div>
-
-                {/* Line 2: ARPIT'S 40TH or GRAND CELEBRATION */}
-                <p
-                  className="font-marcellus text-[10px] sm:text-xs font-bold tracking-[0.24em] uppercase leading-tight"
-                  style={{
-                    background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2C2 45%, #DDA938 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.95)) drop-shadow(0 0 6px rgba(255,191,71,0.6))',
-                  }}
-                >
-                  {isDiwaliEvent ? 'GRAND CELEBRATION' : "ARPIT'S 40TH"}
-                </p>
-
-                {/* Line 3: & DIWALI CELEBRATION */}
-                <p
-                  className="font-marcellus text-[8.5px] sm:text-[10px] font-bold tracking-[0.2em] uppercase leading-tight mt-0.5"
-                  style={{
-                    background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2C2 45%, #DDA938 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.95)) drop-shadow(0 0 6px rgba(255,191,71,0.6))',
-                  }}
-                >
-                  &amp; DIWALI CELEBRATION
-                </p>
-              </div>
+              <h2
+                className="font-marcellus text-2xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase max-w-4xl leading-tight px-4"
+                style={{
+                  background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
+                }}
+              >
+                <span className="block">{isDiwaliEvent ? 'DIWALI PARTY' : '40 & FESTIVE'}</span>
+                <span className="block text-lg sm:text-2xl md:text-3xl tracking-[0.18em] font-semibold mt-1.5 sm:mt-2 text-[#FFFDF0]">
+                  {isDiwaliEvent ? 'GRAND CELEBRATION' : "ARPIT'S 40TH & DIWALI CELEBRATION"}
+                </span>
+              </h2>
             </div>
           )}
 
