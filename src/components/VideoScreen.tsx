@@ -89,38 +89,16 @@ export default function VideoScreen({
       const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
       if (prevOrientation !== currentOrientation) {
-        if (isLandscape) {
-          // Entering landscape -> automatically request fullscreen
+        if (isLandscape && isMobile && !soundPromptVisible) {
+          // Entering landscape on mobile after video started -> request fullscreen
           enterFullscreen()
-
-          // Also arm one-time touch listener in case browser requires immediate gesture
-          const onLandscapeTouch = () => {
-            enterFullscreen()
-            window.removeEventListener('touchstart', onLandscapeTouch, true)
-            window.removeEventListener('pointerdown', onLandscapeTouch, true)
-            window.removeEventListener('click', onLandscapeTouch, true)
-          }
-          window.addEventListener('touchstart', onLandscapeTouch, { capture: true, passive: true })
-          window.addEventListener('pointerdown', onLandscapeTouch, { capture: true, passive: true })
-          window.addEventListener('click', onLandscapeTouch, { capture: true })
-        } else if (isMobile) {
+        } else if (!isLandscape && isMobile) {
           // Exiting landscape back to portrait on mobile -> smoothly exit fullscreen
           exitFullscreen()
         }
       }
 
       prevOrientation = currentOrientation
-    }
-
-    // If opened already in landscape on mobile, arm the first touch to enter fullscreen
-    if (window.innerWidth > window.innerHeight) {
-      const onInitialLandscapeTouch = () => {
-        enterFullscreen()
-        window.removeEventListener('touchstart', onInitialLandscapeTouch, true)
-        window.removeEventListener('click', onInitialLandscapeTouch, true)
-      }
-      window.addEventListener('touchstart', onInitialLandscapeTouch, { capture: true, passive: true })
-      window.addEventListener('click', onInitialLandscapeTouch, { capture: true })
     }
 
     window.addEventListener('resize', handleOrientation)
@@ -136,7 +114,7 @@ export default function VideoScreen({
         screen.orientation.removeEventListener('change', handleOrientation)
       }
     }
-  }, [])
+  }, [soundPromptVisible])
 
   useEffect(() => {
     onStartRef.current = onStart
@@ -424,19 +402,29 @@ export default function VideoScreen({
     if (e) {
       e.stopPropagation()
     }
-    // Auto enter fullscreen if in landscape mode
-    if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
-      enterFullscreen()
-    }
-    // Never restart or play video once it has already started or reached the RSVP end screen
-    if (endedCalledRef.current || videoState === 'ended' || showRsvpPrompt || !soundPromptVisible) {
+    // Never restart or play video once it has reached the RSVP end screen
+    if (endedCalledRef.current || videoState === 'ended' || showRsvpPrompt) {
       return
     }
-    setHasTappedSound(true)
-    setSoundPromptVisible(false)
 
     const video = videoRef.current
+    // If video is already playing but was muted, unmute immediately on tap
+    if (!soundPromptVisible) {
+      if (video && video.muted) {
+        video.muted = false
+        video.volume = 1.0
+        setSoundMuted(false)
+      }
+      return
+    }
+
+    setHasTappedSound(true)
+    setSoundPromptVisible(false)
+    setSoundMuted(false)
+
     if (video) {
+      // IMPORTANT: Call video.play() with muted=false FIRST while user gesture token is fresh
+      // (calling requestFullscreen() before video.play() consumes user activation and mutes audio!)
       video.muted = false
       video.defaultMuted = false
       video.volume = 1.0
@@ -446,6 +434,7 @@ export default function VideoScreen({
         playPromise
           .then(() => {
             video.muted = false
+            video.volume = 1.0
             setSoundMuted(false)
             setVideoState('playing')
             if (!startedRef.current) {
@@ -479,6 +468,9 @@ export default function VideoScreen({
     if (!video) return
     const nextMuted = !video.muted
     video.muted = nextMuted
+    if (!nextMuted) {
+      video.volume = 1.0
+    }
     setSoundMuted(nextMuted)
   }
 
@@ -512,9 +504,9 @@ export default function VideoScreen({
     <div
       ref={containerRef}
       className={`relative w-full full-viewport-height bg-black overflow-hidden select-none ${
-        soundPromptVisible ? 'cursor-pointer' : 'cursor-default'
+        soundPromptVisible || soundMuted ? 'cursor-pointer' : 'cursor-default'
       }`}
-      onClick={soundPromptVisible ? handleUserInteraction : undefined}
+      onClick={soundPromptVisible || (videoState === 'playing' && soundMuted) ? handleUserInteraction : undefined}
     >
       {/* ── FLOATING TOP CONTROLS BAR: FULLSCREEN & SKIP ── */}
       <div className="fixed top-3 inset-x-3 sm:top-4 sm:inset-x-6 flex items-center justify-between pointer-events-none z-[70]">
@@ -617,11 +609,9 @@ export default function VideoScreen({
       {/* ── 5-SECOND LUXURY ROTATE PHONE SCREEN (BEFORE TAP TO ENTER - MAIN INVITE ONLY) ── */}
       {hasVideo && soundPromptVisible && rotatePromptActive && isMainInvite && (
         <div
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation()
             setRotatePromptActive(false)
-            if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
-              enterFullscreen()
-            }
           }}
           className="absolute inset-0 z-[60] flex flex-col items-center justify-between p-6 sm:p-10 cursor-pointer select-none transition-all duration-700 animate-fadeIn"
           style={{
@@ -693,9 +683,6 @@ export default function VideoScreen({
               onClick={(e) => {
                 e.stopPropagation()
                 setRotatePromptActive(false)
-                if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
-                  enterFullscreen()
-                }
               }}
               className="text-[#C9A84C]/70 hover:text-[#C9A84C] text-[11px] font-marcellus tracking-[0.25em] uppercase underline underline-offset-4 transition-colors cursor-pointer"
             >
