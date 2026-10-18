@@ -1,4 +1,5 @@
 'use client'
+// Build: v2.4 - Single date display on luxury plaque (no duplicate date text)
 
 import { useEffect, useRef, useState } from 'react'
 import { EVENT, buildGoogleCalUrl, buildICSContent } from '@/lib/config'
