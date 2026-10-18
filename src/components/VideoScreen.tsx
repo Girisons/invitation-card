@@ -448,14 +448,8 @@ export default function VideoScreen({
             background: 'radial-gradient(ellipse at center, rgba(15,28,52,0.98) 0%, rgba(5,13,26,0.99) 70%, #050D1A 100%)'
           }}
         >
-          {/* Top Tagline */}
-          <div className="pt-4 sm:pt-8 flex items-center gap-2">
-            <span className="text-[#C9A84C] text-[10px]">❖</span>
-            <p className="font-marcellus text-[10px] sm:text-xs tracking-[0.4em] uppercase text-[#C9A84C] font-semibold">
-              CINEMATIC 16:9 EXPERIENCE
-            </p>
-            <span className="text-[#C9A84C] text-[10px]">❖</span>
-          </div>
+          {/* Top balance spacer */}
+          <div className="w-full h-4 sm:h-8" />
 
           {/* Centerpiece: Animated 3D Gold Rotating Phone */}
           <div className="flex flex-col items-center justify-center my-auto">
