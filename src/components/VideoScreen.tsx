@@ -362,7 +362,9 @@ export default function VideoScreen({
   const isSpiritsBeat = isMainInvite && videoState === 'playing' && currentTime >= 35.0 && currentTime <= 37.0
   // DJ Stage Overlay (40.0s - 42.0s) on Main Invite: WHEN THE NIGHT COMES ALIVE
   const isStageBeat = isMainInvite && videoState === 'playing' && currentTime >= 40.0 && currentTime <= 42.0
-  // Beat 3 (RSVP Buttons): only appears 2.5 seconds AFTER video ends (or if explicitly skipped, or immediately if video is unlinked)
+  // Grand Finale Overlay (47.0s - 50.0s) on Main Invite: YOUR PRESENCE. THE PERFECT FINALE
+  const isFinaleBeat = isMainInvite && videoState === 'playing' && currentTime >= 47.0 && currentTime <= 50.0
+  // Beat 3 (RSVP Buttons): appears right after video ends (or if explicitly skipped, or immediately if video is unlinked)
   const isBeat3 = !hasVideo || showRsvpPrompt
 
   return (
@@ -389,7 +391,7 @@ export default function VideoScreen({
             if (endTimerRef.current) clearTimeout(endTimerRef.current)
             endTimerRef.current = setTimeout(() => {
               setShowRsvpPrompt(true)
-            }, 2500)
+            }, 800)
           }}
         />
       ) : (
@@ -828,6 +830,28 @@ export default function VideoScreen({
               >
                 <span className="block sm:inline">WHEN THE NIGHT </span>
                 <span className="block sm:inline">COMES ALIVE</span>
+              </h2>
+            </div>
+          )}
+
+          {/* ── GRAND FINALE OVERLAY (47.0s - 50.0s): YOUR PRESENCE. THE PERFECT FINALE ── */}
+          {isMainInvite && (
+            <div
+              className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 pointer-events-none select-none px-6 text-center z-20 ${
+                isFinaleBeat ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
+              }`}
+            >
+              <h2
+                className="font-marcellus text-2xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase max-w-4xl leading-tight px-4"
+                style={{
+                  background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
+                }}
+              >
+                <span className="block sm:inline">YOUR PRESENCE. </span>
+                <span className="block sm:inline">THE PERFECT FINALE</span>
               </h2>
             </div>
           )}
