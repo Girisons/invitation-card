@@ -47,6 +47,7 @@ export default function VideoScreen({
   const [showRsvpPrompt, setShowRsvpPrompt] = useState(false)
   const onStartRef = useRef(onStart)
   const hedgeOverlayRef = useRef<HTMLDivElement>(null)
+  const festiveOverlayRef = useRef<HTMLDivElement>(null)
   const stageOverlayRef = useRef<HTMLDivElement>(null)
   const soulOverlayRef = useRef<HTMLDivElement>(null)
 
@@ -227,7 +228,35 @@ export default function VideoScreen({
       if (video) {
         const t = video.currentTime
 
-        // 1. LED Stage Screen (25.0s - 29.5s): Guest Name + The Night Isn't Complete Without You
+        // 1. 40 & Festive (19.0s - 22.0s): moves along with camera and fades
+        const festiveEl = festiveOverlayRef.current
+        if (festiveEl) {
+          if (t < 19.0 || t > 22.0 || video.paused) {
+            if (t < 19.0 || t > 22.0) {
+              festiveEl.style.opacity = '0'
+            }
+          } else {
+            let opacity = 1
+            let fadeUpY = 0
+            if (t < 19.5) {
+              opacity = Math.max(0, Math.min(1, (t - 19.0) / 0.5))
+            } else if (t > 21.2) {
+              const outProg = Math.max(0, Math.min(1, (t - 21.2) / 0.8))
+              opacity = 1 - outProg
+              fadeUpY = -outProg * 3.5
+            }
+
+            // Move along the camera: forward dolly scale and subtle perspective glide
+            const progress = Math.max(0, Math.min(1, (t - 19.0) / 3.0))
+            const scale = 0.90 + progress * 0.22
+            const translateY = 0 + fadeUpY
+
+            festiveEl.style.opacity = opacity.toFixed(3)
+            festiveEl.style.transform = `translate3d(0vw, ${translateY.toFixed(2)}%, 0) scale(${scale.toFixed(3)})`
+          }
+        }
+
+        // 2. LED Stage Screen (25.0s - 29.5s): Guest Name + The Night Isn't Complete Without You
         const stageEl = stageOverlayRef.current
         if (stageEl) {
           if (t < 25.0 || t > 29.5 || video.paused) {
@@ -701,6 +730,30 @@ export default function VideoScreen({
               >
                 <span className="block sm:inline">{isDiwaliEvent ? 'KHANDELWAL ' : "ARPIT'S 40TH "}</span>
                 <span className="block sm:inline">&amp; DIWALI CELEBRATION</span>
+              </h2>
+            </div>
+          )}
+
+          {/* ── 40 & FESTIVE OVERLAY (19.0s - 22.0s): MOVES ALONG CAMERA & FADES ── */}
+          {isMainInvite && (
+            <div
+              ref={festiveOverlayRef}
+              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none px-6 text-center z-20 will-change-transform"
+              style={{
+                opacity: 0,
+                transform: 'translate3d(0vw, 0%, 0) scale(0.90)',
+              }}
+            >
+              <h2
+                className="font-marcellus text-3xl sm:text-5xl md:text-6xl font-bold tracking-[0.18em] uppercase max-w-4xl leading-tight px-4"
+                style={{
+                  background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
+                }}
+              >
+                {isDiwaliEvent ? 'FESTIVE LIGHTS' : '40 & FESTIVE'}
               </h2>
             </div>
           )}
