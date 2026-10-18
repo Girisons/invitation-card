@@ -1045,9 +1045,7 @@ export default function VideoScreen({
                       <p>'You confirmed your presence, and our hearts are full! The Khandelwal family is eagerly waiting to celebrate the Festival of Lights with you.'</p>
                     ) : isDeclined ? (
                       <p>
-                        {isDiwali
-                          ? 'We know you had other commitments earlier, but our Diwali celebration truly won’t feel complete without you. We warmly request you to please reconsider and change your mind to celebrate with the Khandelwal family!'
-                          : "We noticed you couldn't make it earlier, but this milestone celebration truly won't feel complete without you! We warmly request you to please reconsider and change your mind — it would mean the world to celebrate together!"}
+                        We&rsquo;ll truly miss you. Your presence would have made the celebration brighter. If plans change, we&rsquo;d be overjoyed to welcome you.
                       </p>
                     ) : (
                       <div>

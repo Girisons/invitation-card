@@ -67,9 +67,9 @@ export default function ConfirmationScreen({ guest, guestName, status, inviteTyp
       <div className={`w-full full-viewport-height flex flex-col items-center justify-center px-8 safe-top safe-bottom bg-[#050D1A] transition-all duration-700 ${visible ? 'opacity-100' : 'opacity-0'}`}>
         <div className="flex flex-col items-center text-center max-w-sm">
           <div className="text-4xl mb-10 opacity-30">◆</div>
-          <h2 className="font-serif text-3xl text-[#F5ECD7] mb-4">We'd be sad without you.</h2>
-          <p className="font-sans text-sm text-[#F5ECD7]/60 mb-12 tracking-wide leading-relaxed">
-            Your presence will make the night truly special — we'd love for you to reconsider.
+          <h2 className="font-serif text-3xl text-[#F5ECD7] mb-4">We&rsquo;ll truly miss you.</h2>
+          <p className="font-sans text-sm text-[#F5ECD7]/80 mb-12 tracking-wide leading-relaxed">
+            Your presence would have made the celebration brighter. If plans change, we&rsquo;d be overjoyed to welcome you.
           </p>
 
           <button onClick={handleWhatsApp} className="btn-outline w-full py-4 text-sm tracking-[0.2em] uppercase mb-4">
