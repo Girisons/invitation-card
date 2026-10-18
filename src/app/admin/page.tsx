@@ -411,15 +411,13 @@ export default function AdminPage() {
         }
       }
 
-      // Fetch RSVPs to sync status only if guest doesn't already have an explicit RSVP status
+      // Fetch RSVPs to sync status only if guest doesn't have an invitation_status yet
       const { data: rsvps } = await supabase.from('rsvps').select('*')
       if (rsvps && rsvps.length > 0) {
         for (const g of data) {
-          const rsvp = rsvps.find((r: any) => r.guest_id === g.id || (g.linked_guest_id && r.guest_id === g.linked_guest_id))
-          if (rsvp && rsvp.status) {
-            const current = (g.invitation_status || '').toLowerCase()
-            const hasExplicitRsvp = current === 'rsvp_yes' || current === 'rsvp_no' || current === 'attending' || current === 'declined' || current === 'yes' || current === 'no'
-            if (!hasExplicitRsvp) {
+          if (!g.invitation_status || g.invitation_status === '' || g.invitation_status === 'not_sent') {
+            const rsvp = rsvps.find((r: any) => r.guest_id === g.id && (r.status === 'attending' || r.status === 'declined'))
+            if (rsvp && rsvp.status) {
               g.invitation_status = rsvp.status
             }
           }
@@ -648,35 +646,42 @@ export default function AdminPage() {
     } finally { setSaving(false) }
   }
 
-  // ── QUICK CHANGE ATTENDANCE STATUS (Strictly individual per guest) ──
+  // ── QUICK CHANGE ATTENDANCE STATUS ──
   const handleAttendanceChange = async (g: Guest, newStatus: string) => {
-    // 1. Optimistic UI update so the dropdown changes immediately without any lag
-    setGuests(prev => prev.map(item => item.id === g.id ? { ...item, invitation_status: newStatus } : item))
-
-    // 2. Update guests table
-    const { error: guestErr } = await supabase.from('guests').update({ invitation_status: newStatus }).eq('id', g.id)
-    if (guestErr) {
-      alert('Error updating attendance: ' + guestErr.message)
-      fetchGuests()
-      return
+    const targetIds = [g.id]
+    if (g.linked_guest_id && g.send_together) {
+      targetIds.push(g.linked_guest_id)
     }
 
-    // 3. Sync rsvps table so fetchGuests and online RSVPs remain 100% consistent
+    // 1. Optimistic UI update so the dropdown changes immediately without any lag
+    setGuests(prev => prev.map(item => targetIds.includes(item.id) ? { ...item, invitation_status: newStatus } : item))
+
+    // 2. Update guests table
+    for (const tId of targetIds) {
+      const { error: guestErr } = await supabase.from('guests').update({ invitation_status: newStatus }).eq('id', tId)
+      if (guestErr) {
+        alert('Error updating attendance: ' + guestErr.message)
+        fetchGuests()
+        return
+      }
+    }
+
+    // 3. Sync rsvps table so online RSVPs remain 100% consistent
     const rsvpStatus = (newStatus === 'rsvp_yes' || newStatus === 'attending' || newStatus === 'yes')
       ? 'attending'
       : (newStatus === 'rsvp_no' || newStatus === 'declined' || newStatus === 'no')
       ? 'declined'
-      : null
+      : 'pending'
 
     try {
-      if (rsvpStatus) {
-        const { data: existingRsvp } = await supabase
+      for (const tId of targetIds) {
+        const { data: existingRows } = await supabase
           .from('rsvps')
           .select('id')
-          .eq('guest_id', g.id)
-          .maybeSingle()
+          .eq('guest_id', tId)
 
-        if (existingRsvp) {
+        if (existingRows && existingRows.length > 0) {
+          // Update all rows for this guest in rsvps table (works within RLS)
           await supabase
             .from('rsvps')
             .update({
@@ -684,19 +689,16 @@ export default function AdminPage() {
               number_attending: rsvpStatus === 'attending' ? (g.invited_count || 1) : 0,
               updated_at: new Date().toISOString()
             })
-            .eq('id', existingRsvp.id)
-        } else {
+            .eq('guest_id', tId)
+        } else if (rsvpStatus !== 'pending') {
           await supabase
             .from('rsvps')
             .insert({
-              guest_id: g.id,
+              guest_id: tId,
               status: rsvpStatus,
               number_attending: rsvpStatus === 'attending' ? (g.invited_count || 1) : 0
             })
         }
-      } else {
-        // If set to pending, remove from rsvps table
-        await supabase.from('rsvps').delete().eq('guest_id', g.id)
       }
     } catch (e) {
       console.warn('Syncing rsvps table error:', e)

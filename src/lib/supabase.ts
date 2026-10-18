@@ -95,27 +95,30 @@ export async function getGuestByCode(code: string): Promise<Guest | null> {
     }
   }
 
-  // Resolve previous RSVP status from rsvps table and invitation_status
+  // Resolve previous RSVP status from invitation_status and rsvps table
   let resolvedStatus: 'attending' | 'declined' | 'pending' = 'pending'
   try {
-    const { data: rsvps } = await supabase
-      .from('rsvps')
-      .select('status')
-      .or(`guest_id.eq.${data.id}${data.linked_guest_id ? `,guest_id.eq.${data.linked_guest_id}` : ''}`)
-
     const st = (data.invitation_status || '').toLowerCase()
-    if (rsvps && rsvps.length > 0) {
-      const foundAttending = rsvps.some(r => r.status === 'attending' || r.status === 'yes' || r.status === 'rsvp_yes')
-      const foundDeclined = rsvps.some(r => r.status === 'declined' || r.status === 'no' || r.status === 'rsvp_no')
-      if (foundAttending) {
-        resolvedStatus = 'attending'
-      } else if (foundDeclined) {
-        resolvedStatus = 'declined'
-      }
-    } else if (['attending', 'rsvp_yes', 'yes'].includes(st)) {
+    if (['attending', 'rsvp_yes', 'yes'].includes(st)) {
       resolvedStatus = 'attending'
     } else if (['declined', 'rsvp_no', 'no'].includes(st)) {
       resolvedStatus = 'declined'
+    } else {
+      // If invitation_status is not explicit (e.g. pending, entered, sent), check rsvps table
+      const { data: rsvps } = await supabase
+        .from('rsvps')
+        .select('status, updated_at, submitted_at')
+        .or(`guest_id.eq.${data.id}${data.linked_guest_id ? `,guest_id.eq.${data.linked_guest_id}` : ''}`)
+        .order('updated_at', { ascending: false })
+
+      if (rsvps && rsvps.length > 0) {
+        const latestStatus = (rsvps[0]?.status || '').toLowerCase()
+        if (['attending', 'rsvp_yes', 'yes'].includes(latestStatus)) {
+          resolvedStatus = 'attending'
+        } else if (['declined', 'rsvp_no', 'no'].includes(latestStatus)) {
+          resolvedStatus = 'declined'
+        }
+      }
     }
   } catch (err) {
     console.warn('Error resolving prev_rsvp_status:', err)
@@ -150,7 +153,7 @@ export async function updateGuestStatus(guestId: string, status: string) {
         .from('guests')
         .select('invitation_status')
         .eq('id', guestId)
-        .single()
+        .maybeSingle()
 
       const currStatus = (current?.invitation_status || '').toLowerCase()
       if (['attending', 'declined', 'rsvp_yes', 'rsvp_no', 'yes', 'no'].includes(currStatus)) {
@@ -173,49 +176,67 @@ export async function submitRSVP(
   status: 'attending' | 'declined',
   numberAttending: number
 ): Promise<RSVP | null> {
-  // Update invitation_status directly on guests table
+  // 1. Update invitation_status directly on guests table
   await supabase
     .from('guests')
     .update({ invitation_status: status })
     .eq('id', guestId)
 
-  // If linked partner guest exists and send_together, update partner as well
+  // 2. If linked partner guest exists and send_together, update partner as well
   const { data: g } = await supabase
     .from('guests')
     .select('linked_guest_id, send_together')
     .eq('id', guestId)
-    .single()
+    .maybeSingle()
 
+  const targetIds = [guestId]
   if (g && g.linked_guest_id && g.send_together) {
+    targetIds.push(g.linked_guest_id)
     await supabase
       .from('guests')
       .update({ invitation_status: status })
       .eq('id', g.linked_guest_id)
   }
 
-  // Check for existing RSVP
-  const { data: existing } = await supabase
-    .from('rsvps')
-    .select('*')
-    .eq('guest_id', guestId)
-    .single()
-
-  if (existing) {
-    const { data } = await supabase
+  // 3. Update/Upsert rsvps table for all targetIds (guest and partner)
+  let result: RSVP | null = null
+  for (const tId of targetIds) {
+    const { data: existingRows } = await supabase
       .from('rsvps')
-      .update({ status, number_attending: numberAttending, updated_at: new Date().toISOString() })
-      .eq('id', existing.id)
-      .select()
-      .single()
-    return data
+      .select('id')
+      .eq('guest_id', tId)
+
+    if (existingRows && existingRows.length > 0) {
+      const { data } = await supabase
+        .from('rsvps')
+        .update({
+          status,
+          number_attending: numberAttending,
+          updated_at: new Date().toISOString()
+        })
+        .eq('guest_id', tId)
+        .select()
+
+      if (tId === guestId && data && data.length > 0) {
+        result = data[0]
+      }
+    } else {
+      const { data } = await supabase
+        .from('rsvps')
+        .insert({
+          guest_id: tId,
+          status,
+          number_attending: numberAttending
+        })
+        .select()
+
+      if (tId === guestId && data && data.length > 0) {
+        result = data[0]
+      }
+    }
   }
 
-  const { data } = await supabase
-    .from('rsvps')
-    .insert({ guest_id: guestId, status, number_attending: numberAttending })
-    .select()
-    .single()
-  return data
+  return result
 }
 
 // Save preferences
