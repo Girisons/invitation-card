@@ -120,9 +120,23 @@ export default function ConfirmationScreen({ guest, guestName, status, inviteTyp
             We will be eagerly waiting for you.
           </p>
 
-          <p className="font-sans text-xs tracking-[0.25em] uppercase text-[#C9A84C]/50 mb-10">
-            {EVENT.date} · {EVENT.city}
+          <p className="font-sans text-xs tracking-[0.2em] uppercase text-[#FCE18F] font-semibold mb-1">
+            {EVENT.date} · 8:00 PM ONWARDS
           </p>
+          <p className="font-marcellus text-base text-white tracking-wider uppercase mb-0.5">
+            &ldquo;THE FOOTHILLS VILLAS&rdquo;
+          </p>
+          <p className="font-sans text-[11px] text-[#F5ECD7]/70 mb-2 max-w-xs">
+            Near Rajasthali Resort &amp; Spa, Kukas, Delhi Road, Jaipur
+          </p>
+          <a
+            href={EVENT.mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-[#FCE18F] hover:text-white underline decoration-[#C9A84C]/60 underline-offset-4 tracking-wider mb-6 transition-colors"
+          >
+            <span>📍</span> Open Location in Google Maps ➔
+          </a>
 
           {/* Thin divider */}
           <div className="divider mb-10" />

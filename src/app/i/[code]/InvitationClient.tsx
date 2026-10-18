@@ -100,6 +100,7 @@ export default function InvitationClient({ guest, inviteCode, inviteType }: Prop
           inviteType={inviteType}
           isDiwali={isDiwali}
           isSaveTheDate={isSaveTheDate}
+          prevRsvpStatus={guest.prev_rsvp_status || 'pending'}
           onSelectYes={handleSelectYes}
           onSelectNo={handleSelectNo}
           onStart={handleVideoStart}

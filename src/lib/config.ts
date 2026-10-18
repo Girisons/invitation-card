@@ -2,22 +2,31 @@
 export const EVENT = {
   name:    process.env.NEXT_PUBLIC_EVENT_NAME    || "Arpit's 40 & Diwali Bash",
   date:    process.env.NEXT_PUBLIC_EVENT_DATE    || 'Friday, 23 October 2026',
+  time:    '8:00 PM Onwards',
   city:    process.env.NEXT_PUBLIC_EVENT_CITY    || 'Jaipur',
-  venue:   process.env.NEXT_PUBLIC_EVENT_VENUE   || 'Jaipur (Venue details to follow)',
+  venue:   process.env.NEXT_PUBLIC_EVENT_VENUE   || 'The Foothills Villas, Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur',
+  venueName: 'The Foothills Villas',
+  venueAddress: 'Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur',
+  mapsUrl: 'https://www.google.com/maps/search/?api=1&query=The+Foothills+Villas+Near+Rajasthali+Resort+Kukas+Delhi+Road+Jaipur',
   contact: process.env.NEXT_PUBLIC_RSVP_CONTACT  || 'Tanvi',
   phone:   process.env.NEXT_PUBLIC_RSVP_PHONE    || '+919460922322',
   videoUrl: process.env.NEXT_PUBLIC_VIDEO_URL || '/videos/teaser.mp4',  // default video
   audioUrl: process.env.NEXT_PUBLIC_AUDIO_URL || '/audio/music.mp3',   // custom background music
   poster:   process.env.NEXT_PUBLIC_VIDEO_POSTER || '',
   calDate: '20261023',      // YYYYMMDD for ICS
-  calStart: '20261023T190000',
-  calEnd:   '20261023T230000',
+  calStart: '20261023T200000', // 8:00 PM
+  calEnd:   '20261024T020000', // 2:00 AM next morning
 }
 
 export const DIWALI_EVENT = {
   name: 'Grand Diwali Party Celebration',
   contact: 'Vipul Khandelwal',
   phone: process.env.NEXT_PUBLIC_DIWALI_RSVP_PHONE || '+919414036060',
+  venue: 'The Foothills Villas, Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur',
+  venueName: 'The Foothills Villas',
+  venueAddress: 'Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur',
+  time: '8:00 PM Onwards',
+  mapsUrl: 'https://www.google.com/maps/search/?api=1&query=The+Foothills+Villas+Near+Rajasthali+Resort+Kukas+Delhi+Road+Jaipur',
 }
 
 export const WHATSAPP_URL = `https://wa.me/${EVENT.phone.replace(/\D/g, '')}?text=${encodeURIComponent(

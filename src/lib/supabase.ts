@@ -36,6 +36,7 @@ export interface Guest {
   send_together?: boolean
   video_url?: string
   std_video_url?: string
+  prev_rsvp_status?: 'attending' | 'declined' | 'pending'
 }
 
 export interface RSVP {
@@ -94,6 +95,34 @@ export async function getGuestByCode(code: string): Promise<Guest | null> {
     }
   }
 
+  // Resolve previous RSVP status from rsvps table and invitation_status
+  let resolvedStatus: 'attending' | 'declined' | 'pending' = 'pending'
+  try {
+    const { data: rsvps } = await supabase
+      .from('rsvps')
+      .select('status')
+      .or(`guest_id.eq.${data.id}${data.linked_guest_id ? `,guest_id.eq.${data.linked_guest_id}` : ''}`)
+
+    const st = (data.invitation_status || '').toLowerCase()
+    if (rsvps && rsvps.length > 0) {
+      const foundAttending = rsvps.some(r => r.status === 'attending' || r.status === 'yes' || r.status === 'rsvp_yes')
+      const foundDeclined = rsvps.some(r => r.status === 'declined' || r.status === 'no' || r.status === 'rsvp_no')
+      if (foundAttending) {
+        resolvedStatus = 'attending'
+      } else if (foundDeclined) {
+        resolvedStatus = 'declined'
+      }
+    } else if (['attending', 'rsvp_yes', 'yes'].includes(st)) {
+      resolvedStatus = 'attending'
+    } else if (['declined', 'rsvp_no', 'no'].includes(st)) {
+      resolvedStatus = 'declined'
+    }
+  } catch (err) {
+    console.warn('Error resolving prev_rsvp_status:', err)
+  }
+
+  data.prev_rsvp_status = resolvedStatus
+
   return data
 }
 
@@ -114,6 +143,24 @@ export async function trackEvent(
 
 // Update guest status
 export async function updateGuestStatus(guestId: string, status: string) {
+  // If attempting to set a passive status (entered/opened/seen/sent), do not overwrite an active RSVP
+  if (['entered', 'opened', 'seen', 'sent'].includes(status.toLowerCase())) {
+    try {
+      const { data: current } = await supabase
+        .from('guests')
+        .select('invitation_status')
+        .eq('id', guestId)
+        .single()
+
+      const currStatus = (current?.invitation_status || '').toLowerCase()
+      if (['attending', 'declined', 'rsvp_yes', 'rsvp_no', 'yes', 'no'].includes(currStatus)) {
+        return // Preserve existing RSVP!
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   await supabase
     .from('guests')
     .update({ invitation_status: status })

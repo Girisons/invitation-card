@@ -12,6 +12,7 @@ interface Props {
   inviteType?: string
   isDiwali?: boolean
   isSaveTheDate?: boolean
+  prevRsvpStatus?: 'attending' | 'declined' | 'pending'
   onSelectYes: () => void
   onSelectNo: () => void
   onStart: () => void
@@ -26,6 +27,7 @@ export default function VideoScreen({
   inviteType,
   isDiwali,
   isSaveTheDate,
+  prevRsvpStatus = 'pending',
   onSelectYes,
   onSelectNo,
   onStart,
@@ -369,6 +371,11 @@ export default function VideoScreen({
   const isFinaleBeat = isMainInvite && videoState === 'playing' && currentTime >= 47.0 && currentTime <= 50.0
   // Beat 3 (RSVP Buttons): appears right after video ends (or if explicitly skipped, or immediately if video is unlinked)
   const isBeat3 = !hasVideo || showRsvpPrompt
+
+  // Personalized Save The Date reply status checks
+  const isAttending = prevRsvpStatus === 'attending'
+  const isDeclined = prevRsvpStatus === 'declined'
+  const isPending = !isAttending && !isDeclined
 
   return (
     <div
@@ -876,77 +883,198 @@ export default function VideoScreen({
           )}
 
           {/* BEAT 3: Climax & Interactive CTAs */}
-          <div className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ${
+          <div className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 z-30 ${
             isBeat3 ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
           }`}>
-            {isDiwali ? (
+            {isSaveTheDate ? (
+              /* ── SAVE THE DATE FLOW ── */
               <div className="flex flex-col items-center text-center px-4 max-w-sm mb-4">
-                <div className="text-amber-400 text-3xl mb-2 flame-animate" style={{ filter: 'drop-shadow(0 0 16px rgba(232,129,10,0.9))' }}>
-                  🪔
+                {isDiwali ? (
+                  <>
+                    <div className="text-amber-400 text-3xl mb-2 flame-animate" style={{ filter: 'drop-shadow(0 0 16px rgba(232,129,10,0.9))' }}>
+                      🪔
+                    </div>
+                    <p className="font-sans text-[10px] sm:text-xs tracking-[0.4em] uppercase text-[#C9A84C]/90 mb-1 font-semibold">
+                      FESTIVAL OF LIGHTS
+                    </p>
+                    <h2
+                      className="font-serif font-bold text-2xl sm:text-3xl text-[#F5ECD7] mb-2 leading-tight"
+                      style={{
+                        background: 'linear-gradient(135deg, #FFF6D6 0%, #E8D5A3 50%, #C9A84C 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }}
+                    >
+                      Diwali Party Celebration
+                    </h2>
+                    <div className="h-[1px] w-20 bg-gradient-to-r from-transparent via-[#C9A84C]/60 to-transparent my-1.5" />
+                    <p className="font-serif italic text-sm sm:text-base text-[#F5ECD7]/90 mb-1">
+                      {guestName ? `A Warm Invitation For ${formatGuestTitleCase(guestName)}` : 'A Warm Invitation For You'}
+                    </p>
+                    <p className="font-sans text-xs tracking-[0.25em] uppercase text-[#C9A84C] font-semibold mb-1">
+                      Friday, 23rd October 2026 · Jaipur
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-sans text-[10px] sm:text-xs tracking-[0.4em] uppercase text-[#C9A84C]/90 mb-2">
+                      DIWALI VIBES • FAB 40 • MEMORIES
+                    </p>
+                    <h3 className="font-serif text-2xl sm:text-4xl text-[#F5ECD7] font-bold mb-2">
+                      FRIDAY | OCT 23, 2026
+                    </h3>
+                    <p className="font-sans text-[11px] tracking-[0.25em] uppercase text-white/60 mb-6">
+                      JAIPUR · RAJASTHAN
+                    </p>
+                  </>
+                )}
+
+                <div className="flex flex-col gap-2.5 w-full max-w-xs px-4">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onSelectYes() }}
+                    className="w-full py-3.5 px-6 bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white font-sans font-bold text-xs tracking-[0.2em] uppercase rounded-sm shadow-xl shadow-[#C9A84C]/25 hover:brightness-110 active:scale-95 transition-all"
+                  >
+                    YES, I'LL BE THERE
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onSelectNo() }}
+                    className="w-full py-3.5 px-6 glass border border-white/20 text-[#F5ECD7]/80 font-sans font-medium text-xs tracking-[0.2em] uppercase rounded-sm hover:border-white/50 hover:text-white active:scale-95 transition-all opacity-85 hover:opacity-100"
+                  >
+                    SORRY, CAN'T MAKE IT
+                  </button>
+                  <button
+                    onClick={handleCalendar}
+                    className="w-full py-3 px-6 glass border border-[#C9A84C]/40 text-[#C9A84C] font-sans font-medium text-xs tracking-[0.2em] uppercase rounded-sm hover:bg-[#C9A84C]/10 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>📅</span> ADD TO CALENDAR
+                  </button>
                 </div>
-                <p className="font-sans text-[10px] sm:text-xs tracking-[0.4em] uppercase text-[#C9A84C]/90 mb-1 font-semibold">
-                  FESTIVAL OF LIGHTS
-                </p>
+              </div>
+            ) : (
+              /* ── MAIN INVITATION PERSONALIZED RSVP CLIMAX ── */
+              <div className="relative w-full max-w-md mx-auto flex flex-col items-center text-center px-4 py-2 z-20 overflow-y-auto max-h-[92vh]">
+                {/* Dynamic Status Micro-Badge */}
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#C9A84C]/50 bg-[#050D1A]/90 backdrop-blur-md mb-2 shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
+                  <span className="text-[10px] sm:text-xs tracking-[0.22em] uppercase font-semibold text-[#FCE18F]">
+                    {isAttending
+                      ? "✦ COUNTDOWN IS ON • CAN'T WAIT TO CELEBRATE ✦"
+                      : isDeclined
+                      ? "✦ A SPECIAL REQUEST • WE TRULY MISS YOU ✦"
+                      : "✦ CORDIALLY INVITED • JOIN THE CELEBRATION ✦"}
+                  </span>
+                </div>
+
+                {/* Personalized Guest Name */}
                 <h2
-                  className="font-serif font-bold text-2xl sm:text-3xl text-[#F5ECD7] mb-2 leading-tight"
+                  className="font-marcellus text-xl sm:text-2xl md:text-3xl font-bold tracking-[0.14em] uppercase leading-tight mb-1"
                   style={{
-                    background: 'linear-gradient(135deg, #FFF6D6 0%, #E8D5A3 50%, #C9A84C 100%)',
+                    background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
+                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.95)) drop-shadow(0 0 12px rgba(212,175,55,0.4))',
                   }}
                 >
-                  Diwali Party Celebration
+                  {guestName ? `DEAR ${formatGuestTitleCase(guestName).toUpperCase()}` : 'DEAR HONORED GUEST'}
                 </h2>
-                <div className="h-[1px] w-20 bg-gradient-to-r from-transparent via-[#C9A84C]/60 to-transparent my-1.5" />
-                <p className="font-serif italic text-sm sm:text-base text-[#F5ECD7]/90 mb-1">
-                  {guestName ? `A Warm Invitation For ${formatGuestTitleCase(guestName)}` : 'A Warm Invitation For You'}
+
+                {/* Dynamic Personalized Message based on Save The Date Reply */}
+                <p className="font-serif italic text-xs sm:text-[13px] md:text-sm text-[#F5ECD7]/90 max-w-sm leading-relaxed mb-2.5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
+                  {isAttending ? (
+                    isDiwali
+                      ? 'You confirmed your presence, and our hearts are full! The Khandelwal family is eagerly waiting to celebrate the Festival of Lights with you.'
+                      : "You said YES, and we couldn't be more thrilled! We are counting down the days to celebrate Arpit's 40th & Diwali with you. Get ready for an unforgettable night!"
+                  ) : isDeclined ? (
+                    isDiwali
+                      ? 'We know you had other commitments earlier, but our Diwali celebration truly won’t feel complete without you. We warmly request you to please reconsider and change your mind to celebrate with the Khandelwal family!'
+                      : "We noticed you couldn't make it earlier, but this milestone celebration truly won't feel complete without you! We warmly request you to please reconsider and change your mind — it would mean the world to celebrate together!"
+                  ) : (
+                    isDiwali
+                      ? 'The Khandelwal family cordially requests the honor of your gracious presence to celebrate our Grand Diwali Party. Please let us know if you will celebrate with us!'
+                      : "We warmly request the honor of your gracious presence to celebrate Arpit's 40th milestone & Diwali festivities. Please let us know if you will be celebrating with us!"
+                  )}
                 </p>
-                <p className="font-sans text-xs tracking-[0.25em] uppercase text-[#C9A84C] font-semibold mb-1">
-                  Friday, 23rd October 2026 · Jaipur
-                </p>
-                <p className="font-sans text-[10px] tracking-[0.2em] uppercase text-white/50 mb-2">
-                  Drinks · Dance · Celebration
+
+                {/* Royal Venue, Date & Time Glass Plaque */}
+                <div className="relative w-full px-3.5 py-2.5 rounded-lg border border-[#C9A84C]/50 bg-gradient-to-b from-black/85 via-black/75 to-black/90 backdrop-blur-md shadow-[0_8px_24px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.15)] flex flex-col items-center mb-2.5">
+                  {/* Date & Time Header */}
+                  <div className="flex flex-wrap items-center justify-center gap-1.5 text-[#FCE18F] font-marcellus text-[11px] sm:text-xs tracking-[0.14em] uppercase font-bold">
+                    <span>🗓️ FRIDAY, OCT 23, 2026</span>
+                    <span className="text-[#C9A84C]/60">•</span>
+                    <span>⏰ 8:00 PM ONWARDS</span>
+                  </div>
+
+                  <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-[#C9A84C]/60 to-transparent my-1.5" />
+
+                  {/* Venue Name */}
+                  <h3
+                    className="font-marcellus text-sm sm:text-base font-bold tracking-[0.14em] uppercase"
+                    style={{
+                      background: 'linear-gradient(135deg, #FFFFFF 0%, #FFF2BD 40%, #E2BE5A 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.9))',
+                    }}
+                  >
+                    &ldquo;THE FOOTHILLS VILLAS&rdquo;
+                  </h3>
+
+                  {/* Venue Address */}
+                  <p className="text-[10px] sm:text-[11px] text-[#F5ECD7]/80 font-sans tracking-wide mt-0.5 leading-snug">
+                    Near RAJASTHALI RESORT &amp; SPA, Kukas, Delhi Road, Jaipur
+                  </p>
+
+                  {/* Google Maps Link */}
+                  <a
+                    href={EVENT.mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-sans font-medium text-[#FCE18F] hover:text-white underline decoration-[#C9A84C]/60 underline-offset-4 tracking-wider transition-colors"
+                  >
+                    <span>📍</span> Open in Google Maps ➔
+                  </a>
+                </div>
+
+                {/* Dynamic Action Buttons */}
+                <div className="flex flex-col gap-2 w-full max-w-xs">
+                  {/* Primary Button */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onSelectYes() }}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white font-sans font-bold text-xs tracking-[0.16em] uppercase rounded-sm shadow-xl shadow-[#C9A84C]/30 hover:brightness-110 active:scale-95 transition-all"
+                  >
+                    {isAttending
+                      ? "✨ RECONFIRM / I'LL BE THERE"
+                      : isDeclined
+                      ? "🎉 CHANGE TO YES! I'LL BE THERE"
+                      : "YES, I'LL BE THERE"}
+                  </button>
+
+                  {/* Secondary Button */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onSelectNo() }}
+                    className="w-full py-2.5 px-4 glass border border-white/20 text-[#F5ECD7]/80 font-sans font-medium text-[11px] sm:text-xs tracking-[0.16em] uppercase rounded-sm hover:border-white/50 hover:text-white active:scale-95 transition-all opacity-85 hover:opacity-100"
+                  >
+                    {isAttending
+                      ? "CAN NO LONGER MAKE IT?"
+                      : isDeclined
+                      ? "SORRY, STILL CAN'T MAKE IT"
+                      : "SORRY, CAN'T MAKE IT"}
+                  </button>
+
+                  {/* Calendar Button */}
+                  <button
+                    onClick={handleCalendar}
+                    className="w-full py-2.5 px-4 glass border border-[#C9A84C]/50 text-[#C9A84C] font-sans font-semibold text-[11px] sm:text-xs tracking-[0.16em] uppercase rounded-sm hover:bg-[#C9A84C]/15 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>📅</span> ADD TO CALENDAR
+                  </button>
+                </div>
+
+                {/* Sign-off */}
+                <p className="font-serif italic text-xs text-[#FCE18F]/75 mt-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                  {isDiwali ? 'Warmly, The Khandelwal Family' : 'Warmly, Arpit & Tanvi'}
                 </p>
               </div>
-            ) : (!hasBurnedText) && (
-              <>
-                <p className="font-sans text-[10px] sm:text-xs tracking-[0.4em] uppercase text-[#C9A84C]/90 mb-2">
-                  DIWALI VIBES • FAB 40 • MEMORIES
-                </p>
-                <h3 className="font-serif text-2xl sm:text-4xl text-[#F5ECD7] font-bold mb-2">
-                  FRIDAY | OCT 23, 2026
-                </h3>
-                <p className="font-sans text-[11px] tracking-[0.25em] uppercase text-white/60 mb-6">
-                  JAIPUR · RAJASTHAN
-                </p>
-              </>
-            )}
-
-            {/* Interactive CTAs — Direct Yes / No / Calendar Buttons */}
-            <div className="flex flex-col gap-2.5 w-full max-w-xs px-4">
-              <button
-                onClick={(e) => { e.stopPropagation(); onSelectYes() }}
-                className="w-full py-3.5 px-6 bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white font-sans font-bold text-xs tracking-[0.2em] uppercase rounded-sm shadow-xl shadow-[#C9A84C]/25 hover:brightness-110 active:scale-95 transition-all"
-              >
-                YES, I'LL BE THERE
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); onSelectNo() }}
-                className="w-full py-3.5 px-6 glass border border-white/20 text-[#F5ECD7]/80 font-sans font-medium text-xs tracking-[0.2em] uppercase rounded-sm hover:border-white/50 hover:text-white active:scale-95 transition-all opacity-85 hover:opacity-100"
-              >
-                SORRY, CAN'T MAKE IT
-              </button>
-              <button
-                onClick={handleCalendar}
-                className="w-full py-3 px-6 glass border border-[#C9A84C]/40 text-[#C9A84C] font-sans font-medium text-xs tracking-[0.2em] uppercase rounded-sm hover:bg-[#C9A84C]/10 active:scale-95 transition-all flex items-center justify-center gap-2"
-              >
-                <span>📅</span> {isDiwali ? 'ADD TO CALENDAR' : 'ADD TO CALENDAR'}
-              </button>
-            </div>
-            {isDiwali && (
-              <p className="font-serif italic text-xs text-[#F5ECD7]/50 mt-4">
-                Warmly, The Khandelwal Family
-              </p>
             )}
           </div>
 
