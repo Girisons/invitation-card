@@ -52,7 +52,7 @@ export async function generateMetadata({ params, searchParams }: Props) {
 
   let title = "The Night Awaits — Arpit's 40th & Diwali Celebration"
   let description = "Personal Video Invitation • Tap to open"
-  let ogImageUrl = "https://khandelwalinvite.vercel.app/og-main.jpg?v=1"
+  let ogImageUrl = "https://khandelwalinvite.vercel.app/og-main.jpg?v=3"
 
   if (isSaveTheDate) {
     if (isDiwali) {
@@ -69,11 +69,11 @@ export async function generateMetadata({ params, searchParams }: Props) {
     if (isDiwali) {
       title = "The Night Awaits — Khandelwal Diwali Celebration"
       description = "Personal Video Invitation • Tap to open"
-      ogImageUrl = "https://khandelwalinvite.vercel.app/og-diwali-main.jpg?v=1"
+      ogImageUrl = "https://khandelwalinvite.vercel.app/og-diwali-main.jpg?v=3"
     } else {
       title = "The Night Awaits — Arpit's 40th & Diwali Celebration"
       description = "Personal Video Invitation • Tap to open"
-      ogImageUrl = "https://khandelwalinvite.vercel.app/og-main.jpg?v=1"
+      ogImageUrl = "https://khandelwalinvite.vercel.app/og-main.jpg?v=3"
     }
   }
 

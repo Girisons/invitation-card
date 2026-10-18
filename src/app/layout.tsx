@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     siteName: "Arpit's 40th & Diwali Celebration",
     images: [
       {
-        url: 'https://khandelwalinvite.vercel.app/og-main.jpg?v=1',
+        url: 'https://khandelwalinvite.vercel.app/og-main.jpg?v=3',
         width: 1200,
         height: 630,
         type: 'image/jpeg',
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: "The Night Awaits — Arpit's 40th & Diwali Celebration",
     description: 'Personal Video Invitation • Tap to open',
-    images: ['https://khandelwalinvite.vercel.app/og-main.jpg?v=1'],
+    images: ['https://khandelwalinvite.vercel.app/og-main.jpg?v=3'],
   },
   robots: 'noindex, nofollow',
 }
