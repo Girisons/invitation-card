@@ -1027,21 +1027,36 @@ export default function VideoScreen({
                 </h2>
 
                 {/* Dynamic Personalized Message based on Save The Date Reply */}
-                <p className="font-serif italic text-xs sm:text-sm md:text-[15px] text-[#F5ECD7]/95 max-w-lg leading-relaxed mb-3.5 px-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
-                  {isAttending ? (
-                    isDiwali
-                      ? 'You confirmed your presence, and our hearts are full! The Khandelwal family is eagerly waiting to celebrate the Festival of Lights with you.'
-                      : "You said YES, and we couldn't be more thrilled! We are counting down the days to celebrate Arpit's 40th & Diwali with you. Get ready for an unforgettable night!"
-                  ) : isDeclined ? (
-                    isDiwali
-                      ? 'We know you had other commitments earlier, but our Diwali celebration truly won’t feel complete without you. We warmly request you to please reconsider and change your mind to celebrate with the Khandelwal family!'
-                      : "We noticed you couldn't make it earlier, but this milestone celebration truly won't feel complete without you! We warmly request you to please reconsider and change your mind — it would mean the world to celebrate together!"
-                  ) : (
-                    isDiwali
-                      ? 'The Khandelwal family cordially requests the honor of your gracious presence to celebrate our Grand Diwali Party. Please let us know if you will celebrate with us!'
-                      : "We warmly request the honor of your gracious presence to celebrate Arpit's 40th milestone & Diwali festivities. Please let us know if you will be celebrating with us!"
-                  )}
-                </p>
+                {isAttending && !isDiwali ? (
+                  <div className="font-serif text-xs sm:text-sm text-[#F5ECD7]/95 max-w-lg leading-relaxed mb-3 px-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] space-y-1.5">
+                    <p className="italic">
+                      You&rsquo;ve confirmed your presence, and We&rsquo;re delighted to have you join us! ✨
+                    </p>
+                    <p className="italic">
+                      Get ready for <strong className="font-bold not-italic text-[#FCE18F]">40 &amp; FESTIVE</strong> — an unforgettable evening of Diwali sparkle, incredible music and magical moments as we celebrate Arpit&rsquo;s 40th Birthday.
+                    </p>
+                    <p className="font-sans text-[11px] sm:text-xs font-bold tracking-[0.18em] uppercase text-[#FCE18F] pt-0.5">
+                      23 October 2026 · Jaipur
+                    </p>
+                    <p className="font-semibold text-[#FFFDF0]">
+                      The night shines brighter with you! ❤️
+                    </p>
+                  </div>
+                ) : (
+                  <p className="font-serif italic text-xs sm:text-sm md:text-[15px] text-[#F5ECD7]/95 max-w-lg leading-relaxed mb-3.5 px-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
+                    {isAttending ? (
+                      'You confirmed your presence, and our hearts are full! The Khandelwal family is eagerly waiting to celebrate the Festival of Lights with you.'
+                    ) : isDeclined ? (
+                      isDiwali
+                        ? 'We know you had other commitments earlier, but our Diwali celebration truly won’t feel complete without you. We warmly request you to please reconsider and change your mind to celebrate with the Khandelwal family!'
+                        : "We noticed you couldn't make it earlier, but this milestone celebration truly won't feel complete without you! We warmly request you to please reconsider and change your mind — it would mean the world to celebrate together!"
+                    ) : (
+                      isDiwali
+                        ? 'The Khandelwal family cordially requests the honor of your gracious presence to celebrate our Grand Diwali Party. Please let us know if you will celebrate with us!'
+                        : "We warmly request the honor of your gracious presence to celebrate Arpit's 40th milestone & Diwali festivities. Please let us know if you will be celebrating with us!"
+                    )}
+                  </p>
+                )}
 
                 {/* Royal Venue, Date & Time Glass Plaque - EXPANDED */}
                 <div className="relative w-full max-w-lg px-4 sm:px-6 py-3.5 sm:py-4 rounded-xl border border-[#C9A84C]/50 bg-gradient-to-b from-black/85 via-black/75 to-black/90 backdrop-blur-md shadow-[0_8px_24px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.15)] flex flex-col items-center mb-3">
@@ -1085,44 +1100,51 @@ export default function VideoScreen({
                 </div>
 
                 {/* Dynamic Action Buttons - EXPANDED */}
-                <div className="flex flex-col gap-2.5 w-full max-w-lg">
-                  {/* Primary RSVP Button */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onSelectYes() }}
-                    className="w-full py-3.5 px-6 bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white font-sans font-bold text-xs sm:text-sm tracking-[0.18em] uppercase rounded-md shadow-xl shadow-[#C9A84C]/30 hover:brightness-110 active:scale-95 transition-all"
-                  >
-                    {isAttending
-                      ? "✨ RECONFIRM / I'LL BE THERE"
-                      : isDeclined
-                      ? "🎉 CHANGE TO YES! I'LL BE THERE"
-                      : "YES, I'LL BE THERE"}
-                  </button>
-
-                  {/* Secondary Buttons Row: Can't Make It + Add to Calendar */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onSelectNo() }}
-                      className="w-full py-2.5 px-3 glass border border-white/20 text-[#F5ECD7]/80 hover:text-white hover:border-white/40 font-sans font-medium text-[11px] sm:text-xs tracking-[0.14em] uppercase rounded-md active:scale-95 transition-all opacity-90 hover:opacity-100 flex items-center justify-center"
-                    >
-                      {isAttending
-                        ? "CAN NO LONGER MAKE IT?"
-                        : isDeclined
-                        ? "SORRY, STILL CAN'T MAKE IT"
-                        : "SORRY, CAN'T MAKE IT"}
-                    </button>
-
+                <div className="flex flex-col gap-2.5 w-full max-w-lg items-center">
+                  {isAttending ? (
                     <button
                       onClick={handleCalendar}
-                      className="w-full py-2.5 px-3 glass border border-[#C9A84C]/50 hover:border-[#C9A84C] text-[#C9A84C] hover:text-[#FCE18F] bg-[#C9A84C]/10 hover:bg-[#C9A84C]/20 font-sans font-semibold text-[11px] sm:text-xs tracking-[0.14em] uppercase rounded-md active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                      className="w-full max-w-xs py-3 px-6 glass border border-[#C9A84C]/60 hover:border-[#C9A84C] text-[#FCE18F] hover:text-white bg-[#C9A84C]/15 hover:bg-[#C9A84C]/25 font-sans font-semibold text-xs tracking-[0.16em] uppercase rounded-md shadow-lg shadow-[#C9A84C]/15 active:scale-95 transition-all flex items-center justify-center gap-2"
                     >
                       <span>📅</span> ADD TO CALENDAR
                     </button>
-                  </div>
+                  ) : (
+                    <>
+                      {/* Primary RSVP Button */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onSelectYes() }}
+                        className="w-full py-3.5 px-6 bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white font-sans font-bold text-xs sm:text-sm tracking-[0.18em] uppercase rounded-md shadow-xl shadow-[#C9A84C]/30 hover:brightness-110 active:scale-95 transition-all"
+                      >
+                        {isDeclined
+                          ? "🎉 CHANGE TO YES! I'LL BE THERE"
+                          : "YES, I'LL BE THERE"}
+                      </button>
+
+                      {/* Secondary Buttons Row: Can't Make It + Add to Calendar */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onSelectNo() }}
+                          className="w-full py-2.5 px-3 glass border border-white/20 text-[#F5ECD7]/80 hover:text-white hover:border-white/40 font-sans font-medium text-[11px] sm:text-xs tracking-[0.14em] uppercase rounded-md active:scale-95 transition-all opacity-90 hover:opacity-100 flex items-center justify-center"
+                        >
+                          {isDeclined
+                            ? "SORRY, STILL CAN'T MAKE IT"
+                            : "SORRY, CAN'T MAKE IT"}
+                        </button>
+
+                        <button
+                          onClick={handleCalendar}
+                          className="w-full py-2.5 px-3 glass border border-[#C9A84C]/50 hover:border-[#C9A84C] text-[#C9A84C] hover:text-[#FCE18F] bg-[#C9A84C]/10 hover:bg-[#C9A84C]/20 font-sans font-semibold text-[11px] sm:text-xs tracking-[0.14em] uppercase rounded-md active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <span>📅</span> ADD TO CALENDAR
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Sign-off */}
                 <p className="font-serif italic text-xs sm:text-[13px] text-[#FCE18F]/80 mt-3 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                  {isDiwali ? 'Warmly, The Khandelwal Family' : 'Warmly, Arpit & Tanvi'}
+                  {isDiwali ? 'Warmly, The Khandelwal Family' : 'Warmly, Tanvi'}
                 </p>
 
                 {/* ── DIGITAL COUNTDOWN CLOCK STRUCTURE DOWN THERE ── */}
