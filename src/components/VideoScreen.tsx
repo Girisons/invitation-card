@@ -39,6 +39,8 @@ export default function VideoScreen({
   const [soundMuted, setSoundMuted] = useState(false)
   const [hasTappedSound, setHasTappedSound] = useState(false)
   const [soundPromptVisible, setSoundPromptVisible] = useState(true)
+  const [rotatePromptActive, setRotatePromptActive] = useState(false)
+  const [rotateCountdown, setRotateCountdown] = useState(3)
   const startedRef = useRef(false)
   const endedCalledRef = useRef(false)
   const endTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -51,6 +53,59 @@ export default function VideoScreen({
   useEffect(() => {
     onStartRef.current = onStart
   }, [onStart])
+
+  // Check if device starts in portrait mode on mobile/tablet (to show 3-sec rotate phone prompt)
+  useEffect(() => {
+    if (!active) return
+
+    const checkIsPortraitMobile = () => {
+      if (typeof window === 'undefined') return false
+      const isPortrait = window.innerHeight > window.innerWidth
+      const isMobile =
+        window.innerWidth <= 900 ||
+        /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      return isPortrait && isMobile
+    }
+
+    if (checkIsPortraitMobile()) {
+      setRotatePromptActive(true)
+      setRotateCountdown(3)
+    } else {
+      setRotatePromptActive(false)
+    }
+  }, [active])
+
+  // Countdown timer and live physical rotation detection
+  useEffect(() => {
+    if (!rotatePromptActive) return
+
+    const handleOrientationChange = () => {
+      if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
+        // Rotated to landscape! Instantly dismiss rotation prompt
+        setRotatePromptActive(false)
+      }
+    }
+
+    window.addEventListener('resize', handleOrientationChange)
+    window.addEventListener('orientationchange', handleOrientationChange)
+
+    const timer = setInterval(() => {
+      setRotateCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          setRotatePromptActive(false)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('resize', handleOrientationChange)
+      window.removeEventListener('orientationchange', handleOrientationChange)
+    }
+  }, [rotatePromptActive])
 
   const isDiwaliSaveDate = Boolean(
     inviteType === 'save_date_diwali' ||
@@ -406,6 +461,95 @@ export default function VideoScreen({
         }`}
       />
 
+      {/* ── 3-SECOND LUXURY ROTATE PHONE SCREEN (BEFORE TAP TO ENTER) ── */}
+      {hasVideo && soundPromptVisible && rotatePromptActive && (
+        <div
+          onClick={() => setRotatePromptActive(false)}
+          className="absolute inset-0 z-[60] flex flex-col items-center justify-between p-6 sm:p-10 cursor-pointer select-none transition-all duration-700 animate-fadeIn"
+          style={{
+            background: 'radial-gradient(ellipse at center, rgba(15,28,52,0.98) 0%, rgba(5,13,26,0.99) 70%, #050D1A 100%)'
+          }}
+        >
+          {/* Top Tagline */}
+          <div className="pt-4 sm:pt-8 flex items-center gap-2">
+            <span className="text-[#C9A84C] text-[10px]">❖</span>
+            <p className="font-marcellus text-[10px] sm:text-xs tracking-[0.4em] uppercase text-[#C9A84C] font-semibold">
+              CINEMATIC 16:9 EXPERIENCE
+            </p>
+            <span className="text-[#C9A84C] text-[10px]">❖</span>
+          </div>
+
+          {/* Centerpiece: Animated 3D Gold Rotating Phone */}
+          <div className="flex flex-col items-center justify-center my-auto">
+            <div className="relative w-44 h-44 flex items-center justify-center mb-5">
+              {/* Glowing circular backdrop pulse */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#C9A84C]/15 via-[#FFF0BD]/20 to-[#C9A84C]/10 blur-2xl animate-pulse-ring pointer-events-none" />
+
+              {/* Orbiting circular dashed ring */}
+              <svg className="absolute inset-0 w-full h-full text-[#C9A84C]/40 animate-spin" style={{ animationDuration: '10s' }} viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="1.2" strokeDasharray="6 8" fill="none" />
+              </svg>
+
+              {/* The Rotating Gold Smartphone */}
+              <div className="relative w-20 h-36 rounded-2xl border-2 border-[#C9A84C] bg-gradient-to-b from-[#13223A] to-[#08101D] shadow-[0_0_30px_rgba(201,168,76,0.4),inset_0_0_15px_rgba(201,168,76,0.2)] flex flex-col items-center justify-between p-2 animate-rotate-phone">
+                {/* Speaker slit & Camera notch */}
+                <div className="w-6 h-1 rounded-full bg-[#C9A84C]/70" />
+
+                {/* Screen preview showing 16:9 landscape aspect ratio frame */}
+                <div className="w-full flex-1 my-1.5 rounded-lg border border-[#C9A84C]/40 bg-[#050D1A]/90 flex flex-col items-center justify-center p-1 relative overflow-hidden">
+                  <div className="text-[16px]">🎬</div>
+                  <span className="text-[9px] font-marcellus text-[#E8D5A3] tracking-widest mt-1 font-bold">16:9</span>
+                </div>
+
+                {/* Home Indicator line */}
+                <div className="w-8 h-1 rounded-full bg-[#C9A84C]/70" />
+              </div>
+            </div>
+
+            {/* Title: PLEASE ROTATE YOUR PHONE */}
+            <h1
+              className="font-marcellus text-2xl sm:text-4xl font-bold tracking-[0.12em] uppercase text-center mb-2 leading-tight px-4"
+              style={{
+                background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF0BD 35%, #E2B755 75%, #9C6F16 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                filter: 'drop-shadow(0 3px 2px rgba(0,0,0,0.95)) drop-shadow(0 -1px 0.8px rgba(255,247,208,0.5))',
+              }}
+            >
+              PLEASE ROTATE YOUR PHONE
+            </h1>
+
+            {/* Subtitle */}
+            <p className="font-marcellus text-xs sm:text-sm text-[#F5ECD7]/80 text-center tracking-wider max-w-xs px-2 leading-relaxed">
+              Turn your device to landscape for the full widescreen royal celebration
+            </p>
+          </div>
+
+          {/* Bottom Countdown & Skip Button */}
+          <div className="pb-4 sm:pb-8 flex flex-col items-center gap-3 w-full max-w-xs">
+            {/* Countdown Badge */}
+            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#C9A84C]/40 bg-[#0A1931]/80 backdrop-blur-md">
+              <span className="text-[#C9A84C] text-xs">⏳</span>
+              <span className="font-sans text-[11px] tracking-[0.2em] uppercase text-[#F5ECD7] font-semibold">
+                Opening in {rotateCountdown}s...
+              </span>
+            </div>
+
+            {/* Tap to Skip */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setRotatePromptActive(false)
+              }}
+              className="text-[#C9A84C]/70 hover:text-[#C9A84C] text-[11px] font-marcellus tracking-[0.25em] uppercase underline underline-offset-4 transition-colors"
+            >
+              Continue in Portrait ➔
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── EMBOSSED GATE SCREEN (DESIGN 1: ROYAL MARCELLUS) ── */}
       {hasVideo && soundPromptVisible && (
         <div
@@ -415,22 +559,22 @@ export default function VideoScreen({
             background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0.88) 100%)'
           }}
         >
-          <div className="flex flex-col items-center justify-center text-center max-w-xl w-full select-none px-4">
+          <div className="flex flex-col items-center justify-center text-center max-w-xl w-full select-none px-4 max-h-screen py-2">
             {/* Tagline with Gold Diamonds */}
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-[#C9A84C] text-[10px]">❖</span>
+            <div className="flex items-center gap-2 mb-2 sm:mb-4">
+              <span className="text-[#C9A84C] text-[9px] sm:text-[10px]">❖</span>
               <p
-                className="font-marcellus text-[11px] sm:text-xs tracking-[0.45em] uppercase text-[#C9A84C] font-semibold"
+                className="font-marcellus text-[9px] sm:text-[11px] tracking-[0.45em] uppercase text-[#C9A84C] font-semibold"
                 style={{ filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.95)) drop-shadow(0 -1px 0.5px rgba(255,249,210,0.5))' }}
               >
                 A PERSONAL INVITATION
               </p>
-              <span className="text-[#C9A84C] text-[10px]">❖</span>
+              <span className="text-[#C9A84C] text-[9px] sm:text-[10px]">❖</span>
             </div>
 
             {/* Guest Name in Marcellus Title Case (Without "Hi") */}
             <h2
-              className="font-marcellus text-3xl sm:text-5xl font-bold tracking-wide mb-3 leading-tight px-2"
+              className="font-marcellus text-2xl sm:text-4xl md:text-5xl font-bold tracking-wide mb-1 sm:mb-3 leading-tight px-2"
               style={{
                 background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF0BD 35%, #E2B755 75%, #9C6F16 100%)',
                 WebkitBackgroundClip: 'text',
@@ -442,16 +586,16 @@ export default function VideoScreen({
             </h2>
 
             {/* Carved Gold Inlay Divider with Center Pearl Dot */}
-            <div className="relative w-48 sm:w-72 h-[3px] my-3 flex items-center justify-center">
+            <div className="relative w-40 sm:w-64 h-[3px] my-1 sm:my-3 flex items-center justify-center">
               <div className="absolute inset-0 bg-[#000000] translate-y-[1.5px] opacity-80 blur-[0.5px]" />
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#C9A84C] to-transparent h-[1.6px]" />
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#FFF5BD] to-transparent -translate-y-[1px] h-[0.8px] opacity-50" />
-              <div className="relative z-10 w-2 h-2 rounded-full bg-[#FFF5BD] shadow-[0_0_6px_rgba(201,168,76,0.8)]" />
+              <div className="relative z-10 w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#FFF5BD] shadow-[0_0_6px_rgba(201,168,76,0.8)]" />
             </div>
 
             {/* BIG: THE NIGHT AWAITS or SAVE THE DATE (Monumental 3D Embossed Marcellus) */}
             <h1
-              className="font-marcellus text-4xl sm:text-6xl md:text-7xl font-bold tracking-[0.14em] uppercase my-2 leading-tight"
+              className="font-marcellus text-3xl sm:text-5xl md:text-6xl font-bold tracking-[0.14em] uppercase my-1 sm:my-2 leading-tight"
               style={{
                 background: 'linear-gradient(180deg, #FFFDF5 0%, #FCE18F 25%, #D4A63B 60%, #7A540D 100%)',
                 WebkitBackgroundClip: 'text',
@@ -464,7 +608,7 @@ export default function VideoScreen({
 
             {/* Event Subtitle */}
             <p
-              className="font-marcellus text-[11px] sm:text-xs font-semibold tracking-[0.35em] uppercase text-[#E8D5A3] my-4"
+              className="font-marcellus text-[9px] sm:text-[11px] font-semibold tracking-[0.35em] uppercase text-[#E8D5A3] my-1.5 sm:my-3"
               style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.95))' }}
             >
               {isDiwaliEvent ? 'KHANDELWAL DIWALI CELEBRATION' : "ARPIT'S 40TH BIRTHDAY & DIWALI CELEBRATION"}
@@ -474,7 +618,7 @@ export default function VideoScreen({
             <button
               type="button"
               onClick={handleUserInteraction}
-              className="group relative mt-2 px-9 py-3.5 rounded-full border border-[#AA822E] bg-gradient-to-b from-[#1A1108] to-[#0D0804] text-[#FFF6D6] shadow-[0_4px_20px_rgba(0,0,0,0.9),0_0_20px_rgba(170,130,46,0.25)] hover:shadow-[0_4px_25px_rgba(0,0,0,0.9),0_0_30px_rgba(170,130,46,0.45)] hover:scale-105 active:scale-95 transition-all duration-300 pointer-events-auto"
+              className="group relative mt-1.5 sm:mt-2 px-7 sm:px-9 py-2.5 sm:py-3.5 rounded-full border border-[#AA822E] bg-gradient-to-b from-[#1A1108] to-[#0D0804] text-[#FFF6D6] shadow-[0_4px_20px_rgba(0,0,0,0.9),0_0_20px_rgba(170,130,46,0.25)] hover:shadow-[0_4px_25px_rgba(0,0,0,0.9),0_0_30px_rgba(170,130,46,0.45)] hover:scale-105 active:scale-95 transition-all duration-300 pointer-events-auto"
               style={{
                 boxShadow: '0 4px 20px rgba(0,0,0,0.9), 0 0 25px rgba(170,130,46,0.3), inset 0 0 0 1px rgba(255,234,160,0.4)'
               }}
