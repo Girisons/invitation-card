@@ -255,7 +255,7 @@ export default function VideoScreen({
           }
         }
 
-        // 2. LED Stage Screen (25.2s - 29.5s): Rock-solid locked to the glowing LED video screen (NO dancing/moving)
+        // 2. LED Stage Screen (25.2s - 29.5s): Rock-solid locked in the center of the LED screen (NO dancing/moving)
         const stageEl = stageOverlayRef.current
         if (stageEl) {
           if (t < 25.2 || t > 29.5 || video.paused) {
@@ -270,42 +270,6 @@ export default function VideoScreen({
               const fadeOutProgress = Math.max(0, Math.min(1, (t - 28.8) / 0.6))
               opacity = 1 - fadeOutProgress
             }
-
-            // Calculate precise pixel layout matching 1280x720 video's LED screen
-            const container = containerRef.current
-            if (container) {
-              const cw = container.clientWidth
-              const ch = container.clientHeight
-              if (cw > 0 && ch > 0) {
-                const videoAspect = 16 / 9
-                const containerAspect = cw / ch
-                let renderW: number, renderH: number, offsetX: number, offsetY: number
-                if (containerAspect > videoAspect) {
-                  renderW = cw
-                  renderH = cw / videoAspect
-                  offsetX = 0
-                  offsetY = (ch - renderH) / 2
-                } else {
-                  renderH = ch
-                  renderW = ch * videoAspect
-                  offsetX = (cw - renderW) / 2
-                  offsetY = 0
-                }
-
-                // LED screen in 1280x720 video: Left 599px, Top 314px, Width 171px, Height 123px
-                const left = offsetX + (599 / 1280) * renderW
-                const top = offsetY + (314 / 720) * renderH
-                const width = (171 / 1280) * renderW
-                const height = (123 / 720) * renderH
-
-                stageEl.style.left = `${left.toFixed(1)}px`
-                stageEl.style.top = `${top.toFixed(1)}px`
-                stageEl.style.width = `${width.toFixed(1)}px`
-                stageEl.style.height = `${height.toFixed(1)}px`
-                stageEl.style.transform = 'none'
-              }
-            }
-
             stageEl.style.opacity = opacity.toFixed(3)
           }
         }
@@ -761,45 +725,42 @@ export default function VideoScreen({
           {isMainInvite && (
             <div
               ref={stageOverlayRef}
-              className="absolute pointer-events-none select-none z-20 flex flex-col items-center justify-center text-center overflow-hidden"
+              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none px-4 text-center z-20"
               style={{
                 opacity: 0,
-                transform: 'none',
               }}
             >
-              {/* Fitted strictly inside the glowing LED Stage Screen */}
-              <div className="relative w-full h-full flex flex-col items-center justify-center px-1">
-                {/* Personalized Guest Name on the LED Screen */}
+              {/* Centered directly inside the glowing LED Stage Screen */}
+              <div className="relative flex flex-col items-center justify-center px-4 py-2 max-w-[280px] sm:max-w-[380px]">
+                {/* Personalized Guest Name glowing on the LED Screen */}
                 <h2
-                  className="font-marcellus font-bold tracking-wide leading-tight px-1"
+                  className="font-marcellus text-xl sm:text-3xl md:text-4xl font-bold tracking-wide leading-tight px-1"
                   style={{
-                    fontSize: 'clamp(10px, 1.8vw, 20px)',
                     background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF8E0 45%, #F5D06A 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
-                    filter: 'drop-shadow(0 0 6px rgba(255,238,180,0.85)) drop-shadow(0 1px 2px rgba(35,12,0,0.95))',
+                    filter: 'drop-shadow(0 0 10px rgba(255,238,180,0.95)) drop-shadow(0 0 25px rgba(240,196,90,0.65)) drop-shadow(0 1.5px 3px rgba(35,12,0,0.85))',
                   }}
                 >
                   {formatGuestTitleCase(guestName)}
                 </h2>
 
                 {/* Delicate Gold Divider inside LED Screen */}
-                <div className="flex items-center justify-center w-3/4 max-w-[90px] my-1 opacity-90">
+                <div className="flex items-center justify-center w-36 sm:w-52 my-1.5 opacity-90">
                   <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#FFE9A3] to-transparent shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
-                  <span className="w-1 h-1 rounded-full bg-white mx-1 shadow-[0_0_4px_#FFF]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-white mx-1.5 shadow-[0_0_6px_#FFF]" />
                   <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#FFE9A3] to-transparent shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
                 </div>
 
                 {/* Below Guest Name inside LED Screen: THE NIGHT ISN'T COMPLETE WITHOUT YOU */}
                 <p
-                  className="font-marcellus font-bold tracking-[0.14em] uppercase text-[#FFFDF5] leading-tight"
+                  className="font-marcellus text-[9px] sm:text-xs md:text-sm font-bold tracking-[0.18em] uppercase text-[#FFFDF5] leading-snug"
                   style={{
-                    fontSize: 'clamp(6px, 1.0vw, 10px)',
-                    filter: 'drop-shadow(0 0 5px rgba(245,210,120,0.7)) drop-shadow(0 1px 2px rgba(35,12,0,0.95))',
+                    filter: 'drop-shadow(0 0 8px rgba(245,210,120,0.85)) drop-shadow(0 1px 2px rgba(35,12,0,0.85))',
                   }}
                 >
                   THE NIGHT ISN&apos;T COMPLETE
-                  <span className="block text-[#FCE18F] mt-0.5 tracking-[0.18em]">WITHOUT YOU</span>
+                  <span className="block text-[#FCE18F] mt-0.5 tracking-[0.22em]">WITHOUT YOU</span>
                 </p>
               </div>
             </div>
