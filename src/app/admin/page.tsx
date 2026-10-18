@@ -166,7 +166,9 @@ function PhoneInputWithPrefix({ value, onChange }: { value: string; onChange: (v
   )
 }
 
-const BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'https://khandelwalinvite.vercel.app'
+const BASE_URL = typeof window !== 'undefined' && !window.location.origin.includes('localhost')
+  ? window.location.origin
+  : 'https://khandelwalinvite.vercel.app'
 
 type FoodPref = 'vegetarian' | 'jain' | 'non-vegetarian' | 'other' | ''
 type LiquorPref = 'yes' | 'no' | 'maybe' | ''
