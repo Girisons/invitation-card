@@ -360,6 +360,8 @@ export default function VideoScreen({
   const isHedgeBeat = isMainInvite && videoState === 'playing' && currentTime >= 10.0 && currentTime <= 17.0
   // Band Music Overlay (31.0s - 32.5s) on Main Invite: WHERE MUSIC MEETS THE SOUL
   const isMusicBeat = isMainInvite && videoState === 'playing' && currentTime >= 31.0 && currentTime <= 32.5
+  // Bar / Cocktail Lounge Overlay (35.0s - 37.0s) on Main Invite: WHERE THE SPIRITS SOAR
+  const isSpiritsBeat = isMainInvite && videoState === 'playing' && currentTime >= 35.0 && currentTime <= 37.0
   // DJ Stage Overlay (40.0s - 42.0s) on Main Invite: WHEN THE NIGHT COMES ALIVE
   const isStageBeat = isMainInvite && videoState === 'playing' && currentTime >= 40.0 && currentTime <= 42.0
   // Beat 3 (RSVP Buttons): only appears 2.5 seconds AFTER video ends (or if explicitly skipped, or immediately if video is unlinked)
@@ -784,6 +786,28 @@ export default function VideoScreen({
               >
                 <span className="block sm:inline">WHERE MUSIC </span>
                 <span className="block sm:inline">MEETS THE SOUL</span>
+              </h2>
+            </div>
+          )}
+
+          {/* ── WHERE THE SPIRITS SOAR (35.0s - 37.0s): CENTERED LIKE ONE NIGHT. TWO REASONS TO CELEBRATE ── */}
+          {isMainInvite && (
+            <div
+              className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 pointer-events-none select-none px-6 text-center z-20 ${
+                isSpiritsBeat ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
+              }`}
+            >
+              <h2
+                className="font-marcellus text-2xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase max-w-4xl leading-tight px-4"
+                style={{
+                  background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
+                }}
+              >
+                <span className="block sm:inline">WHERE THE </span>
+                <span className="block sm:inline">SPIRITS SOAR</span>
               </h2>
             </div>
           )}
