@@ -1035,32 +1035,20 @@ export default function VideoScreen({
                   </a>
                 </div>
 
-                {/* Dynamic Action Buttons */}
+                {/* Action Button: Calendar Only */}
                 <div className="flex flex-col gap-2 w-full max-w-xs">
-                  {/* Primary Button */}
                   <button
-                    onClick={(e) => { e.stopPropagation(); onSelectYes() }}
-                    className="w-full py-3 px-4 bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white font-sans font-bold text-xs tracking-[0.16em] uppercase rounded-sm shadow-xl shadow-[#C9A84C]/30 hover:brightness-110 active:scale-95 transition-all"
+                    onClick={handleCalendar}
+                    className="w-full py-2.5 px-4 glass border border-[#C9A84C]/50 text-[#C9A84C] font-sans font-semibold text-[11px] sm:text-xs tracking-[0.16em] uppercase rounded-sm hover:bg-[#C9A84C]/15 active:scale-95 transition-all flex items-center justify-center gap-2"
                   >
-                    {isAttending
-                      ? "✨ RECONFIRM / I'LL BE THERE"
-                      : isDeclined
-                      ? "🎉 CHANGE TO YES! I'LL BE THERE"
-                      : "YES, I'LL BE THERE"}
-                  </button>
-
-                  {/* Secondary Button */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onSelectNo() }}
-                    className="w-full py-2.5 px-4 glass border border-white/20 text-[#F5ECD7]/80 font-sans font-medium text-[11px] sm:text-xs tracking-[0.16em] uppercase rounded-sm hover:border-white/50 hover:text-white active:scale-95 transition-all opacity-85 hover:opacity-100"
-                  >
-                    {isAttending
-                      ? "CAN NO LONGER MAKE IT?"
-                      : isDeclined
-                      ? "SORRY, STILL CAN'T MAKE IT"
-                      : "SORRY, CAN'T MAKE IT"}
+                    <span>📅</span> ADD TO CALENDAR
                   </button>
                 </div>
+
+                {/* Sign-off */}
+                <p className="font-serif italic text-xs text-[#FCE18F]/75 mt-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                  {isDiwali ? 'Warmly, The Khandelwal Family' : 'Warmly, Arpit & Tanvi'}
+                </p>
               </div>
             )}
           </div>
