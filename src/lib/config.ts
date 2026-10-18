@@ -9,7 +9,7 @@ export const EVENT = {
   venueAddress: 'Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur',
   mapsUrl: 'https://www.google.com/maps/search/?api=1&query=The+Foothills+Villas+Near+Rajasthali+Resort+Kukas+Delhi+Road+Jaipur',
   contact: process.env.NEXT_PUBLIC_RSVP_CONTACT  || 'Tanvi',
-  phone:   process.env.NEXT_PUBLIC_RSVP_PHONE    || '+919460922322',
+  phone:   process.env.NEXT_PUBLIC_RSVP_PHONE    || '+919414026060',
   videoUrl: process.env.NEXT_PUBLIC_VIDEO_URL || '/videos/teaser.mp4',  // default video
   audioUrl: process.env.NEXT_PUBLIC_AUDIO_URL || '/audio/music.mp3',   // custom background music
   poster:   process.env.NEXT_PUBLIC_VIDEO_POSTER || '',

@@ -843,8 +843,8 @@ export default function AdminPage() {
       const iUrl = (customLinks.instaUrl || 'https://instagram.com').trim()
       msg = `📸 *EVENT PHOTOS & INSTAGRAM LINK* 📸\n\nDear *${name}*, ${EMOJI.heart}\n\nThank you for making Arpit's 40th & Diwali Bash so special! Here are the event photos and Instagram link for ${youTarget}:\n\n🖼️ *Event Photo Gallery Link:*\n${pUrl}\n\n✨ *Instagram Reel / Story Link:*\n${iUrl}\n\n${EMOJI.gift} *Your Invitation Card:*\n${mainInviteLink}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*`
     } else {
-      // Default 'invite'
-      msg = `${EMOJI.sparkles} *Four Decades. One Amazing Journey. And Now… One BIG Celebration!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nIt gives me immense pleasure to personally invite ${youTarget} to celebrate my husband *ARPIT’s 40th Birthday & Diwali Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\n*${name} — no excuses, no “we’ll try”, and definitely no last-minute plans! ${EMOJI.wink}*\nWe are waiting to celebrate this beautiful evening with ${youTarget}. ${EMOJI.heart}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${mainInviteLink}`
+      // Default 'invite' (40 & Festive - Main Invite sent by Tanvi)
+      msg = `Dear *${name}*,\n\nIt gives me immense joy to invite you to a once-in-a-lifetime celebration — *Arpit’s 40th birthday* combined with the *Festival of Lights*. This evening is about cherishing friendships, sharing laughter, and creating memories under the glow of Diwali.\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\nYour presence will make this milestone truly unforgettable. Please join us for an evening of warmth, music, festive cheer, and togetherness.\n\nWe would be delighted to have you with us — because celebrations are brighter when shared.\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${mainInviteLink}\n\nWarmly,\n*Tanvi*`
     }
 
     const phone = formatWhatsAppPhone(g.mobile || '')
