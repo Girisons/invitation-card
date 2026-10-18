@@ -4,6 +4,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { EVENT, buildGoogleCalUrl, buildICSContent } from '@/lib/config'
 import { trackEvent } from '@/lib/supabase'
+import {
+  isCurrentlyFullscreen,
+  enterFullscreen,
+  exitFullscreen,
+  toggleFullscreen
+} from '@/lib/fullscreen'
 
 interface Props {
   guestName?: string
@@ -44,6 +50,7 @@ export default function VideoScreen({
   const [soundPromptVisible, setSoundPromptVisible] = useState(true)
   const [rotatePromptActive, setRotatePromptActive] = useState(true)
   const [rotateCountdown, setRotateCountdown] = useState(5)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const startedRef = useRef(false)
   const endedCalledRef = useRef(false)
   const endTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -52,6 +59,84 @@ export default function VideoScreen({
   const containerRef = useRef<HTMLDivElement>(null)
   const festiveOverlayRef = useRef<HTMLDivElement>(null)
   const stageOverlayRef = useRef<HTMLDivElement>(null)
+
+  // Sync Fullscreen state from DOM
+  useEffect(() => {
+    const updateFsState = () => {
+      setIsFullscreen(isCurrentlyFullscreen())
+    }
+    document.addEventListener('fullscreenchange', updateFsState)
+    document.addEventListener('webkitfullscreenchange', updateFsState)
+    document.addEventListener('mozfullscreenchange', updateFsState)
+    document.addEventListener('MSFullscreenChange', updateFsState)
+    return () => {
+      document.removeEventListener('fullscreenchange', updateFsState)
+      document.removeEventListener('webkitfullscreenchange', updateFsState)
+      document.removeEventListener('mozfullscreenchange', updateFsState)
+      document.removeEventListener('MSFullscreenChange', updateFsState)
+    }
+  }, [])
+
+  // Auto Fullscreen on landscape rotation & gesture handling
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    let prevOrientation = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait'
+
+    const handleOrientation = () => {
+      const isLandscape = window.innerWidth > window.innerHeight
+      const currentOrientation = isLandscape ? 'landscape' : 'portrait'
+      const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+
+      if (prevOrientation !== currentOrientation) {
+        if (isLandscape) {
+          // Entering landscape -> automatically request fullscreen
+          enterFullscreen()
+
+          // Also arm one-time touch listener in case browser requires immediate gesture
+          const onLandscapeTouch = () => {
+            enterFullscreen()
+            window.removeEventListener('touchstart', onLandscapeTouch, true)
+            window.removeEventListener('pointerdown', onLandscapeTouch, true)
+            window.removeEventListener('click', onLandscapeTouch, true)
+          }
+          window.addEventListener('touchstart', onLandscapeTouch, { capture: true, passive: true })
+          window.addEventListener('pointerdown', onLandscapeTouch, { capture: true, passive: true })
+          window.addEventListener('click', onLandscapeTouch, { capture: true })
+        } else if (isMobile) {
+          // Exiting landscape back to portrait on mobile -> smoothly exit fullscreen
+          exitFullscreen()
+        }
+      }
+
+      prevOrientation = currentOrientation
+    }
+
+    // If opened already in landscape on mobile, arm the first touch to enter fullscreen
+    if (window.innerWidth > window.innerHeight) {
+      const onInitialLandscapeTouch = () => {
+        enterFullscreen()
+        window.removeEventListener('touchstart', onInitialLandscapeTouch, true)
+        window.removeEventListener('click', onInitialLandscapeTouch, true)
+      }
+      window.addEventListener('touchstart', onInitialLandscapeTouch, { capture: true, passive: true })
+      window.addEventListener('click', onInitialLandscapeTouch, { capture: true })
+    }
+
+    window.addEventListener('resize', handleOrientation)
+    window.addEventListener('orientationchange', handleOrientation)
+    if (typeof screen !== 'undefined' && screen.orientation) {
+      screen.orientation.addEventListener('change', handleOrientation)
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleOrientation)
+      window.removeEventListener('orientationchange', handleOrientation)
+      if (typeof screen !== 'undefined' && screen.orientation) {
+        screen.orientation.removeEventListener('change', handleOrientation)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     onStartRef.current = onStart
@@ -108,9 +193,10 @@ export default function VideoScreen({
     if (!rotatePromptActive) return
 
     const handleOrientationChange = () => {
-      // If mobile device is physically rotated to landscape, dismiss immediately
+      // If mobile device is physically rotated to landscape, dismiss immediately and enter fullscreen
       if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerWidth <= 900) {
         setRotatePromptActive(false)
+        enterFullscreen()
       }
     }
 
@@ -338,6 +424,10 @@ export default function VideoScreen({
     if (e) {
       e.stopPropagation()
     }
+    // Auto enter fullscreen if in landscape mode
+    if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
+      enterFullscreen()
+    }
     // Never restart or play video once it has already started or reached the RSVP end screen
     if (endedCalledRef.current || videoState === 'ended' || showRsvpPrompt || !soundPromptVisible) {
       return
@@ -426,6 +516,39 @@ export default function VideoScreen({
       }`}
       onClick={soundPromptVisible ? handleUserInteraction : undefined}
     >
+      {/* ── FLOATING TOP CONTROLS BAR: FULLSCREEN & SKIP ── */}
+      <div className="fixed top-3 inset-x-3 sm:top-4 sm:inset-x-6 flex items-center justify-between pointer-events-none z-[70]">
+        {/* Luxury Fullscreen Toggle Pill */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            toggleFullscreen()
+          }}
+          className="pointer-events-auto glass px-3 py-1.5 rounded-full border border-[#C9A84C]/50 bg-[#050D1A]/85 text-[#F5ECD7] hover:text-white hover:border-[#C9A84C] hover:bg-[#C9A84C]/25 transition-all active:scale-95 shadow-[0_2px_12px_rgba(0,0,0,0.85)] flex items-center gap-1.5 backdrop-blur-md cursor-pointer"
+          title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+        >
+          <span className="text-[#C9A84C] text-xs font-bold leading-none">
+            {isFullscreen ? '✕' : '⛶'}
+          </span>
+          <span className="font-sans text-[10px] tracking-[0.18em] uppercase font-semibold text-[#E8D5A3]">
+            {isFullscreen ? 'Exit' : 'Fullscreen'}
+          </span>
+        </button>
+
+        {/* Skip to RSVP Button (when video is playing) */}
+        {videoState === 'playing' && showSkip && !isBeat3 ? (
+          <button
+            type="button"
+            onClick={handleSkip}
+            className="pointer-events-auto glass px-3.5 py-1.5 rounded-full border border-[#C9A84C]/50 bg-[#050D1A]/85 text-[10px] font-sans font-semibold tracking-[0.2em] uppercase text-[#F5ECD7]/90 hover:text-white hover:border-[#C9A84C] hover:bg-[#C9A84C]/25 transition-all active:scale-95 flex items-center gap-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.85)] backdrop-blur-md cursor-pointer"
+          >
+            <span>Skip to RSVP</span>
+            <span className="text-xs">⏭</span>
+          </button>
+        ) : <div />}
+      </div>
+
       {/* Ambient Luxury Backdrop for Main Invite 16:9 on Portrait Mobile */}
       {hasVideo && isMainInvite && (
         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
@@ -494,7 +617,12 @@ export default function VideoScreen({
       {/* ── 5-SECOND LUXURY ROTATE PHONE SCREEN (BEFORE TAP TO ENTER - MAIN INVITE ONLY) ── */}
       {hasVideo && soundPromptVisible && rotatePromptActive && isMainInvite && (
         <div
-          onClick={() => setRotatePromptActive(false)}
+          onClick={() => {
+            setRotatePromptActive(false)
+            if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
+              enterFullscreen()
+            }
+          }}
           className="absolute inset-0 z-[60] flex flex-col items-center justify-between p-6 sm:p-10 cursor-pointer select-none transition-all duration-700 animate-fadeIn"
           style={{
             background: 'radial-gradient(ellipse at center, rgba(15,28,52,0.98) 0%, rgba(5,13,26,0.99) 70%, #050D1A 100%)'
@@ -565,8 +693,11 @@ export default function VideoScreen({
               onClick={(e) => {
                 e.stopPropagation()
                 setRotatePromptActive(false)
+                if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
+                  enterFullscreen()
+                }
               }}
-              className="text-[#C9A84C]/70 hover:text-[#C9A84C] text-[11px] font-marcellus tracking-[0.25em] uppercase underline underline-offset-4 transition-colors"
+              className="text-[#C9A84C]/70 hover:text-[#C9A84C] text-[11px] font-marcellus tracking-[0.25em] uppercase underline underline-offset-4 transition-colors cursor-pointer"
             >
               Continue ➔
             </button>
@@ -659,18 +790,8 @@ export default function VideoScreen({
       {/* ── MOVIE TEASER DYNAMIC TEXT OVERLAY SEQUENCE ── */}
       <div className="absolute inset-0 flex flex-col justify-between p-6 sm:p-10 pointer-events-none z-20">
 
-        {/* Top Header — Skip to RSVP button */}
-        <div className="w-full pt-4 px-2 flex justify-end pointer-events-auto z-30 min-h-[44px]">
-          {videoState === 'playing' && showSkip && !isBeat3 && (
-            <button
-              onClick={handleSkip}
-              className="glass px-3.5 py-1.5 rounded-full border border-[#C9A84C]/40 text-[10px] font-sans font-semibold tracking-[0.2em] uppercase text-[#F5ECD7]/80 hover:text-white hover:border-[#C9A84C] hover:bg-[#C9A84C]/15 transition-all active:scale-95 flex items-center gap-1.5 shadow-lg shadow-black/50"
-            >
-              <span>Skip to RSVP</span>
-              <span className="text-xs">⏭</span>
-            </button>
-          )}
-        </div>
+        {/* Top Header spacer */}
+        <div className="w-full pt-4 px-2 min-h-[44px]" />
 
         {/* CENTER STAGE: SEQUENTIAL TEASER BEATS */}
         <div className="relative w-full flex-1 flex flex-col items-center justify-center text-center">
@@ -1002,262 +1123,273 @@ export default function VideoScreen({
               </div>
             ) : (
               /* ── MAIN INVITATION PERSONALIZED RSVP CLIMAX ── */
-              <div className="relative w-full max-w-xl mx-auto flex flex-col items-center text-center px-3 sm:px-6 py-2 z-20 overflow-y-auto max-h-[92vh]">
-                {/* Dynamic Status Micro-Badge */}
-                <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full border border-[#C9A84C]/50 bg-[#050D1A]/90 backdrop-blur-md mb-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
-                  <span className="text-[10px] sm:text-xs tracking-[0.22em] uppercase font-semibold text-[#FCE18F]">
-                    {isAttending
-                      ? "✦ COUNTDOWN IS ON • CAN'T WAIT TO CELEBRATE ✦"
-                      : isDeclined
-                      ? "✦ A SPECIAL REQUEST • WE TRULY MISS YOU ✦"
-                      : "✦ RSVP PENDING • STILL WAITING FOR YOUR REPLY ✦"}
-                  </span>
-                </div>
+              <div className="relative w-full max-w-5xl mx-auto flex flex-col items-center text-center px-3 sm:px-6 py-2 z-20 overflow-y-auto max-h-[92vh]">
+                <div className="rsvp-landscape-grid w-full flex flex-col items-center">
 
-                {/* Personalized Guest Name */}
-                <h2
-                  className="font-marcellus text-2xl sm:text-3xl md:text-4xl font-bold tracking-[0.16em] uppercase leading-tight mb-2"
-                  style={{
-                    background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.95)) drop-shadow(0 0 14px rgba(212,175,55,0.45))',
-                  }}
-                >
-                  {guestName ? `DEAR ${formatGuestTitleCase(guestName).toUpperCase()}` : 'DEAR HONORED GUEST'}
-                </h2>
+                  {/* 1. HEADER AREA: STATUS BADGE & GUEST NAME */}
+                  <div className="rsvp-area-header flex flex-col items-center text-center w-full">
+                    {/* Dynamic Status Micro-Badge */}
+                    <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1 rounded-full border border-[#C9A84C]/50 bg-[#050D1A]/90 backdrop-blur-md mb-1.5 sm:mb-2 shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
+                      <span className="text-[9px] sm:text-xs tracking-[0.22em] uppercase font-semibold text-[#FCE18F]">
+                        {isAttending
+                          ? "✦ COUNTDOWN IS ON • CAN'T WAIT TO CELEBRATE ✦"
+                          : isDeclined
+                          ? "✦ A SPECIAL REQUEST • WE TRULY MISS YOU ✦"
+                          : "✦ RSVP PENDING • STILL WAITING FOR YOUR REPLY ✦"}
+                      </span>
+                    </div>
 
-                {/* Dynamic Personalized Message based on Save The Date Reply */}
-                {isAttending && !isDiwali ? (
-                  <div className="font-serif text-xs sm:text-sm text-[#F5ECD7]/95 max-w-lg leading-relaxed mb-3 px-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] space-y-1.5">
-                    <p className="italic">
-                      You&rsquo;ve confirmed your presence, and We&rsquo;re delighted to have you join us! ✨
-                    </p>
-                    <p className="italic">
-                      Get ready for <strong className="font-bold not-italic text-[#FCE18F]">40 &amp; FESTIVE</strong> — an unforgettable evening of Diwali sparkle, incredible music and magical moments as we celebrate Arpit&rsquo;s 40th Birthday.
-                    </p>
-                    <p className="font-semibold text-[#FFFDF0]">
-                      The night shines brighter with you! ❤️
-                    </p>
+                    {/* Personalized Guest Name */}
+                    <h2
+                      className="font-marcellus text-xl sm:text-3xl md:text-4xl font-bold tracking-[0.16em] uppercase leading-tight mb-1 sm:mb-2"
+                      style={{
+                        background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.95)) drop-shadow(0 0 14px rgba(212,175,55,0.45))',
+                      }}
+                    >
+                      {guestName ? `DEAR ${formatGuestTitleCase(guestName).toUpperCase()}` : 'DEAR HONORED GUEST'}
+                    </h2>
                   </div>
-                ) : (
-                  <div className="font-serif italic text-xs sm:text-sm md:text-[15px] text-[#F5ECD7]/95 max-w-lg leading-relaxed mb-3.5 px-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
-                    {isAttending ? (
-                      <p>'You confirmed your presence, and our hearts are full! The Khandelwal family is eagerly waiting to celebrate the Festival of Lights with you.'</p>
-                    ) : isDeclined ? (
-                      <p>
-                        We&rsquo;ll truly miss you. Your presence would have made the celebration brighter. If plans change, we&rsquo;d be overjoyed to welcome you.
-                      </p>
+
+                  {/* 2. MESSAGE AREA: PERSONALIZED TEXT */}
+                  <div className="rsvp-area-message flex flex-col items-center text-center w-full">
+                    {isAttending && !isDiwali ? (
+                      <div className="font-serif text-xs sm:text-sm text-[#F5ECD7]/95 max-w-lg leading-relaxed mb-2 px-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] space-y-1">
+                        <p className="italic">
+                          You&rsquo;ve confirmed your presence, and We&rsquo;re delighted to have you join us! ✨
+                        </p>
+                        <p className="italic">
+                          Get ready for <strong className="font-bold not-italic text-[#FCE18F]">40 &amp; FESTIVE</strong> — an unforgettable evening of Diwali sparkle, incredible music and magical moments as we celebrate Arpit&rsquo;s 40th Birthday.
+                        </p>
+                        <p className="font-semibold text-[#FFFDF0]">
+                          The night shines brighter with you! ❤️
+                        </p>
+                      </div>
                     ) : (
-                      <div>
-                        <p>
-                          {isDiwali
-                            ? 'The night won\u2019t be the same without you. The Grand Diwali Celebration is waiting for you \u2014 join us for an unforgettable evening.'
-                            : 'The night won\u2019t be the same without you. Arpit\u2019s 40th \u00d7 Diwali bash is waiting for you \u2014 join us for an unforgettable evening.'}
-                        </p>
-                        <p className="font-sans font-semibold text-[11px] sm:text-xs tracking-wide text-[#FCE18F] not-italic mt-1.5">
-                          Still waiting for your RSVP replies!
-                        </p>
+                      <div className="font-serif italic text-xs sm:text-sm md:text-[15px] text-[#F5ECD7]/95 max-w-lg leading-relaxed mb-2 px-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
+                        {isAttending ? (
+                          <p>'You confirmed your presence, and our hearts are full! The Khandelwal family is eagerly waiting to celebrate the Festival of Lights with you.'</p>
+                        ) : isDeclined ? (
+                          <p>
+                            We&rsquo;ll truly miss you. Your presence would have made the celebration brighter. If plans change, we&rsquo;d be overjoyed to welcome you.
+                          </p>
+                        ) : (
+                          <div>
+                            <p>
+                              {isDiwali
+                                ? 'The night won\u2019t be the same without you. The Grand Diwali Celebration is waiting for you \u2014 join us for an unforgettable evening.'
+                                : 'The night won\u2019t be the same without you. Arpit\u2019s 40th \u00d7 Diwali bash is waiting for you \u2014 join us for an unforgettable evening.'}
+                            </p>
+                            <p className="font-sans font-semibold text-[10px] sm:text-xs tracking-wide text-[#FCE18F] not-italic mt-1">
+                              Still waiting for your RSVP replies!
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                )}
 
-                {/* Royal Venue, Date & Time Glass Plaque - EXPANDED */}
-                <div className="relative w-full max-w-lg px-4 sm:px-6 py-3.5 sm:py-4 rounded-xl border border-[#C9A84C]/50 bg-gradient-to-b from-black/85 via-black/75 to-black/90 backdrop-blur-md shadow-[0_8px_24px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.15)] flex flex-col items-center mb-3">
-                  {/* Date & Time Header */}
-                  <div className="flex flex-wrap items-center justify-center gap-2 text-[#FCE18F] font-marcellus text-xs sm:text-[13px] tracking-[0.16em] uppercase font-bold">
-                    <span>🗓️ FRIDAY, OCT 23, 2026</span>
-                    <span className="text-[#C9A84C]/60">•</span>
-                    <span>⏰ 8:00 PM ONWARDS</span>
+                  {/* 3. VENUE AREA: ROYAL PLAQUE */}
+                  <div className="rsvp-area-venue w-full flex justify-center">
+                    <div className="relative w-full max-w-md px-3.5 sm:px-6 py-2.5 sm:py-3.5 rounded-xl border border-[#C9A84C]/50 bg-gradient-to-b from-black/85 via-black/75 to-black/90 backdrop-blur-md shadow-[0_8px_24px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.15)] flex flex-col items-center">
+                      {/* Date & Time Header */}
+                      <div className="flex flex-wrap items-center justify-center gap-2 text-[#FCE18F] font-marcellus text-[11px] sm:text-[13px] tracking-[0.16em] uppercase font-bold">
+                        <span>🗓️ FRIDAY, OCT 23, 2026</span>
+                        <span className="text-[#C9A84C]/60">•</span>
+                        <span>⏰ 8:00 PM ONWARDS</span>
+                      </div>
+
+                      <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-[#C9A84C]/60 to-transparent my-1.5" />
+
+                      {/* Venue Name */}
+                      <h3
+                        className="font-marcellus text-sm sm:text-base md:text-lg font-bold tracking-[0.16em] uppercase text-center"
+                        style={{
+                          background: 'linear-gradient(135deg, #FFFFFF 0%, #FFF2BD 40%, #E2BE5A 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.9))',
+                        }}
+                      >
+                        &ldquo;THE FOOTHILLS VILLAS&rdquo;
+                      </h3>
+
+                      {/* Venue Address */}
+                      <p className="text-[10px] sm:text-xs text-[#F5ECD7]/85 font-sans tracking-wide mt-0.5 leading-snug text-center">
+                        Near RAJASTHALI RESORT &amp; SPA, Kukas, Delhi Road, Jaipur
+                      </p>
+
+                      {/* Google Maps Link */}
+                      <a
+                        href={EVENT.mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-1.5 inline-flex items-center gap-1.5 px-3 py-0.5 sm:py-1 rounded-full bg-[#C9A84C]/15 border border-[#C9A84C]/40 text-[10px] sm:text-xs font-sans font-medium text-[#FCE18F] hover:bg-[#C9A84C]/30 hover:text-white tracking-wider transition-all"
+                      >
+                        <span>📍</span> Open in Google Maps ➔
+                      </a>
+                    </div>
                   </div>
 
-                  <div className="h-[1px] w-28 bg-gradient-to-r from-transparent via-[#C9A84C]/60 to-transparent my-2" />
-
-                  {/* Venue Name */}
-                  <h3
-                    className="font-marcellus text-base sm:text-lg font-bold tracking-[0.16em] uppercase"
-                    style={{
-                      background: 'linear-gradient(135deg, #FFFFFF 0%, #FFF2BD 40%, #E2BE5A 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.9))',
-                    }}
-                  >
-                    &ldquo;THE FOOTHILLS VILLAS&rdquo;
-                  </h3>
-
-                  {/* Venue Address */}
-                  <p className="text-[11px] sm:text-xs text-[#F5ECD7]/85 font-sans tracking-wide mt-0.5 leading-snug">
-                    Near RAJASTHALI RESORT &amp; SPA, Kukas, Delhi Road, Jaipur
-                  </p>
-
-                  {/* Google Maps Link */}
-                  <a
-                    href={EVENT.mapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#C9A84C]/15 border border-[#C9A84C]/40 text-[11px] sm:text-xs font-sans font-medium text-[#FCE18F] hover:bg-[#C9A84C]/30 hover:text-white tracking-wider transition-all"
-                  >
-                    <span>📍</span> Open in Google Maps ➔
-                  </a>
-                </div>
-
-                {/* Dynamic Action Buttons - EXPANDED */}
-                <div className="flex flex-col gap-2.5 w-full max-w-lg items-center">
-                  {isAttending ? (
-                    <button
-                      onClick={handleCalendar}
-                      className="w-full max-w-xs py-3 px-6 glass border border-[#C9A84C]/60 hover:border-[#C9A84C] text-[#FCE18F] hover:text-white bg-[#C9A84C]/15 hover:bg-[#C9A84C]/25 font-sans font-semibold text-xs tracking-[0.16em] uppercase rounded-md shadow-lg shadow-[#C9A84C]/15 active:scale-95 transition-all flex items-center justify-center gap-2"
-                    >
-                      <span>📅</span> ADD TO CALENDAR
-                    </button>
-                  ) : (
-                    <>
-                      {/* Primary RSVP Button */}
+                  {/* 4. BUTTONS AREA */}
+                  <div className="rsvp-area-buttons w-full flex flex-col gap-2 max-w-md items-center mx-auto">
+                    {isAttending ? (
                       <button
-                        onClick={(e) => { e.stopPropagation(); onSelectYes() }}
-                        className="w-full py-3.5 px-6 bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white font-sans font-bold text-xs sm:text-sm tracking-[0.18em] uppercase rounded-md shadow-xl shadow-[#C9A84C]/30 hover:brightness-110 active:scale-95 transition-all"
+                        onClick={handleCalendar}
+                        className="w-full max-w-xs py-2.5 px-6 glass border border-[#C9A84C]/60 hover:border-[#C9A84C] text-[#FCE18F] hover:text-white bg-[#C9A84C]/15 hover:bg-[#C9A84C]/25 font-sans font-semibold text-xs tracking-[0.16em] uppercase rounded-md shadow-lg shadow-[#C9A84C]/15 active:scale-95 transition-all flex items-center justify-center gap-2"
                       >
-                        {isDeclined
-                          ? "🎉 CHANGE TO YES! I'LL BE THERE"
-                          : "YES, I'LL BE THERE"}
+                        <span>📅</span> ADD TO CALENDAR
                       </button>
-
-                      {/* Secondary Buttons Row: Can't Make It + Add to Calendar */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                    ) : (
+                      <>
+                        {/* Primary RSVP Button */}
                         <button
-                          onClick={(e) => { e.stopPropagation(); onSelectNo() }}
-                          className="w-full py-2.5 px-3 glass border border-white/20 text-[#F5ECD7]/80 hover:text-white hover:border-white/40 font-sans font-medium text-[11px] sm:text-xs tracking-[0.14em] uppercase rounded-md active:scale-95 transition-all opacity-90 hover:opacity-100 flex items-center justify-center"
+                          onClick={(e) => { e.stopPropagation(); onSelectYes() }}
+                          className="w-full py-2.5 sm:py-3 px-5 bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white font-sans font-bold text-xs sm:text-sm tracking-[0.18em] uppercase rounded-md shadow-xl shadow-[#C9A84C]/30 hover:brightness-110 active:scale-95 transition-all"
                         >
                           {isDeclined
-                            ? "SORRY, STILL CAN'T MAKE IT"
-                            : "SORRY, CAN'T MAKE IT"}
+                            ? "🎉 CHANGE TO YES! I'LL BE THERE"
+                            : "YES, I'LL BE THERE"}
                         </button>
 
-                        <button
-                          onClick={handleCalendar}
-                          className="w-full py-2.5 px-3 glass border border-[#C9A84C]/50 hover:border-[#C9A84C] text-[#C9A84C] hover:text-[#FCE18F] bg-[#C9A84C]/10 hover:bg-[#C9A84C]/20 font-sans font-semibold text-[11px] sm:text-xs tracking-[0.14em] uppercase rounded-md active:scale-95 transition-all flex items-center justify-center gap-1.5"
-                        >
-                          <span>📅</span> ADD TO CALENDAR
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
+                        {/* Secondary Buttons Row: Can't Make It + Add to Calendar */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onSelectNo() }}
+                            className="w-full py-2 px-3 glass border border-white/20 text-[#F5ECD7]/80 hover:text-white hover:border-white/40 font-sans font-medium text-[11px] sm:text-xs tracking-[0.14em] uppercase rounded-md active:scale-95 transition-all opacity-90 hover:opacity-100 flex items-center justify-center"
+                          >
+                            {isDeclined
+                              ? "SORRY, STILL CAN'T MAKE IT"
+                              : "SORRY, CAN'T MAKE IT"}
+                          </button>
 
-                {/* Sign-off */}
-                <p className="font-serif italic text-xs sm:text-[13px] text-[#FCE18F]/80 mt-3 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                  {isDiwali ? 'Warmly, The Khandelwal Family' : 'Warmly, Tanvi'}
-                </p>
-
-                {/* ── DIGITAL COUNTDOWN CLOCK STRUCTURE DOWN THERE ── */}
-                <div className="w-full max-w-sm sm:max-w-md mx-auto mt-3.5 mb-1 flex flex-col items-center select-none">
-                  {/* Pulsing micro-badge */}
-                  <div className="flex items-center gap-1.5 mb-1.5 px-3 py-0.5 rounded-full bg-[#C9A84C]/10 border border-[#C9A84C]/35">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#FCE18F] animate-ping" />
-                    <span className="font-sans text-[9px] sm:text-[10px] tracking-[0.22em] uppercase font-semibold text-[#FCE18F]">
-                      THE SPARKLE BEGINS IN…
-                    </span>
+                          <button
+                            onClick={handleCalendar}
+                            className="w-full py-2 px-3 glass border border-[#C9A84C]/50 hover:border-[#C9A84C] text-[#C9A84C] hover:text-[#FCE18F] bg-[#C9A84C]/10 hover:bg-[#C9A84C]/20 font-sans font-semibold text-[11px] sm:text-xs tracking-[0.14em] uppercase rounded-md active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                          >
+                            <span>📅</span> ADD TO CALENDAR
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
 
-                  {/* Digital Clock Structure Container */}
-                  <div className="flex items-center justify-center gap-1 sm:gap-2 px-3 py-2 rounded-xl border border-[#C9A84C]/60 bg-gradient-to-b from-[#0A1324]/95 via-black/95 to-[#070D18]/95 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.15)]">
-                    {/* DAYS */}
-                    <div className="flex flex-col items-center min-w-[50px] sm:min-w-[62px]">
-                      <div className="relative w-full py-1.5 px-1.5 rounded-md bg-gradient-to-b from-[#141C2B] to-[#0A0F1A] border border-[#C9A84C]/45 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] overflow-hidden">
-                        {/* Horizontal split-flap line */}
-                        <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 pointer-events-none z-10" />
-                        <span
-                          className="font-mono text-xl sm:text-2xl md:text-3xl font-extrabold tracking-wider tabular-nums leading-none z-0"
-                          style={{
-                            background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2BD 50%, #E2BE5A 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            filter: 'drop-shadow(0 0 8px rgba(226,190,90,0.6))',
-                          }}
-                        >
-                          {String(timeLeft.days).padStart(2, '0')}
+                  {/* 5. SIGNOFF AREA */}
+                  <div className="rsvp-area-signoff w-full flex justify-center text-center">
+                    <p className="font-serif italic text-xs sm:text-[13px] text-[#FCE18F]/80 my-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                      {isDiwali ? 'Warmly, The Khandelwal Family' : 'Warmly, Tanvi'}
+                    </p>
+                  </div>
+
+                  {/* 6. CLOCK AREA: DIGITAL COUNTDOWN STRUCTURE */}
+                  <div className="rsvp-area-clock w-full flex flex-col items-center">
+                    <div className="w-full max-w-sm sm:max-w-md mx-auto my-1 flex flex-col items-center select-none">
+                      {/* Pulsing micro-badge */}
+                      <div className="flex items-center gap-1.5 mb-1 px-2.5 py-0.5 rounded-full bg-[#C9A84C]/10 border border-[#C9A84C]/35">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#FCE18F] animate-ping" />
+                        <span className="font-sans text-[8px] sm:text-[10px] tracking-[0.22em] uppercase font-semibold text-[#FCE18F]">
+                          THE SPARKLE BEGINS IN…
                         </span>
                       </div>
-                      <span className="font-sans text-[8px] sm:text-[9px] tracking-[0.2em] uppercase font-bold text-[#C9A84C] mt-1">
-                        DAYS
-                      </span>
-                    </div>
 
-                    {/* Separator Colon */}
-                    <span className="text-[#FCE18F] text-base sm:text-xl font-bold pb-3.5 animate-pulse">:</span>
+                      {/* Digital Clock Structure Container */}
+                      <div className="flex items-center justify-center gap-1 sm:gap-2 px-2.5 py-1.5 sm:py-2 rounded-xl border border-[#C9A84C]/60 bg-gradient-to-b from-[#0A1324]/95 via-black/95 to-[#070D18]/95 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.15)]">
+                        {/* DAYS */}
+                        <div className="flex flex-col items-center min-w-[44px] sm:min-w-[58px]">
+                          <div className="relative w-full py-1 sm:py-1.5 px-1.5 rounded-md bg-gradient-to-b from-[#141C2B] to-[#0A0F1A] border border-[#C9A84C]/45 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] overflow-hidden">
+                            <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 pointer-events-none z-10" />
+                            <span
+                              className="font-mono text-lg sm:text-2xl font-extrabold tracking-wider tabular-nums leading-none z-0"
+                              style={{
+                                background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2BD 50%, #E2BE5A 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                filter: 'drop-shadow(0 0 8px rgba(226,190,90,0.6))',
+                              }}
+                            >
+                              {String(timeLeft.days).padStart(2, '0')}
+                            </span>
+                          </div>
+                          <span className="font-sans text-[8px] sm:text-[9px] tracking-[0.2em] uppercase font-bold text-[#C9A84C] mt-1">
+                            DAYS
+                          </span>
+                        </div>
 
-                    {/* HOURS */}
-                    <div className="flex flex-col items-center min-w-[50px] sm:min-w-[62px]">
-                      <div className="relative w-full py-1.5 px-1.5 rounded-md bg-gradient-to-b from-[#141C2B] to-[#0A0F1A] border border-[#C9A84C]/45 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] overflow-hidden">
-                        <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 pointer-events-none z-10" />
-                        <span
-                          className="font-mono text-xl sm:text-2xl md:text-3xl font-extrabold tracking-wider tabular-nums leading-none z-0"
-                          style={{
-                            background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2BD 50%, #E2BE5A 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            filter: 'drop-shadow(0 0 8px rgba(226,190,90,0.6))',
-                          }}
-                        >
-                          {String(timeLeft.hours).padStart(2, '0')}
-                        </span>
+                        <span className="text-[#FCE18F] text-sm sm:text-lg font-bold pb-2 animate-pulse">:</span>
+
+                        {/* HOURS */}
+                        <div className="flex flex-col items-center min-w-[44px] sm:min-w-[58px]">
+                          <div className="relative w-full py-1 sm:py-1.5 px-1.5 rounded-md bg-gradient-to-b from-[#141C2B] to-[#0A0F1A] border border-[#C9A84C]/45 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] overflow-hidden">
+                            <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 pointer-events-none z-10" />
+                            <span
+                              className="font-mono text-lg sm:text-2xl font-extrabold tracking-wider tabular-nums leading-none z-0"
+                              style={{
+                                background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2BD 50%, #E2BE5A 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                filter: 'drop-shadow(0 0 8px rgba(226,190,90,0.6))',
+                              }}
+                            >
+                              {String(timeLeft.hours).padStart(2, '0')}
+                            </span>
+                          </div>
+                          <span className="font-sans text-[8px] sm:text-[9px] tracking-[0.2em] uppercase font-bold text-[#C9A84C] mt-1">
+                            HOURS
+                          </span>
+                        </div>
+
+                        <span className="text-[#FCE18F] text-sm sm:text-lg font-bold pb-2 animate-pulse">:</span>
+
+                        {/* MINUTES */}
+                        <div className="flex flex-col items-center min-w-[44px] sm:min-w-[58px]">
+                          <div className="relative w-full py-1 sm:py-1.5 px-1.5 rounded-md bg-gradient-to-b from-[#141C2B] to-[#0A0F1A] border border-[#C9A84C]/45 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] overflow-hidden">
+                            <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 pointer-events-none z-10" />
+                            <span
+                              className="font-mono text-lg sm:text-2xl font-extrabold tracking-wider tabular-nums leading-none z-0"
+                              style={{
+                                background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2BD 50%, #E2BE5A 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                filter: 'drop-shadow(0 0 8px rgba(226,190,90,0.6))',
+                              }}
+                            >
+                              {String(timeLeft.minutes).padStart(2, '0')}
+                            </span>
+                          </div>
+                          <span className="font-sans text-[8px] sm:text-[9px] tracking-[0.2em] uppercase font-bold text-[#C9A84C] mt-1">
+                            MINS
+                          </span>
+                        </div>
+
+                        <span className="text-[#FCE18F] text-sm sm:text-lg font-bold pb-2 animate-pulse">:</span>
+
+                        {/* SECONDS */}
+                        <div className="flex flex-col items-center min-w-[44px] sm:min-w-[58px]">
+                          <div className="relative w-full py-1 sm:py-1.5 px-1.5 rounded-md bg-gradient-to-b from-[#141C2B] to-[#0A0F1A] border border-[#C9A84C]/45 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] overflow-hidden">
+                            <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 pointer-events-none z-10" />
+                            <span
+                              className="font-mono text-lg sm:text-2xl font-extrabold tracking-wider tabular-nums leading-none z-0"
+                              style={{
+                                background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2BD 50%, #E2BE5A 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                filter: 'drop-shadow(0 0 8px rgba(226,190,90,0.6))',
+                              }}
+                            >
+                              {String(timeLeft.seconds).padStart(2, '0')}
+                            </span>
+                          </div>
+                          <span className="font-sans text-[8px] sm:text-[9px] tracking-[0.2em] uppercase font-bold text-[#C9A84C] mt-1">
+                            SECS
+                          </span>
+                        </div>
                       </div>
-                      <span className="font-sans text-[8px] sm:text-[9px] tracking-[0.2em] uppercase font-bold text-[#C9A84C] mt-1">
-                        HOURS
-                      </span>
-                    </div>
-
-                    {/* Separator Colon */}
-                    <span className="text-[#FCE18F] text-base sm:text-xl font-bold pb-3.5 animate-pulse">:</span>
-
-                    {/* MINUTES */}
-                    <div className="flex flex-col items-center min-w-[50px] sm:min-w-[62px]">
-                      <div className="relative w-full py-1.5 px-1.5 rounded-md bg-gradient-to-b from-[#141C2B] to-[#0A0F1A] border border-[#C9A84C]/45 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] overflow-hidden">
-                        <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 pointer-events-none z-10" />
-                        <span
-                          className="font-mono text-xl sm:text-2xl md:text-3xl font-extrabold tracking-wider tabular-nums leading-none z-0"
-                          style={{
-                            background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2BD 50%, #E2BE5A 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            filter: 'drop-shadow(0 0 8px rgba(226,190,90,0.6))',
-                          }}
-                        >
-                          {String(timeLeft.minutes).padStart(2, '0')}
-                        </span>
-                      </div>
-                      <span className="font-sans text-[8px] sm:text-[9px] tracking-[0.2em] uppercase font-bold text-[#C9A84C] mt-1">
-                        MINS
-                      </span>
-                    </div>
-
-                    {/* Separator Colon */}
-                    <span className="text-[#FCE18F] text-base sm:text-xl font-bold pb-3.5 animate-pulse">:</span>
-
-                    {/* SECONDS */}
-                    <div className="flex flex-col items-center min-w-[50px] sm:min-w-[62px]">
-                      <div className="relative w-full py-1.5 px-1.5 rounded-md bg-gradient-to-b from-[#141C2B] to-[#0A0F1A] border border-[#C9A84C]/45 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] overflow-hidden">
-                        <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 pointer-events-none z-10" />
-                        <span
-                          className="font-mono text-xl sm:text-2xl md:text-3xl font-extrabold tracking-wider tabular-nums leading-none z-0"
-                          style={{
-                            background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2BD 50%, #E2BE5A 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            filter: 'drop-shadow(0 0 8px rgba(226,190,90,0.6))',
-                          }}
-                        >
-                          {String(timeLeft.seconds).padStart(2, '0')}
-                        </span>
-                      </div>
-                      <span className="font-sans text-[8px] sm:text-[9px] tracking-[0.2em] uppercase font-bold text-[#C9A84C] mt-1">
-                        SECS
-                      </span>
                     </div>
                   </div>
+
                 </div>
               </div>
             )}

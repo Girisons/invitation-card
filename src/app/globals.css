@@ -176,3 +176,42 @@ body {
   animation: pulseRing 2s ease-in-out infinite;
 }
 
+/* ── Landscape Widescreen 2-Column Grid for Beat 3 RSVP Screen ── */
+@media (orientation: landscape) {
+  .rsvp-landscape-grid {
+    display: grid !important;
+    grid-template-columns: 1.05fr 0.95fr !important;
+    grid-template-areas:
+      "header venue"
+      "message venue"
+      "clock buttons"
+      "clock signoff" !important;
+    column-gap: 1.25rem !important;
+    row-gap: 0.35rem !important;
+    align-items: center !important;
+    max-width: 920px !important;
+    width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  .rsvp-area-header  { grid-area: header; }
+  .rsvp-area-message { grid-area: message; }
+  .rsvp-area-venue   { grid-area: venue; }
+  .rsvp-area-buttons { grid-area: buttons; }
+  .rsvp-area-signoff { grid-area: signoff; }
+  .rsvp-area-clock   { grid-area: clock; }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .rsvp-landscape-grid {
+    row-gap: 0.2rem !important;
+    column-gap: 1rem !important;
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+  .rsvp-compact-text {
+    font-size: 0.75rem !important;
+    line-height: 1.15rem !important;
+  }
+}
+
