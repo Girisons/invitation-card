@@ -46,10 +46,8 @@ export default function VideoScreen({
   const endTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [showRsvpPrompt, setShowRsvpPrompt] = useState(false)
   const onStartRef = useRef(onStart)
-  const hedgeOverlayRef = useRef<HTMLDivElement>(null)
   const festiveOverlayRef = useRef<HTMLDivElement>(null)
   const stageOverlayRef = useRef<HTMLDivElement>(null)
-  const soulOverlayRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     onStartRef.current = onStart
@@ -278,33 +276,6 @@ export default function VideoScreen({
           }
         }
 
-        // 3. Upper LED screen above band (31.0s - 32.6s): WHERE MUSIC MEETS THE SOUL
-        const soulEl = soulOverlayRef.current
-        if (soulEl) {
-          if (t < 31.0 || t > 32.6 || video.paused) {
-            if (t < 31.0 || t > 32.6) {
-              soulEl.style.opacity = '0'
-            }
-          } else {
-            let opacity = 1
-            let fadeUpY = 0
-            if (t < 31.3) {
-              opacity = Math.max(0, Math.min(1, (t - 31.0) / 0.3))
-            } else if (t > 32.1) {
-              const outProg = Math.max(0, Math.min(1, (t - 32.1) / 0.45))
-              opacity = 1 - outProg
-              fadeUpY = -outProg * 2.0
-            }
-
-            const soulProg = Math.max(0, Math.min(1, (t - 31.0) / 1.5))
-            const scale = 1.0 + soulProg * 0.04
-            const translateX = 5.4
-            const translateY = -10.2 + fadeUpY
-
-            soulEl.style.opacity = opacity.toFixed(3)
-            soulEl.style.transform = `translate3d(${translateX.toFixed(2)}vw, ${translateY.toFixed(2)}%, 0) scale(${scale.toFixed(3)})`
-          }
-        }
       }
       rafId = requestAnimationFrame(updateSceneTransforms)
     }
@@ -387,7 +358,9 @@ export default function VideoScreen({
   const isPathwayBeat = isMainInvite && videoState === 'playing' && currentTime >= 4.0 && currentTime <= 8.0
   // Hedge Overlay (10.0s - 17.0s) on Main Invite: ARPIT'S 40TH & DIWALI CELEBRATION
   const isHedgeBeat = isMainInvite && videoState === 'playing' && currentTime >= 10.0 && currentTime <= 17.0
-  // Stage LED Backdrop Overlay (40s - 42s) on Main Invite
+  // Band Music Overlay (31.0s - 32.5s) on Main Invite: WHERE MUSIC MEETS THE SOUL
+  const isMusicBeat = isMainInvite && videoState === 'playing' && currentTime >= 31.0 && currentTime <= 32.5
+  // DJ Stage Overlay (40.0s - 42.0s) on Main Invite: WHEN THE NIGHT COMES ALIVE
   const isStageBeat = isMainInvite && videoState === 'playing' && currentTime >= 40.0 && currentTime <= 42.0
   // Beat 3 (RSVP Buttons): only appears 2.5 seconds AFTER video ends (or if explicitly skipped, or immediately if video is unlinked)
   const isBeat3 = !hasVideo || showRsvpPrompt
@@ -793,74 +766,47 @@ export default function VideoScreen({
             </div>
           )}
 
-          {/* ── UPPER LED SCREEN OVERLAY ABOVE BAND (31.0s - 32.5s): WHERE MUSIC MEETS THE SOUL ── */}
-          {isMainInvite && (
-            <div
-              ref={soulOverlayRef}
-              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none px-4 text-center z-20 will-change-transform"
-              style={{
-                opacity: 0,
-                transform: 'translate3d(5.4vw, -10.2%, 0) scale(1.0)',
-              }}
-            >
-              <div
-                className="relative flex flex-col items-center justify-center px-3 py-1.5 rounded-[2px] max-w-[175px] sm:max-w-[215px]"
-                style={{
-                  background: 'radial-gradient(ellipse at center, rgba(30,14,2,0.58) 0%, rgba(30,14,2,0.36) 75%, rgba(0,0,0,0) 100%)',
-                }}
-              >
-                <p
-                  className="font-marcellus text-[10px] sm:text-[13px] font-bold tracking-[0.22em] uppercase leading-snug"
-                  style={{
-                    background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF6D6 45%, #F0C45A 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    filter: 'drop-shadow(0 2px 2px rgba(26,10,0,0.95)) drop-shadow(0 0 4px rgba(0,0,0,0.75))',
-                  }}
-                >
-                  WHERE MUSIC
-                  <span className="block text-[#FCE18F] mt-0.5 tracking-[0.22em]">MEETS THE SOUL</span>
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* ── STAGE LED BACKDROP OVERLAY (40s - 42s): WHEN THE NIGHT COMES ALIVE ── */}
+          {/* ── WHERE MUSIC MEETS THE SOUL (31.0s - 32.5s): CENTERED LIKE ONE NIGHT. TWO REASONS TO CELEBRATE ── */}
           {isMainInvite && (
             <div
               className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 pointer-events-none select-none px-6 text-center z-20 ${
-                isStageBeat ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
+                isMusicBeat ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
               }`}
-              style={{
-                transform: 'translateY(-10%)',
-              }}
             >
-              {/* Top delicate gold stars */}
-              <div className="flex items-center gap-3 text-[#FFF2BD] text-xs sm:text-sm tracking-[0.4em] mb-2 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                <span>✦</span>
-                <span className="text-[10px]">❖</span>
-                <span>✦</span>
-              </div>
-
-              {/* Title: WHEN THE NIGHT COMES ALIVE */}
               <h2
-                className="font-marcellus text-2xl sm:text-4xl md:text-5xl font-bold tracking-[0.18em] uppercase max-w-4xl leading-tight px-4"
+                className="font-marcellus text-2xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase max-w-4xl leading-tight px-4"
                 style={{
-                  background: 'linear-gradient(180deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #8C6314 100%)',
+                  background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
                 }}
               >
-                WHEN THE NIGHT COMES ALIVE
+                <span className="block sm:inline">WHERE MUSIC </span>
+                <span className="block sm:inline">MEETS THE SOUL</span>
               </h2>
+            </div>
+          )}
 
-              {/* Gold underline */}
-              <div className="flex items-center justify-center w-44 sm:w-64 mt-3 opacity-85">
-                <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#FFF2BD] to-transparent shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FFF2BD] mx-2 shadow-[0_0_6px_rgba(201,168,76,0.8)]" />
-                <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#FFF2BD] to-transparent shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
-              </div>
+          {/* ── WHEN THE NIGHT COMES ALIVE (40.0s - 42.0s): CENTERED LIKE ONE NIGHT. TWO REASONS TO CELEBRATE ── */}
+          {isMainInvite && (
+            <div
+              className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 pointer-events-none select-none px-6 text-center z-20 ${
+                isStageBeat ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
+              }`}
+            >
+              <h2
+                className="font-marcellus text-2xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase max-w-4xl leading-tight px-4"
+                style={{
+                  background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
+                }}
+              >
+                <span className="block sm:inline">WHEN THE NIGHT </span>
+                <span className="block sm:inline">COMES ALIVE</span>
+              </h2>
             </div>
           )}
 
