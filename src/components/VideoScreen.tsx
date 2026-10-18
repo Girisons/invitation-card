@@ -1009,7 +1009,7 @@ export default function VideoScreen({
                       ? "✦ COUNTDOWN IS ON • CAN'T WAIT TO CELEBRATE ✦"
                       : isDeclined
                       ? "✦ A SPECIAL REQUEST • WE TRULY MISS YOU ✦"
-                      : "✦ CORDIALLY INVITED • JOIN THE CELEBRATION ✦"}
+                      : "✦ RSVP PENDING • STILL WAITING FOR YOUR REPLY ✦"}
                   </span>
                 </div>
 
@@ -1043,19 +1043,28 @@ export default function VideoScreen({
                     </p>
                   </div>
                 ) : (
-                  <p className="font-serif italic text-xs sm:text-sm md:text-[15px] text-[#F5ECD7]/95 max-w-lg leading-relaxed mb-3.5 px-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
+                  <div className="font-serif italic text-xs sm:text-sm md:text-[15px] text-[#F5ECD7]/95 max-w-lg leading-relaxed mb-3.5 px-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
                     {isAttending ? (
-                      'You confirmed your presence, and our hearts are full! The Khandelwal family is eagerly waiting to celebrate the Festival of Lights with you.'
+                      <p>'You confirmed your presence, and our hearts are full! The Khandelwal family is eagerly waiting to celebrate the Festival of Lights with you.'</p>
                     ) : isDeclined ? (
-                      isDiwali
-                        ? 'We know you had other commitments earlier, but our Diwali celebration truly won’t feel complete without you. We warmly request you to please reconsider and change your mind to celebrate with the Khandelwal family!'
-                        : "We noticed you couldn't make it earlier, but this milestone celebration truly won't feel complete without you! We warmly request you to please reconsider and change your mind — it would mean the world to celebrate together!"
+                      <p>
+                        {isDiwali
+                          ? 'We know you had other commitments earlier, but our Diwali celebration truly won’t feel complete without you. We warmly request you to please reconsider and change your mind to celebrate with the Khandelwal family!'
+                          : "We noticed you couldn't make it earlier, but this milestone celebration truly won't feel complete without you! We warmly request you to please reconsider and change your mind — it would mean the world to celebrate together!"}
+                      </p>
                     ) : (
-                      isDiwali
-                        ? 'The Khandelwal family cordially requests the honor of your gracious presence to celebrate our Grand Diwali Party. Please let us know if you will celebrate with us!'
-                        : "We warmly request the honor of your gracious presence to celebrate Arpit's 40th milestone & Diwali festivities. Please let us know if you will be celebrating with us!"
+                      <div>
+                        <p>
+                          {isDiwali
+                            ? 'The night won\u2019t be the same without you. The Grand Diwali Celebration is waiting for you \u2014 join us for an unforgettable evening.'
+                            : 'The night won\u2019t be the same without you. Arpit\u2019s 40th \u00d7 Diwali bash is waiting for you \u2014 join us for an unforgettable evening.'}
+                        </p>
+                        <p className="font-sans font-semibold text-[11px] sm:text-xs tracking-wide text-[#FCE18F] not-italic mt-1.5">
+                          Still waiting for your RSVP replies!
+                        </p>
+                      </div>
                     )}
-                  </p>
+                  </div>
                 )}
 
                 {/* Royal Venue, Date & Time Glass Plaque - EXPANDED */}
