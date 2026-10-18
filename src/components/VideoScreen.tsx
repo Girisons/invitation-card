@@ -228,7 +228,7 @@ export default function VideoScreen({
       if (video) {
         const t = video.currentTime
 
-        // 1. 40 & Festive (19.0s - 22.0s): moves along with camera and fades
+        // 1. More Meaningful Because of You (19.0s - 22.0s): moves along with camera and fades
         const festiveEl = festiveOverlayRef.current
         if (festiveEl) {
           if (t < 19.0 || t > 22.0 || video.paused) {
@@ -722,7 +722,7 @@ export default function VideoScreen({
             </div>
           )}
 
-          {/* ── 40 & FESTIVE OVERLAY (19.0s - 22.0s): MOVES ALONG CAMERA & FADES ── */}
+          {/* ── MORE MEANINGFUL BECAUSE OF YOU OVERLAY (19.0s - 22.0s): MOVES ALONG CAMERA & FADES ── */}
           {isMainInvite && (
             <div
               ref={festiveOverlayRef}
@@ -733,7 +733,7 @@ export default function VideoScreen({
               }}
             >
               <h2
-                className="font-marcellus text-3xl sm:text-5xl md:text-6xl font-bold tracking-[0.18em] uppercase max-w-4xl leading-tight px-4"
+                className="font-marcellus text-2xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase max-w-4xl leading-tight px-4"
                 style={{
                   background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
                   WebkitBackgroundClip: 'text',
@@ -741,7 +741,8 @@ export default function VideoScreen({
                   filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
                 }}
               >
-                {isDiwaliEvent ? 'FESTIVE LIGHTS' : '40 & FESTIVE'}
+                <span className="block sm:inline">MORE MEANINGFUL </span>
+                <span className="block sm:inline">BECAUSE OF YOU</span>
               </h2>
             </div>
           )}
