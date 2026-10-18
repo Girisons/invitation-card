@@ -362,8 +362,8 @@ export default function VideoScreen({
   const isBeat2 = videoState !== 'ended' && currentTime >= beat1End && currentTime < beat2End
   // Pathway Overlay (04s - 08s) on Main Invite
   const isPathwayBeat = isMainInvite && videoState === 'playing' && currentTime >= 4.0 && currentTime <= 8.0
-  // Hedge Overlay (10.0s - 18.8s) on Main Invite: 40 & FESTIVE
-  const isHedgeBeat = isMainInvite && videoState === 'playing' && currentTime >= 10.0 && currentTime <= 18.8
+  // Hedge Overlay (10.0s - 17.0s) on Main Invite: ARPIT'S 40TH & DIWALI CELEBRATION
+  const isHedgeBeat = isMainInvite && videoState === 'playing' && currentTime >= 10.0 && currentTime <= 17.0
   // Stage LED Backdrop Overlay (40s - 42s) on Main Invite
   const isStageBeat = isMainInvite && videoState === 'playing' && currentTime >= 40.0 && currentTime <= 42.0
   // Beat 3 (RSVP Buttons): only appears 2.5 seconds AFTER video ends (or if explicitly skipped, or immediately if video is unlinked)
@@ -683,7 +683,7 @@ export default function VideoScreen({
             </div>
           )}
 
-          {/* ── CELEBRATION TITLE OVERLAY (10.0s - 18.8s): ARPIT'S 40TH & DIWALI CELEBRATION (SAME AS 2ND IMAGE ONLY) ── */}
+          {/* ── CELEBRATION TITLE OVERLAY (10.0s - 17.0s): ARPIT'S 40TH & DIWALI CELEBRATION (SAME AS 2ND IMAGE ONLY) ── */}
           {isMainInvite && (
             <div
               className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-1000 pointer-events-none select-none px-6 text-center z-20 ${
