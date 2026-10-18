@@ -39,6 +39,8 @@ export default function VideoScreen({
   const [soundMuted, setSoundMuted] = useState(false)
   const [hasTappedSound, setHasTappedSound] = useState(false)
   const [soundPromptVisible, setSoundPromptVisible] = useState(true)
+  const [rotatePromptActive, setRotatePromptActive] = useState(true)
+  const [rotateCountdown, setRotateCountdown] = useState(5)
   const startedRef = useRef(false)
   const endedCalledRef = useRef(false)
   const endTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -61,6 +63,49 @@ export default function VideoScreen({
   const isDiwaliEvent = Boolean(isDiwali || isDiwaliSaveDate || (inviteType && inviteType.includes('diwali')))
   const isSaveDate = Boolean(isSaveTheDate || isDiwaliSaveDate || inviteType === 'save_date' || inviteType === 'std' || inviteType === 'save-the-date')
   const isMainInvite = !isSaveDate
+
+  // Show 5-sec rotate phone prompt before TAP TO ENTER on initial load (Main Invite only)
+  useEffect(() => {
+    if (!active || !isMainInvite) {
+      setRotatePromptActive(false)
+      return
+    }
+
+    setRotatePromptActive(true)
+    setRotateCountdown(5)
+  }, [active, isMainInvite])
+
+  // Countdown timer and live physical rotation detection
+  useEffect(() => {
+    if (!rotatePromptActive) return
+
+    const handleOrientationChange = () => {
+      // If mobile device is physically rotated to landscape, dismiss immediately
+      if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerWidth <= 900) {
+        setRotatePromptActive(false)
+      }
+    }
+
+    window.addEventListener('resize', handleOrientationChange)
+    window.addEventListener('orientationchange', handleOrientationChange)
+
+    const timer = setInterval(() => {
+      setRotateCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          setRotatePromptActive(false)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('resize', handleOrientationChange)
+      window.removeEventListener('orientationchange', handleOrientationChange)
+    }
+  }, [rotatePromptActive])
   const targetUrl = customVideoUrl || (isSaveDate ? (isDiwaliEvent ? '/videos/save-the-date-diwali.mp4' : '/videos/save-the-date.mp4') : '/videos/main-invite.mp4')
   const hasVideo = Boolean(targetUrl && targetUrl.trim().length > 0)
   const hasBurnedText = isSaveDate
@@ -388,6 +433,89 @@ export default function VideoScreen({
           isBeat3 ? 'opacity-100' : 'opacity-0'
         }`}
       />
+
+      {/* ── 5-SECOND LUXURY ROTATE PHONE SCREEN (BEFORE TAP TO ENTER - MAIN INVITE ONLY) ── */}
+      {hasVideo && soundPromptVisible && rotatePromptActive && isMainInvite && (
+        <div
+          onClick={() => setRotatePromptActive(false)}
+          className="absolute inset-0 z-[60] flex flex-col items-center justify-between p-6 sm:p-10 cursor-pointer select-none transition-all duration-700 animate-fadeIn"
+          style={{
+            background: 'radial-gradient(ellipse at center, rgba(15,28,52,0.98) 0%, rgba(5,13,26,0.99) 70%, #050D1A 100%)'
+          }}
+        >
+          {/* Top balance spacer */}
+          <div className="w-full h-4 sm:h-8" />
+
+          {/* Centerpiece: Animated 3D Gold Rotating Phone */}
+          <div className="flex flex-col items-center justify-center my-auto">
+            <div className="relative w-44 h-44 flex items-center justify-center mb-5">
+              {/* Glowing circular backdrop pulse */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#C9A84C]/15 via-[#FFF0BD]/20 to-[#C9A84C]/10 blur-2xl animate-pulse-ring pointer-events-none" />
+
+              {/* Orbiting circular dashed ring */}
+              <svg className="absolute inset-0 w-full h-full text-[#C9A84C]/40 animate-spin" style={{ animationDuration: '10s' }} viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="1.2" strokeDasharray="6 8" fill="none" />
+              </svg>
+
+              {/* The Rotating Gold Smartphone */}
+              <div className="relative w-20 h-36 rounded-2xl border-2 border-[#C9A84C] bg-gradient-to-b from-[#13223A] to-[#08101D] shadow-[0_0_30px_rgba(201,168,76,0.4),inset_0_0_15px_rgba(201,168,76,0.2)] flex flex-col items-center justify-between p-2 animate-rotate-phone">
+                {/* Speaker slit & Camera notch */}
+                <div className="w-6 h-1 rounded-full bg-[#C9A84C]/70" />
+
+                {/* Screen preview showing 16:9 landscape aspect ratio frame */}
+                <div className="w-full flex-1 my-1.5 rounded-lg border border-[#C9A84C]/40 bg-[#050D1A]/90 flex flex-col items-center justify-center p-1 relative overflow-hidden">
+                  <div className="text-[16px]">🎬</div>
+                  <span className="text-[9px] font-marcellus text-[#E8D5A3] tracking-widest mt-1 font-bold">16:9</span>
+                </div>
+
+                {/* Home Indicator line */}
+                <div className="w-8 h-1 rounded-full bg-[#C9A84C]/70" />
+              </div>
+            </div>
+
+            {/* Title: PLEASE ROTATE YOUR PHONE */}
+            <h1
+              className="font-marcellus text-2xl sm:text-4xl font-bold tracking-[0.12em] uppercase text-center mb-2 leading-tight px-4"
+              style={{
+                background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF0BD 35%, #E2B755 75%, #9C6F16 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                filter: 'drop-shadow(0 3px 2px rgba(0,0,0,0.95)) drop-shadow(0 -1px 0.8px rgba(255,247,208,0.5))',
+              }}
+            >
+              PLEASE ROTATE YOUR PHONE
+            </h1>
+
+            {/* Subtitle */}
+            <p className="font-marcellus text-xs sm:text-sm text-[#F5ECD7]/80 text-center tracking-wider max-w-xs px-2 leading-relaxed">
+              Turn your device to landscape for the best widescreen experience
+            </p>
+          </div>
+
+          {/* Bottom Countdown & Skip Button */}
+          <div className="pb-4 sm:pb-8 flex flex-col items-center gap-3 w-full max-w-xs">
+            {/* Countdown Badge */}
+            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#C9A84C]/40 bg-[#0A1931]/80 backdrop-blur-md">
+              <span className="text-[#C9A84C] text-xs">⏳</span>
+              <span className="font-sans text-[11px] tracking-[0.2em] uppercase text-[#F5ECD7] font-semibold">
+                Opening in {rotateCountdown}s...
+              </span>
+            </div>
+
+            {/* Tap to Skip */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setRotatePromptActive(false)
+              }}
+              className="text-[#C9A84C]/70 hover:text-[#C9A84C] text-[11px] font-marcellus tracking-[0.25em] uppercase underline underline-offset-4 transition-colors"
+            >
+              Continue ➔
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── EMBOSSED GATE SCREEN (DESIGN 1: GOLD MARCELLUS) ── */}
       {hasVideo && soundPromptVisible && (
