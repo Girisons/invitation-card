@@ -36,28 +36,28 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://khandelwalinvite.vercel.app'),
-  title: "Arpit's 40th & Diwali Bash",
-  description: 'Invitation - Tap to open',
+  title: "The Night Awaits — Arpit's 40th & Diwali Celebration",
+  description: 'Personal Video Invitation • Tap to open',
   openGraph: {
-    title: "Arpit's 40th & Diwali Bash",
-    description: 'Invitation - Tap to open',
+    title: "The Night Awaits — Arpit's 40th & Diwali Celebration",
+    description: 'Personal Video Invitation • Tap to open',
     url: 'https://khandelwalinvite.vercel.app',
-    siteName: "Arpit's 40th & Diwali Bash",
+    siteName: "Arpit's 40th & Diwali Celebration",
     images: [
       {
-        url: 'https://khandelwalinvite.vercel.app/og.jpg',
+        url: 'https://khandelwalinvite.vercel.app/og-main.jpg?v=1',
         width: 1200,
         height: 630,
         type: 'image/jpeg',
-        alt: "Arpit's 40th & Diwali Bash Invitation",
+        alt: "Arpit's 40th & Diwali Celebration Invitation",
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: "Arpit's 40th & Diwali Bash",
-    description: 'Invitation - Tap to open',
-    images: ['https://khandelwalinvite.vercel.app/og.jpg'],
+    title: "The Night Awaits — Arpit's 40th & Diwali Celebration",
+    description: 'Personal Video Invitation • Tap to open',
+    images: ['https://khandelwalinvite.vercel.app/og-main.jpg?v=1'],
   },
   robots: 'noindex, nofollow',
 }

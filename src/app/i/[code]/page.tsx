@@ -44,14 +44,41 @@ export async function generateMetadata({ params, searchParams }: Props) {
   const rawType = Array.isArray(sParams.type) ? sParams.type[0] : sParams.type
   const rawMode = Array.isArray(sParams.mode) ? sParams.mode[0] : sParams.mode
   const inviteType = (rawType || rawMode || '').toLowerCase()
-  const isDiwali = inviteType.includes('diwali')
 
-  const title = isDiwali ? "Grand Diwali Party Celebration" : "Arpit's 40th & Diwali Bash"
-  const description = isDiwali ? 'Diwali Invitation - Tap to open' : 'Invitation - Tap to open'
-  const ogImageUrl = isDiwali
-    ? 'https://khandelwalinvite.vercel.app/og-diwali.jpg?v=2'
-    : 'https://khandelwalinvite.vercel.app/og.jpg'
-  const pageUrl = `https://khandelwalinvite.vercel.app/i/${code}${isDiwali ? `?type=${inviteType}` : ''}`
+  const isDiwaliSaveDate = inviteType === 'save_date_diwali' || inviteType === 'std_diwali' || inviteType === 'diwali' || inviteType === 'save-date-diwali'
+  const isDiwaliMain = inviteType === 'main_diwali' || inviteType === 'invite_diwali' || inviteType === 'diwali_main' || inviteType === 'diwali_invite'
+  const isDiwali = isDiwaliSaveDate || isDiwaliMain
+  const isSaveTheDate = isDiwaliSaveDate || inviteType === 'save_date' || inviteType === 'std' || inviteType === 'save-the-date'
+
+  let title = "The Night Awaits — Arpit's 40th & Diwali Celebration"
+  let description = "Personal Video Invitation • Tap to open"
+  let ogImageUrl = "https://khandelwalinvite.vercel.app/og-main.jpg?v=1"
+
+  if (isSaveTheDate) {
+    if (isDiwali) {
+      title = "Grand Diwali Party Celebration"
+      description = "Diwali Invitation - Tap to open"
+      ogImageUrl = "https://khandelwalinvite.vercel.app/og-diwali.jpg?v=2"
+    } else {
+      title = "Arpit's 40th & Diwali Bash"
+      description = "Invitation - Tap to open"
+      ogImageUrl = "https://khandelwalinvite.vercel.app/og.jpg"
+    }
+  } else {
+    // Main Invite
+    if (isDiwali) {
+      title = "The Night Awaits — Khandelwal Diwali Celebration"
+      description = "Personal Video Invitation • Tap to open"
+      ogImageUrl = "https://khandelwalinvite.vercel.app/og-diwali-main.jpg?v=1"
+    } else {
+      title = "The Night Awaits — Arpit's 40th & Diwali Celebration"
+      description = "Personal Video Invitation • Tap to open"
+      ogImageUrl = "https://khandelwalinvite.vercel.app/og-main.jpg?v=1"
+    }
+  }
+
+  const queryParam = rawType ? `?type=${rawType}` : rawMode ? `?mode=${rawMode}` : ''
+  const pageUrl = `https://khandelwalinvite.vercel.app/i/${code}${queryParam}`
 
   return {
     metadataBase: new URL('https://khandelwalinvite.vercel.app'),
