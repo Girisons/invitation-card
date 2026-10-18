@@ -952,9 +952,9 @@ export default function VideoScreen({
               </div>
             ) : (
               /* ── MAIN INVITATION PERSONALIZED RSVP CLIMAX ── */
-              <div className="relative w-full max-w-md mx-auto flex flex-col items-center text-center px-4 py-2 z-20 overflow-y-auto max-h-[92vh]">
+              <div className="relative w-full max-w-xl mx-auto flex flex-col items-center text-center px-3 sm:px-6 py-2 z-20 overflow-y-auto max-h-[92vh]">
                 {/* Dynamic Status Micro-Badge */}
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#C9A84C]/50 bg-[#050D1A]/90 backdrop-blur-md mb-2 shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
+                <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full border border-[#C9A84C]/50 bg-[#050D1A]/90 backdrop-blur-md mb-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
                   <span className="text-[10px] sm:text-xs tracking-[0.22em] uppercase font-semibold text-[#FCE18F]">
                     {isAttending
                       ? "✦ COUNTDOWN IS ON • CAN'T WAIT TO CELEBRATE ✦"
@@ -966,19 +966,19 @@ export default function VideoScreen({
 
                 {/* Personalized Guest Name */}
                 <h2
-                  className="font-marcellus text-xl sm:text-2xl md:text-3xl font-bold tracking-[0.14em] uppercase leading-tight mb-1"
+                  className="font-marcellus text-2xl sm:text-3xl md:text-4xl font-bold tracking-[0.16em] uppercase leading-tight mb-2"
                   style={{
                     background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
-                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.95)) drop-shadow(0 0 12px rgba(212,175,55,0.4))',
+                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.95)) drop-shadow(0 0 14px rgba(212,175,55,0.45))',
                   }}
                 >
                   {guestName ? `DEAR ${formatGuestTitleCase(guestName).toUpperCase()}` : 'DEAR HONORED GUEST'}
                 </h2>
 
                 {/* Dynamic Personalized Message based on Save The Date Reply */}
-                <p className="font-serif italic text-xs sm:text-[13px] md:text-sm text-[#F5ECD7]/90 max-w-sm leading-relaxed mb-2.5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
+                <p className="font-serif italic text-xs sm:text-sm md:text-[15px] text-[#F5ECD7]/95 max-w-lg leading-relaxed mb-3.5 px-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
                   {isAttending ? (
                     isDiwali
                       ? 'You confirmed your presence, and our hearts are full! The Khandelwal family is eagerly waiting to celebrate the Festival of Lights with you.'
@@ -994,20 +994,20 @@ export default function VideoScreen({
                   )}
                 </p>
 
-                {/* Royal Venue, Date & Time Glass Plaque */}
-                <div className="relative w-full px-3.5 py-2.5 rounded-lg border border-[#C9A84C]/50 bg-gradient-to-b from-black/85 via-black/75 to-black/90 backdrop-blur-md shadow-[0_8px_24px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.15)] flex flex-col items-center mb-2.5">
+                {/* Royal Venue, Date & Time Glass Plaque - EXPANDED */}
+                <div className="relative w-full max-w-lg px-4 sm:px-6 py-3.5 sm:py-4 rounded-xl border border-[#C9A84C]/50 bg-gradient-to-b from-black/85 via-black/75 to-black/90 backdrop-blur-md shadow-[0_8px_24px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.15)] flex flex-col items-center mb-3">
                   {/* Date & Time Header */}
-                  <div className="flex flex-wrap items-center justify-center gap-1.5 text-[#FCE18F] font-marcellus text-[11px] sm:text-xs tracking-[0.14em] uppercase font-bold">
+                  <div className="flex flex-wrap items-center justify-center gap-2 text-[#FCE18F] font-marcellus text-xs sm:text-[13px] tracking-[0.16em] uppercase font-bold">
                     <span>🗓️ FRIDAY, OCT 23, 2026</span>
                     <span className="text-[#C9A84C]/60">•</span>
                     <span>⏰ 8:00 PM ONWARDS</span>
                   </div>
 
-                  <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-[#C9A84C]/60 to-transparent my-1.5" />
+                  <div className="h-[1px] w-28 bg-gradient-to-r from-transparent via-[#C9A84C]/60 to-transparent my-2" />
 
                   {/* Venue Name */}
                   <h3
-                    className="font-marcellus text-sm sm:text-base font-bold tracking-[0.14em] uppercase"
+                    className="font-marcellus text-base sm:text-lg font-bold tracking-[0.16em] uppercase"
                     style={{
                       background: 'linear-gradient(135deg, #FFFFFF 0%, #FFF2BD 40%, #E2BE5A 100%)',
                       WebkitBackgroundClip: 'text',
@@ -1019,7 +1019,7 @@ export default function VideoScreen({
                   </h3>
 
                   {/* Venue Address */}
-                  <p className="text-[10px] sm:text-[11px] text-[#F5ECD7]/80 font-sans tracking-wide mt-0.5 leading-snug">
+                  <p className="text-[11px] sm:text-xs text-[#F5ECD7]/85 font-sans tracking-wide mt-0.5 leading-snug">
                     Near RAJASTHALI RESORT &amp; SPA, Kukas, Delhi Road, Jaipur
                   </p>
 
@@ -1029,24 +1029,50 @@ export default function VideoScreen({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-sans font-medium text-[#FCE18F] hover:text-white underline decoration-[#C9A84C]/60 underline-offset-4 tracking-wider transition-colors"
+                    className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#C9A84C]/15 border border-[#C9A84C]/40 text-[11px] sm:text-xs font-sans font-medium text-[#FCE18F] hover:bg-[#C9A84C]/30 hover:text-white tracking-wider transition-all"
                   >
                     <span>📍</span> Open in Google Maps ➔
                   </a>
                 </div>
 
-                {/* Action Button: Calendar Only */}
-                <div className="flex flex-col gap-2 w-full max-w-xs">
+                {/* Dynamic Action Buttons - EXPANDED */}
+                <div className="flex flex-col gap-2.5 w-full max-w-lg">
+                  {/* Primary RSVP Button */}
                   <button
-                    onClick={handleCalendar}
-                    className="w-full py-2.5 px-4 glass border border-[#C9A84C]/50 text-[#C9A84C] font-sans font-semibold text-[11px] sm:text-xs tracking-[0.16em] uppercase rounded-sm hover:bg-[#C9A84C]/15 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    onClick={(e) => { e.stopPropagation(); onSelectYes() }}
+                    className="w-full py-3.5 px-6 bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white font-sans font-bold text-xs sm:text-sm tracking-[0.18em] uppercase rounded-md shadow-xl shadow-[#C9A84C]/30 hover:brightness-110 active:scale-95 transition-all"
                   >
-                    <span>📅</span> ADD TO CALENDAR
+                    {isAttending
+                      ? "✨ RECONFIRM / I'LL BE THERE"
+                      : isDeclined
+                      ? "🎉 CHANGE TO YES! I'LL BE THERE"
+                      : "YES, I'LL BE THERE"}
                   </button>
+
+                  {/* Secondary Buttons Row: Can't Make It + Add to Calendar */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onSelectNo() }}
+                      className="w-full py-2.5 px-3 glass border border-white/20 text-[#F5ECD7]/80 hover:text-white hover:border-white/40 font-sans font-medium text-[11px] sm:text-xs tracking-[0.14em] uppercase rounded-md active:scale-95 transition-all opacity-90 hover:opacity-100 flex items-center justify-center"
+                    >
+                      {isAttending
+                        ? "CAN NO LONGER MAKE IT?"
+                        : isDeclined
+                        ? "SORRY, STILL CAN'T MAKE IT"
+                        : "SORRY, CAN'T MAKE IT"}
+                    </button>
+
+                    <button
+                      onClick={handleCalendar}
+                      className="w-full py-2.5 px-3 glass border border-[#C9A84C]/50 hover:border-[#C9A84C] text-[#C9A84C] hover:text-[#FCE18F] bg-[#C9A84C]/10 hover:bg-[#C9A84C]/20 font-sans font-semibold text-[11px] sm:text-xs tracking-[0.14em] uppercase rounded-md active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <span>📅</span> ADD TO CALENDAR
+                    </button>
+                  </div>
                 </div>
 
                 {/* Sign-off */}
-                <p className="font-serif italic text-xs text-[#FCE18F]/75 mt-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                <p className="font-serif italic text-xs sm:text-[13px] text-[#FCE18F]/80 mt-3 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                   {isDiwali ? 'Warmly, The Khandelwal Family' : 'Warmly, Arpit & Tanvi'}
                 </p>
               </div>
