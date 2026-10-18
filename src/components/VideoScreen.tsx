@@ -493,7 +493,7 @@ export default function VideoScreen({
 
             {/* Subtitle */}
             <p className="font-marcellus text-xs sm:text-sm text-[#F5ECD7]/80 text-center tracking-wider max-w-xs px-2 leading-relaxed">
-              Turn your device to landscape for the full widescreen royal celebration
+              Turn your device to landscape for the best widescreen experience
             </p>
           </div>
 
@@ -522,7 +522,7 @@ export default function VideoScreen({
         </div>
       )}
 
-      {/* ── EMBOSSED GATE SCREEN (DESIGN 1: ROYAL MARCELLUS) ── */}
+      {/* ── EMBOSSED GATE SCREEN (DESIGN 1: GOLD MARCELLUS) ── */}
       {hasVideo && soundPromptVisible && (
         <div
           onClick={handleUserInteraction}
