@@ -1153,7 +1153,7 @@ export default function VideoScreen({
                   <div className="flex items-center gap-1.5 mb-1.5 px-3 py-0.5 rounded-full bg-[#C9A84C]/10 border border-[#C9A84C]/35">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#FCE18F] animate-ping" />
                     <span className="font-sans text-[9px] sm:text-[10px] tracking-[0.22em] uppercase font-semibold text-[#FCE18F]">
-                      TIME LEFT FOR GRAND CELEBRATION
+                      THE SPARKLE BEGINS IN…
                     </span>
                   </div>
 
