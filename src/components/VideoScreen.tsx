@@ -221,6 +221,7 @@ export default function VideoScreen({
     const handleEnded = () => {
       if (endedCalledRef.current) return
       endedCalledRef.current = true
+      video.pause()
       setVideoState('ended')
 
       // User constraint: Wait 2.5 seconds after video ends before presenting RSVP buttons
@@ -321,10 +322,24 @@ export default function VideoScreen({
     }
   }, [active, targetUrl, hasVideo])
 
+  // Guarantee background video stays completely stopped once end / RSVP screen is reached
+  useEffect(() => {
+    if (showRsvpPrompt || videoState === 'ended') {
+      const video = videoRef.current
+      if (video && !video.paused) {
+        video.pause()
+      }
+    }
+  }, [showRsvpPrompt, videoState])
+
   // Handle user interaction (tap card or screen to start video immediately WITH AUDIO)
   const handleUserInteraction = (e?: React.SyntheticEvent) => {
     if (e) {
       e.stopPropagation()
+    }
+    // Never restart or play video once it has already started or reached the RSVP end screen
+    if (endedCalledRef.current || videoState === 'ended' || showRsvpPrompt || !soundPromptVisible) {
+      return
     }
     setHasTappedSound(true)
     setSoundPromptVisible(false)
@@ -405,8 +420,10 @@ export default function VideoScreen({
   return (
     <div
       ref={containerRef}
-      className="relative w-full full-viewport-height bg-black overflow-hidden select-none cursor-pointer"
-      onClick={handleUserInteraction}
+      className={`relative w-full full-viewport-height bg-black overflow-hidden select-none ${
+        soundPromptVisible ? 'cursor-pointer' : 'cursor-default'
+      }`}
+      onClick={soundPromptVisible ? handleUserInteraction : undefined}
     >
       {/* Ambient Luxury Backdrop for Main Invite 16:9 on Portrait Mobile */}
       {hasVideo && isMainInvite && (
@@ -433,11 +450,18 @@ export default function VideoScreen({
           playsInline
           webkit-playsinline="true"
           preload="auto"
+          loop={false}
           muted={soundMuted}
           poster={EVENT.poster || undefined}
+          onPlay={() => {
+            if (endedCalledRef.current || showRsvpPrompt || videoState === 'ended') {
+              videoRef.current?.pause()
+            }
+          }}
           onEnded={() => {
             if (endedCalledRef.current) return
             endedCalledRef.current = true
+            videoRef.current?.pause()
             setVideoState('ended')
             if (endTimerRef.current) clearTimeout(endTimerRef.current)
             endTimerRef.current = setTimeout(() => {
@@ -1215,7 +1239,7 @@ export default function VideoScreen({
         </div>
 
         {/* BOTTOM NAVIGATION BAR */}
-        {hasVideo && (
+        {hasVideo && !isBeat3 && (
           <div className="w-full pb-4 flex justify-between items-center pointer-events-auto gap-2">
             <button
               onClick={toggleSound}
