@@ -683,7 +683,7 @@ export default function VideoScreen({
             </div>
           )}
 
-          {/* ── 40 & FESTIVE OVERLAY (10.0s - 18.8s): SAME AS 2ND IMAGE ONLY (16:9 WIDESCREEN) ── */}
+          {/* ── CELEBRATION TITLE OVERLAY (10.0s - 18.8s): ARPIT'S 40TH & DIWALI CELEBRATION (SAME AS 2ND IMAGE ONLY) ── */}
           {isMainInvite && (
             <div
               className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-1000 pointer-events-none select-none px-6 text-center z-20 ${
@@ -699,10 +699,8 @@ export default function VideoScreen({
                   filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
                 }}
               >
-                <span className="block">{isDiwaliEvent ? 'DIWALI PARTY' : '40 & FESTIVE'}</span>
-                <span className="block text-lg sm:text-2xl md:text-3xl tracking-[0.18em] font-semibold mt-1.5 sm:mt-2 text-[#FFFDF0]">
-                  {isDiwaliEvent ? 'GRAND CELEBRATION' : "ARPIT'S 40TH & DIWALI CELEBRATION"}
-                </span>
+                <span className="block sm:inline">{isDiwaliEvent ? 'KHANDELWAL ' : "ARPIT'S 40TH "}</span>
+                <span className="block sm:inline">&amp; DIWALI CELEBRATION</span>
               </h2>
             </div>
           )}
