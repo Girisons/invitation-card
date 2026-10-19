@@ -55,7 +55,9 @@ export default function VideoScreen({
   const startedRef = useRef(false)
   const endedCalledRef = useRef(false)
   const endTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const greetingTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [showRsvpPrompt, setShowRsvpPrompt] = useState(false)
+  const [showPersonalGreeting, setShowPersonalGreeting] = useState(true)
   const onStartRef = useRef(onStart)
   const containerRef = useRef<HTMLDivElement>(null)
   const festiveOverlayRef = useRef<HTMLDivElement>(null)
@@ -277,15 +279,18 @@ export default function VideoScreen({
     if (video) video.pause()
     endedCalledRef.current = true
     setVideoState('ended')
+    setShowPersonalGreeting(true)
     setShowRsvpPrompt(true)
   }
 
   useEffect(() => {
     if (!active) {
       setShowRsvpPrompt(false)
+      setShowPersonalGreeting(true)
       startedRef.current = false
       endedCalledRef.current = false
       if (endTimerRef.current) clearTimeout(endTimerRef.current)
+      if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current)
       const video = videoRef.current
       if (video) video.pause()
       return
@@ -293,6 +298,7 @@ export default function VideoScreen({
 
     if (!hasVideo) {
       setVideoState('ended')
+      setShowPersonalGreeting(true)
       setShowRsvpPrompt(true)
       setSoundPromptVisible(false)
       return
@@ -325,16 +331,23 @@ export default function VideoScreen({
       video.pause()
       setVideoState('ended')
 
-      // User constraint: Wait 2.5 seconds after video ends before presenting RSVP buttons
       if (endTimerRef.current) clearTimeout(endTimerRef.current)
-      endTimerRef.current = setTimeout(() => {
+      if (isMainInvite) {
+        // Main Invite: Immediately show the 5-second Personal Greeting screen, which then transitions to the Final One-Screen Venue & RSVP card
+        setShowPersonalGreeting(true)
         setShowRsvpPrompt(true)
-      }, 2500)
+      } else {
+        // Save the Date: Wait 2.5 seconds after video ends before presenting RSVP buttons
+        endTimerRef.current = setTimeout(() => {
+          setShowRsvpPrompt(true)
+        }, 2500)
+      }
     }
 
     const handleError = (e: Event) => {
       console.warn('Video load error:', e)
       setVideoState('unavailable')
+      setShowPersonalGreeting(true)
       setShowRsvpPrompt(true)
     }
 
@@ -433,6 +446,18 @@ export default function VideoScreen({
     }
   }, [showRsvpPrompt, videoState])
 
+  // Show Personal Greeting card for 5 seconds first, then transition to One-Screen Venue + RSVP + Countdown
+  useEffect(() => {
+    if (!showRsvpPrompt || !isMainInvite || !showPersonalGreeting) return
+    if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current)
+    greetingTimerRef.current = setTimeout(() => {
+      setShowPersonalGreeting(false)
+    }, 5000)
+    return () => {
+      if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current)
+    }
+  }, [showRsvpPrompt, isMainInvite, showPersonalGreeting])
+
   // Handle user interaction (tap card or screen to start video immediately WITH AUDIO)
   const handleUserInteraction = (e?: React.SyntheticEvent) => {
     if (e) {
@@ -467,11 +492,10 @@ export default function VideoScreen({
 
       const playPromise = video.play()
 
-      // If user taps to enter while already in landscape, trigger fullscreen immediately with user activation
-      if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
-        enterFullscreen(containerRef.current)
-        collapseAddressBar()
-      }
+      // Treat "TAP TO ENTER" as permission for BOTH Audio ON and Fullscreen!
+      // This enters fullscreen immediately so when guest rotates the mobile, the address bar is already gone.
+      enterFullscreen(containerRef.current)
+      collapseAddressBar()
 
       if (playPromise !== undefined) {
         playPromise
@@ -484,10 +508,8 @@ export default function VideoScreen({
               startedRef.current = true
               onStartRef.current()
             }
-            if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
-              enterFullscreen(containerRef.current)
-              collapseAddressBar()
-            }
+            enterFullscreen(containerRef.current)
+            collapseAddressBar()
           })
           .catch((err) => {
             console.warn('Unmuted play blocked by browser, trying fallback:', err)
@@ -500,6 +522,8 @@ export default function VideoScreen({
                   startedRef.current = true
                   onStartRef.current()
                 }
+                enterFullscreen(containerRef.current)
+                collapseAddressBar()
               })
               .catch((err2) => {
                 console.error('Video play error:', err2)
@@ -696,10 +720,8 @@ export default function VideoScreen({
           onClick={(e) => {
             e.stopPropagation()
             setRotatePromptActive(false)
-            if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
-              enterFullscreen(containerRef.current)
-              collapseAddressBar()
-            }
+            enterFullscreen(containerRef.current)
+            collapseAddressBar()
           }}
           className="absolute inset-0 z-[60] flex flex-col items-center justify-between p-6 sm:p-10 cursor-pointer select-none transition-all duration-700 animate-fadeIn"
           style={{
@@ -771,10 +793,8 @@ export default function VideoScreen({
               onClick={(e) => {
                 e.stopPropagation()
                 setRotatePromptActive(false)
-                if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
-                  enterFullscreen(containerRef.current)
-                  collapseAddressBar()
-                }
+                enterFullscreen(containerRef.current)
+                collapseAddressBar()
               }}
               className="text-[#C9A84C]/70 hover:text-[#C9A84C] text-[11px] font-marcellus tracking-[0.25em] uppercase underline underline-offset-4 transition-colors cursor-pointer"
             >
@@ -1200,77 +1220,87 @@ export default function VideoScreen({
                   </button>
                 </div>
               </div>
+            ) : showPersonalGreeting ? (
+              /* ── STAGE 1 (5 SECONDS): PERSONALIZED GREETING SCREEN ONLY ── */
+              <div
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current)
+                  setShowPersonalGreeting(false)
+                }}
+                className="relative w-full max-w-2xl mx-auto flex flex-col items-center justify-center text-center px-4 sm:px-8 py-4 z-20 animate-fade-up cursor-pointer"
+              >
+                {/* Dynamic Status Micro-Badge */}
+                <div className="inline-flex items-center gap-2 px-3.5 sm:px-5 py-1.5 rounded-full border border-[#C9A84C]/55 bg-[#050D1A]/90 backdrop-blur-md mb-3 sm:mb-4 shadow-[0_2px_16px_rgba(0,0,0,0.85)]">
+                  <span className="text-[10px] sm:text-xs tracking-[0.22em] uppercase font-semibold text-[#FCE18F]">
+                    {isAttending
+                      ? "✦ COUNTDOWN IS ON • CAN'T WAIT TO CELEBRATE ✦"
+                      : isDeclined
+                      ? "✦ A SPECIAL REQUEST • WE TRULY MISS YOU ✦"
+                      : "✦ RSVP PENDING • STILL WAITING FOR YOUR REPLY ✦"}
+                  </span>
+                </div>
+
+                {/* Personalized Guest Name */}
+                <h2
+                  className="font-marcellus text-2xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase leading-tight mb-3 sm:mb-4"
+                  style={{
+                    background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.95)) drop-shadow(0 0 16px rgba(212,175,55,0.45))',
+                  }}
+                >
+                  {guestName ? `DEAR ${formatGuestTitleCase(guestName).toUpperCase()}` : 'DEAR HONORED GUEST'}
+                </h2>
+
+                {/* Concise 3-Format Personalized Message */}
+                <div className="font-serif text-sm sm:text-base md:text-lg text-[#F5ECD7]/95 max-w-xl leading-relaxed px-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] space-y-1.5">
+                  {isAttending ? (
+                    <>
+                      <p className="italic">
+                        {isDiwali
+                          ? "You’ve confirmed your presence, and our hearts are full! Can’t wait to celebrate the Festival of Lights with you. ✨"
+                          : (
+                            <>
+                              You&rsquo;ve confirmed your presence, and we&rsquo;re delighted to have you join us for{' '}
+                              <strong className="font-bold not-italic text-[#FCE18F]">40 &amp; FESTIVE</strong>! ✨
+                            </>
+                          )}
+                      </p>
+                      <p className="font-semibold text-[#FFFDF0]">
+                        The night shines brighter with you! ❤️
+                      </p>
+                    </>
+                  ) : isDeclined ? (
+                    <p className="italic">
+                      We&rsquo;ll truly miss you! If your plans change, we&rsquo;d be overjoyed to welcome you to the celebration. ✨
+                    </p>
+                  ) : (
+                    <>
+                      <p className="italic">
+                        {isDiwali
+                          ? "The night won’t be the same without you — join us for an unforgettable Grand Diwali Celebration! ✨"
+                          : (
+                            <>
+                              The night won&rsquo;t be the same without you — join us for an unforgettable evening of{' '}
+                              <strong className="font-bold not-italic text-[#FCE18F]">40 &amp; FESTIVE</strong>! ✨
+                            </>
+                          )}
+                      </p>
+                      <p className="font-sans font-semibold text-[11px] sm:text-xs tracking-[0.14em] uppercase text-[#FCE18F] mt-1">
+                        Still waiting for your RSVP reply!
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
             ) : (
-              /* ── MAIN INVITATION PERSONALIZED RSVP CLIMAX ── */
-              <div className="relative w-full max-w-5xl mx-auto flex flex-col items-center text-center px-3 sm:px-6 py-2 z-20 overflow-y-auto max-h-[92vh]">
-                <div className="rsvp-landscape-grid w-full flex flex-col items-center">
+              /* ── STAGE 2: ONE-SCREEN VENUE + RSVP + COUNTDOWN CLIMAX ── */
+              <div className="relative w-full max-w-5xl mx-auto flex flex-col items-center justify-center text-center px-3 sm:px-6 py-1.5 z-20 overflow-hidden animate-fade-up">
+                <div className="rsvp-landscape-grid w-full flex flex-col items-center gap-2 sm:gap-2.5">
 
-                  {/* 1. HEADER AREA: STATUS BADGE & GUEST NAME */}
-                  <div className="rsvp-area-header flex flex-col items-center text-center w-full">
-                    {/* Dynamic Status Micro-Badge */}
-                    <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1 rounded-full border border-[#C9A84C]/50 bg-[#050D1A]/90 backdrop-blur-md mb-1.5 sm:mb-2 shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
-                      <span className="text-[9px] sm:text-xs tracking-[0.22em] uppercase font-semibold text-[#FCE18F]">
-                        {isAttending
-                          ? "✦ COUNTDOWN IS ON • CAN'T WAIT TO CELEBRATE ✦"
-                          : isDeclined
-                          ? "✦ A SPECIAL REQUEST • WE TRULY MISS YOU ✦"
-                          : "✦ RSVP PENDING • STILL WAITING FOR YOUR REPLY ✦"}
-                      </span>
-                    </div>
-
-                    {/* Personalized Guest Name */}
-                    <h2
-                      className="font-marcellus text-xl sm:text-3xl md:text-4xl font-bold tracking-[0.16em] uppercase leading-tight mb-1 sm:mb-2"
-                      style={{
-                        background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.95)) drop-shadow(0 0 14px rgba(212,175,55,0.45))',
-                      }}
-                    >
-                      {guestName ? `DEAR ${formatGuestTitleCase(guestName).toUpperCase()}` : 'DEAR HONORED GUEST'}
-                    </h2>
-                  </div>
-
-                  {/* 2. MESSAGE AREA: PERSONALIZED TEXT */}
-                  <div className="rsvp-area-message flex flex-col items-center text-center w-full">
-                    {isAttending && !isDiwali ? (
-                      <div className="font-serif text-xs sm:text-sm text-[#F5ECD7]/95 max-w-lg leading-relaxed mb-2 px-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] space-y-1">
-                        <p className="italic">
-                          You&rsquo;ve confirmed your presence, and We&rsquo;re delighted to have you join us! ✨
-                        </p>
-                        <p className="italic">
-                          Get ready for <strong className="font-bold not-italic text-[#FCE18F]">40 &amp; FESTIVE</strong> — an unforgettable evening of Diwali sparkle, incredible music and magical moments as we celebrate Arpit&rsquo;s 40th Birthday.
-                        </p>
-                        <p className="font-semibold text-[#FFFDF0]">
-                          The night shines brighter with you! ❤️
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="font-serif italic text-xs sm:text-sm md:text-[15px] text-[#F5ECD7]/95 max-w-lg leading-relaxed mb-2 px-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
-                        {isAttending ? (
-                          <p>'You confirmed your presence, and our hearts are full! The Khandelwal family is eagerly waiting to celebrate the Festival of Lights with you.'</p>
-                        ) : isDeclined ? (
-                          <p>
-                            We&rsquo;ll truly miss you. Your presence would have made the celebration brighter. If plans change, we&rsquo;d be overjoyed to welcome you.
-                          </p>
-                        ) : (
-                          <div>
-                            <p>
-                              {isDiwali
-                                ? 'The night won\u2019t be the same without you. The Grand Diwali Celebration is waiting for you \u2014 join us for an unforgettable evening.'
-                                : 'The night won\u2019t be the same without you. Arpit\u2019s 40th \u00d7 Diwali bash is waiting for you \u2014 join us for an unforgettable evening.'}
-                            </p>
-                            <p className="font-sans font-semibold text-[10px] sm:text-xs tracking-wide text-[#FCE18F] not-italic mt-1">
-                              Still waiting for your RSVP replies!
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 3. VENUE AREA: ROYAL PLAQUE */}
+                  {/* 1. VENUE AREA: ROYAL PLAQUE */}
                   <div className="rsvp-area-venue w-full flex justify-center">
                     <div className="relative w-full max-w-md px-3.5 sm:px-6 py-2.5 sm:py-3.5 rounded-xl border border-[#C9A84C]/50 bg-gradient-to-b from-black/85 via-black/75 to-black/90 backdrop-blur-md shadow-[0_8px_24px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.15)] flex flex-col items-center">
                       {/* Date & Time Header */}
