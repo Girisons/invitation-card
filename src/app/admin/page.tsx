@@ -13,8 +13,24 @@ export function getEffectiveInviteDetails(g: Guest, allGuests: Guest[]): GuestIn
     }
   }
 
-  const std_status = own.std_status || partnerDetails.std_status || 'pending'
-  const std_type = own.std_type || partnerDetails.std_type || ''
+  // Derive from invitation_status if notes.std_status is missing/empty
+  const rawSt = (g.invitation_status || '').toLowerCase()
+  const derivedStdStatus: 'seen' | 'sent' | 'pending' =
+    ['seen', 'message_seen', 'entered', 'opened', 'rsvp_yes', 'rsvp_no', 'attending', 'declined', 'yes', 'no'].includes(rawSt)
+      ? 'seen'
+      : ['sent', 'message_sent'].includes(rawSt)
+      ? 'sent'
+      : 'pending'
+
+  // Derive template from guest_of if notes.std_type is missing/empty
+  const host = (g.guest_of || '').toLowerCase().trim()
+  const derivedStdType: 'diwali' | '40_festive' | '' =
+    derivedStdStatus !== 'pending'
+      ? (host === 'vipul' || host === 'jitu' ? 'diwali' : '40_festive')
+      : ''
+
+  const std_status = own.std_status || partnerDetails.std_status || derivedStdStatus
+  const std_type = own.std_type || partnerDetails.std_type || derivedStdType
 
   const main_status = own.main_status || partnerDetails.main_status || 'pending'
   const main_type = own.main_type || partnerDetails.main_type || ''
