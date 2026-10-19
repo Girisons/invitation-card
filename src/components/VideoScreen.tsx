@@ -537,7 +537,7 @@ export default function VideoScreen({
   const isStageBeat = isMainInvite && videoState === 'playing' && currentTime >= 40.0 && currentTime <= 42.0
   // Beat 3 (RSVP Buttons): appears right after video ends (or if explicitly skipped, or immediately if video is unlinked)
   const isBeat3 = !hasVideo || showRsvpPrompt
-  // Grand Finale Overlay (47.0s - 50.0s) on Main Invite: YOUR PRESENCE. THE PERFECT FINALE
+  // Grand Finale Overlay (47.0s - 50.0s) on Main Invite: YOUR PRESENCE • THE PERFECT FINALE
   const isFinaleBeat = isMainInvite && !isBeat3 && videoState === 'playing' && currentTime >= 47.0 && currentTime <= 50.0
 
   // Personalized Save The Date reply status checks
@@ -1205,7 +1205,7 @@ export default function VideoScreen({
             </div>
           )}
 
-          {/* ── GRAND FINALE OVERLAY (47.0s - 50.0s): YOUR PRESENCE. THE PERFECT FINALE ── */}
+          {/* ── GRAND FINALE OVERLAY (47.0s - 50.0s): YOUR PRESENCE • THE PERFECT FINALE ── */}
           {isMainInvite && !isBeat3 && (
             <div
               className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 pointer-events-none select-none px-6 text-center z-20 ${
@@ -1231,8 +1231,8 @@ export default function VideoScreen({
                     filter: 'drop-shadow(0 0 1.5px rgba(0,0,0,1)) drop-shadow(0 2px 4px rgba(0,0,0,0.98)) drop-shadow(0 4px 14px rgba(0,0,0,0.92))',
                   }}
                 >
-                  <span className="block sm:inline">YOUR PRESENCE. </span>
-                  <span className="block sm:inline">THE PERFECT FINALE</span>
+                  <span className="block">YOUR PRESENCE</span>
+                  <span className="block mt-0.5 sm:mt-1.5">THE PERFECT FINALE</span>
                 </h2>
               </div>
             </div>
