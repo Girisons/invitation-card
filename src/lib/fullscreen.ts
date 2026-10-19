@@ -1,31 +1,48 @@
-// Utility for cross-browser, cross-device Fullscreen management
+// Utility for cross-browser, cross-device Fullscreen management (including iOS Safari fallback)
 
 interface FsDocument extends Document {
-  webkitFullscreenElement?: Element
-  mozFullScreenElement?: Element
-  msFullscreenElement?: Element
-  webkitExitFullscreen?: () => Promise<void>
-  mozCancelFullScreen?: () => Promise<void>
-  msExitFullscreen?: () => Promise<void>
+  webkitFullscreenElement?: Element | null
+  webkitCurrentFullScreenElement?: Element | null
+  mozFullScreenElement?: Element | null
+  msFullscreenElement?: Element | null
+  webkitExitFullscreen?: () => void | Promise<void>
+  webkitCancelFullScreen?: () => void | Promise<void>
+  mozCancelFullScreen?: () => void | Promise<void>
+  msExitFullscreen?: () => void | Promise<void>
 }
 
 interface FsElement extends HTMLElement {
-  webkitRequestFullscreen?: (options?: unknown) => Promise<void>
-  mozRequestFullScreen?: (options?: unknown) => Promise<void>
-  msRequestFullscreen?: (options?: unknown) => Promise<void>
+  webkitRequestFullscreen?: () => void | Promise<void>
+  webkitRequestFullScreen?: () => void | Promise<void>
+  mozRequestFullScreen?: () => void | Promise<void>
+  msRequestFullscreen?: () => void | Promise<void>
+}
+
+// Track simulated/theater fullscreen for iPhone iOS Safari where Apple blocks HTMLElement.requestFullscreen
+let iosFallbackFullscreen = false
+
+function notifyFullscreenChange() {
+  if (typeof document !== 'undefined') {
+    document.dispatchEvent(new Event('customfullscreenchange'))
+  }
+}
+
+export function isNativeFullscreen(): boolean {
+  if (typeof document === 'undefined') return false
+  const doc = document as FsDocument
+  return Boolean(
+    doc.fullscreenElement ||
+    doc.webkitFullscreenElement ||
+    doc.webkitCurrentFullScreenElement ||
+    doc.mozFullScreenElement ||
+    doc.msFullscreenElement
+  )
 }
 
 export function isCurrentlyFullscreen(): boolean {
   if (typeof document === 'undefined') return false
-  const doc = document as FsDocument
-  if (
-    doc.fullscreenElement ||
-    doc.webkitFullscreenElement ||
-    doc.mozFullScreenElement ||
-    doc.msFullscreenElement
-  ) {
-    return true
-  }
+  if (isNativeFullscreen()) return true
+  if (iosFallbackFullscreen) return true
 
   // PWA / Standalone mode
   if (typeof window !== 'undefined') {
@@ -47,106 +64,121 @@ export function collapseAddressBar() {
     window.scrollTo(0, 1)
     setTimeout(() => {
       try { window.scrollTo(0, 1) } catch {}
-    }, 150)
+    }, 100)
     setTimeout(() => {
       try { window.scrollTo(0, 1) } catch {}
-    }, 400)
+    }, 300)
   } catch {}
 }
 
-export async function enterFullscreen(element?: HTMLElement | null): Promise<boolean> {
+export function enterFullscreen(element?: HTMLElement | null): boolean {
   if (typeof document === 'undefined') return false
   if (isCurrentlyFullscreen()) return true
 
+  const docEl = document.documentElement as FsElement | null
+  const el = (element as FsElement | null) || docEl
+
+  // IMPORTANT FOR SAFARI: Call requestFullscreen / webkitRequestFullscreen SYNCHRONOUSLY
+  // inside the click handler without any preceding await, otherwise Safari invalidates the user gesture!
   const targets: FsElement[] = []
-  if (element) targets.push(element as FsElement)
-  if (document.documentElement) targets.push(document.documentElement as FsElement)
+  if (docEl) targets.push(docEl)
+  if (el && el !== docEl) targets.push(el)
   if (document.body) targets.push(document.body as FsElement)
 
   for (const target of targets) {
     try {
-      if (target.requestFullscreen) {
-        await target.requestFullscreen({ navigationUI: 'hide' } as unknown as FullscreenOptions)
+      if (typeof target.webkitRequestFullscreen === 'function') {
+        const res = target.webkitRequestFullscreen()
+        if (res && typeof (res as Promise<void>).catch === 'function') {
+          ;(res as Promise<void>).catch(() => {})
+        }
+        iosFallbackFullscreen = true
         collapseAddressBar()
+        notifyFullscreenChange()
+        return true
+      }
+      if (typeof target.webkitRequestFullScreen === 'function') {
+        const res = target.webkitRequestFullScreen()
+        if (res && typeof (res as Promise<void>).catch === 'function') {
+          ;(res as Promise<void>).catch(() => {})
+        }
+        iosFallbackFullscreen = true
+        collapseAddressBar()
+        notifyFullscreenChange()
+        return true
+      }
+      if (typeof target.requestFullscreen === 'function') {
+        const res = target.requestFullscreen()
+        if (res && typeof (res as Promise<void>).catch === 'function') {
+          ;(res as Promise<void>).catch(() => {})
+        }
+        iosFallbackFullscreen = true
+        collapseAddressBar()
+        notifyFullscreenChange()
+        return true
+      }
+      if (typeof target.mozRequestFullScreen === 'function') {
+        target.mozRequestFullScreen()
+        iosFallbackFullscreen = true
+        collapseAddressBar()
+        notifyFullscreenChange()
+        return true
+      }
+      if (typeof target.msRequestFullscreen === 'function') {
+        target.msRequestFullscreen()
+        iosFallbackFullscreen = true
+        collapseAddressBar()
+        notifyFullscreenChange()
         return true
       }
     } catch {
-      // Try without options if navigationUI wasn't supported
-      try {
-        if (target.requestFullscreen) {
-          await target.requestFullscreen()
-          collapseAddressBar()
-          return true
-        }
-      } catch {}
+      // Continue to next target or fallback
     }
-
-    try {
-      if (target.webkitRequestFullscreen) {
-        await target.webkitRequestFullscreen({ navigationUI: 'hide' })
-        collapseAddressBar()
-        return true
-      }
-    } catch {
-      try {
-        if (target.webkitRequestFullscreen) {
-          await target.webkitRequestFullscreen()
-          collapseAddressBar()
-          return true
-        }
-      } catch {}
-    }
-
-    try {
-      if (target.mozRequestFullScreen) {
-        await target.mozRequestFullScreen()
-        collapseAddressBar()
-        return true
-      }
-    } catch {}
-
-    try {
-      if (target.msRequestFullscreen) {
-        await target.msRequestFullscreen()
-        collapseAddressBar()
-        return true
-      }
-    } catch {}
   }
 
-  // iOS Safari fallback: scroll 1px down to minimize browser navigation bar
+  // iPhone iOS Safari fallback (where HTMLElement.requestFullscreen does not exist):
+  // Activate edge-to-edge widescreen theater mode + scroll 1px to minimize Safari toolbar
+  iosFallbackFullscreen = true
   collapseAddressBar()
-
-  return false
+  notifyFullscreenChange()
+  return true
 }
 
-export async function exitFullscreen(): Promise<boolean> {
+export function exitFullscreen(): boolean {
   if (typeof document === 'undefined') return false
-  if (!isCurrentlyFullscreen()) return true
 
+  iosFallbackFullscreen = false
   const doc = document as FsDocument
 
   try {
-    if (doc.exitFullscreen) {
-      await doc.exitFullscreen()
-      return true
-    } else if (doc.webkitExitFullscreen) {
-      await doc.webkitExitFullscreen()
-      return true
-    } else if (doc.mozCancelFullScreen) {
-      await doc.mozCancelFullScreen()
-      return true
-    } else if (doc.msExitFullscreen) {
-      await doc.msExitFullscreen()
-      return true
+    if (isNativeFullscreen()) {
+      if (typeof doc.webkitExitFullscreen === 'function') {
+        const res = doc.webkitExitFullscreen()
+        if (res && typeof (res as Promise<void>).catch === 'function') {
+          ;(res as Promise<void>).catch(() => {})
+        }
+      } else if (typeof doc.webkitCancelFullScreen === 'function') {
+        doc.webkitCancelFullScreen()
+      } else if (typeof doc.exitFullscreen === 'function') {
+        const res = doc.exitFullscreen()
+        if (res && typeof (res as Promise<void>).catch === 'function') {
+          ;(res as Promise<void>).catch(() => {})
+        }
+      } else if (typeof doc.mozCancelFullScreen === 'function') {
+        doc.mozCancelFullScreen()
+      } else if (typeof doc.msExitFullscreen === 'function') {
+        doc.msExitFullscreen()
+      }
     }
   } catch (err) {
     console.log('Exit fullscreen handled:', err)
   }
-  return false
+
+  notifyFullscreenChange()
+  return true
 }
 
-export async function toggleFullscreen(element?: HTMLElement | null): Promise<boolean> {
+export function toggleFullscreen(element?: HTMLElement | null): boolean {
   if (isCurrentlyFullscreen()) {
     return exitFullscreen()
   } else {

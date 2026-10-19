@@ -63,7 +63,7 @@ export default function VideoScreen({
   const festiveOverlayRef = useRef<HTMLDivElement>(null)
   const stageOverlayRef = useRef<HTMLDivElement>(null)
 
-  // Sync Fullscreen state from DOM
+  // Sync Fullscreen state from DOM (including iOS Safari fallback state)
   useEffect(() => {
     const updateFsState = () => {
       setIsFullscreen(isCurrentlyFullscreen())
@@ -72,38 +72,21 @@ export default function VideoScreen({
     document.addEventListener('webkitfullscreenchange', updateFsState)
     document.addEventListener('mozfullscreenchange', updateFsState)
     document.addEventListener('MSFullscreenChange', updateFsState)
+    document.addEventListener('customfullscreenchange', updateFsState)
     return () => {
       document.removeEventListener('fullscreenchange', updateFsState)
       document.removeEventListener('webkitfullscreenchange', updateFsState)
       document.removeEventListener('mozfullscreenchange', updateFsState)
       document.removeEventListener('MSFullscreenChange', updateFsState)
+      document.removeEventListener('customfullscreenchange', updateFsState)
     }
   }, [])
 
-  // Auto Fullscreen on landscape rotation & gesture handling
+  // Auto Fullscreen on landscape rotation
   useEffect(() => {
     if (typeof window === 'undefined') return
 
     let prevOrientation = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait'
-
-    const handleFirstLandscapeTouch = () => {
-      if (window.innerWidth > window.innerHeight && !isCurrentlyFullscreen()) {
-        enterFullscreen(containerRef.current)
-        collapseAddressBar()
-      }
-    }
-
-    const armTouchListeners = () => {
-      window.addEventListener('touchstart', handleFirstLandscapeTouch, { capture: true, passive: true })
-      window.addEventListener('pointerdown', handleFirstLandscapeTouch, { capture: true, passive: true })
-      window.addEventListener('click', handleFirstLandscapeTouch, { capture: true })
-    }
-
-    const removeTouchListeners = () => {
-      window.removeEventListener('touchstart', handleFirstLandscapeTouch, true)
-      window.removeEventListener('pointerdown', handleFirstLandscapeTouch, true)
-      window.removeEventListener('click', handleFirstLandscapeTouch, true)
-    }
 
     const handleOrientation = () => {
       const isLandscape = window.innerWidth > window.innerHeight
@@ -112,28 +95,16 @@ export default function VideoScreen({
 
       if (prevOrientation !== currentOrientation) {
         if (isLandscape && isMobile) {
-          // Entering landscape on mobile:
-          // 1. Attempt fullscreen immediately with address bar collapse
-          enterFullscreen(containerRef.current)
           collapseAddressBar()
-
-          // 2. Also arm one-time touch listener in case browser requires immediate direct user gesture
-          armTouchListeners()
         } else if (!isLandscape && isMobile) {
-          // Exiting landscape back to portrait on mobile -> smoothly exit fullscreen
-          removeTouchListeners()
           exitFullscreen()
         }
-      } else if (isLandscape && isMobile && !isCurrentlyFullscreen()) {
-        armTouchListeners()
       }
 
       prevOrientation = currentOrientation
     }
 
-    // If opened already in landscape on mobile, arm touch listeners and attempt collapse
     if (window.innerWidth > window.innerHeight) {
-      armTouchListeners()
       collapseAddressBar()
     }
 
@@ -144,7 +115,6 @@ export default function VideoScreen({
     }
 
     return () => {
-      removeTouchListeners()
       window.removeEventListener('resize', handleOrientation)
       window.removeEventListener('orientationchange', handleOrientation)
       if (typeof screen !== 'undefined' && screen.orientation) {
@@ -668,8 +638,12 @@ export default function VideoScreen({
         <video
           ref={videoRef}
           src={targetUrl}
-          className={`absolute inset-0 w-full h-full ${
-            isMainInvite ? 'object-contain z-10' : 'object-cover'
+          className={`absolute inset-0 w-full h-full transition-all duration-300 ${
+            isMainInvite
+              ? isFullscreen
+                ? 'object-cover z-10'
+                : 'object-contain z-10'
+              : 'object-cover'
           }`}
           playsInline
           webkit-playsinline="true"
@@ -839,12 +813,26 @@ export default function VideoScreen({
               {formatGuestTitleCase(guestName)}
             </h2>
 
-            {/* Carved Gold Inlay Divider with Center Pearl Dot */}
-            <div className="relative w-40 sm:w-64 h-[3px] my-1 sm:my-3 flex items-center justify-center">
-              <div className="absolute inset-0 bg-[#000000] translate-y-[1.5px] opacity-80 blur-[0.5px]" />
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#C9A84C] to-transparent h-[1.6px]" />
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#FFF5BD] to-transparent -translate-y-[1px] h-[0.8px] opacity-50" />
-              <div className="relative z-10 w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#FFF5BD] shadow-[0_0_6px_rgba(201,168,76,0.8)]" />
+            {/* Carved Gold Inlay Divider with Center "TAP" Pill */}
+            <div className="relative w-56 sm:w-80 my-2 sm:my-3 flex items-center justify-center pointer-events-auto">
+              {/* Left gold hairline */}
+              <div className="flex-1 h-[1.5px] bg-gradient-to-r from-transparent via-[#C9A84C] to-[#FFF5BD]" />
+
+              {/* Glowing TAP Pill */}
+              <button
+                type="button"
+                onClick={handleUserInteraction}
+                className="group relative mx-2.5 px-4 sm:px-5 py-1 sm:py-1.5 rounded-full border border-[#C9A84C]/90 bg-gradient-to-b from-[#1A1108] via-[#0E0A05] to-[#050302] text-[#FFF6D6] shadow-[0_0_15px_rgba(201,168,76,0.45),inset_0_1px_0_rgba(255,245,189,0.35)] hover:shadow-[0_0_25px_rgba(201,168,76,0.7)] hover:border-[#FFF5BD] hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer animate-pulse"
+              >
+                <span className="font-marcellus text-[10px] sm:text-xs font-bold tracking-[0.3em] uppercase flex items-center gap-1.5 text-gold">
+                  <span className="text-[8px] text-[#C9A84C]">✦</span>
+                  <span>TAP</span>
+                  <span className="text-[8px] text-[#C9A84C]">✦</span>
+                </span>
+              </button>
+
+              {/* Right gold hairline */}
+              <div className="flex-1 h-[1.5px] bg-gradient-to-l from-transparent via-[#C9A84C] to-[#FFF5BD]" />
             </div>
 
             {/* BIG: THE NIGHT AWAITS or SAVE THE DATE (Monumental 3D Embossed Marcellus) */}
@@ -867,21 +855,6 @@ export default function VideoScreen({
             >
               {isDiwaliEvent ? 'KHANDELWAL DIWALI CELEBRATION' : "ARPIT'S 40TH BIRTHDAY & DIWALI CELEBRATION"}
             </p>
-
-            {/* Antique Brass Plaque Button: TAP TO ENTER */}
-            <button
-              type="button"
-              onClick={handleUserInteraction}
-              className="group relative mt-1.5 sm:mt-2 px-7 sm:px-9 py-2.5 sm:py-3.5 rounded-full border border-[#AA822E] bg-gradient-to-b from-[#1A1108] to-[#0D0804] text-[#FFF6D6] shadow-[0_4px_20px_rgba(0,0,0,0.9),0_0_20px_rgba(170,130,46,0.25)] hover:shadow-[0_4px_25px_rgba(0,0,0,0.9),0_0_30px_rgba(170,130,46,0.45)] hover:scale-105 active:scale-95 transition-all duration-300 pointer-events-auto"
-              style={{
-                boxShadow: '0 4px 20px rgba(0,0,0,0.9), 0 0 25px rgba(170,130,46,0.3), inset 0 0 0 1px rgba(255,234,160,0.4)'
-              }}
-            >
-              <span className="font-marcellus text-xs sm:text-sm font-bold tracking-[0.25em] uppercase flex items-center gap-2">
-                <span>TAP TO ENTER</span>
-                <span className="transition-transform group-hover:translate-x-1">➔</span>
-              </span>
-            </button>
           </div>
         </div>
       )}
