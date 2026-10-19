@@ -407,24 +407,14 @@ export default function AdminPage() {
       return merged
     }
 
-    const loadUsers = async () => {
+    const loadUsers = () => {
       try {
-        const { data } = await supabase.from('portal_users').select('*')
-        if (data && data.length > 0) {
-          const merged = mergeWithDefaults(data)
-          setPortalUsers(merged)
-          localStorage.setItem('portal_users', JSON.stringify(merged))
-        } else {
-          const saved = localStorage.getItem('portal_users')
-          const merged = saved ? mergeWithDefaults(JSON.parse(saved)) : DEFAULT_USERS
-          setPortalUsers(merged)
-          localStorage.setItem('portal_users', JSON.stringify(merged))
-        }
-      } catch {
         const saved = localStorage.getItem('portal_users')
         const merged = saved ? mergeWithDefaults(JSON.parse(saved)) : DEFAULT_USERS
         setPortalUsers(merged)
         localStorage.setItem('portal_users', JSON.stringify(merged))
+      } catch {
+        setPortalUsers(DEFAULT_USERS)
       }
 
       const activeUser = localStorage.getItem('portal_current_user')
@@ -438,9 +428,8 @@ export default function AdminPage() {
   // Save users helper
   const savePortalUsers = async (updatedUsers: PortalUser[]) => {
     setPortalUsers(updatedUsers)
-    localStorage.setItem('portal_users', JSON.stringify(updatedUsers))
     try {
-      await supabase.from('portal_users').upsert(updatedUsers)
+      localStorage.setItem('portal_users', JSON.stringify(updatedUsers))
     } catch {}
   }
 
