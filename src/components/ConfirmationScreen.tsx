@@ -64,8 +64,11 @@ export default function ConfirmationScreen({ guest, guestName, status, inviteTyp
 
   if (status === 'declined') {
     return (
-      <div className={`w-full full-viewport-height flex flex-col items-center justify-center px-8 safe-top safe-bottom bg-[#050D1A] transition-all duration-700 ${visible ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="flex flex-col items-center text-center max-w-sm">
+      <div
+        className={`w-full full-viewport-height overflow-y-auto overflow-x-hidden touch-pan-y overscroll-contain flex flex-col items-center justify-start px-8 py-8 safe-top safe-bottom bg-[#050D1A] transition-all duration-700 ${visible ? 'opacity-100' : 'opacity-0'}`}
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
+        <div className="flex flex-col items-center text-center max-w-sm my-auto">
           <div className="text-4xl mb-10 opacity-30">◆</div>
           <h2 className="font-serif text-3xl text-[#F5ECD7] mb-4">We&rsquo;ll truly miss you.</h2>
           <p className="font-sans text-sm text-[#F5ECD7]/80 mb-12 tracking-wide leading-relaxed">

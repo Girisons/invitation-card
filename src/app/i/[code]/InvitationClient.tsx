@@ -80,7 +80,10 @@ export default function InvitationClient({ guest, inviteCode, inviteType }: Prop
       {activeVideoUrl && (
         <link rel="preload" as="video" href={activeVideoUrl} type="video/mp4" />
       )}
-      <div className="grain relative w-full full-viewport-height overflow-hidden bg-[#050D1A]">
+      <div
+        className="grain relative w-full full-viewport-height overflow-y-auto overflow-x-hidden touch-pan-y bg-[#050D1A]"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
         {/* Opening — always rendered, hidden when not active */}
       <div className={`absolute inset-0 transition-opacity duration-1000 ${screen === 'opening' ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none z-0'}`}>
         <OpeningScreen

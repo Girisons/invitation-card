@@ -682,9 +682,10 @@ export default function VideoScreen({
             enterFullscreen(containerRef.current)
             collapseAddressBar()
           }}
-          className="absolute inset-0 z-[60] flex flex-col items-center justify-between p-6 sm:p-10 cursor-pointer select-none transition-all duration-700 animate-fadeIn"
+          className="absolute inset-0 z-[60] overflow-y-auto overflow-x-hidden touch-pan-y flex flex-col items-center justify-between p-6 sm:p-10 cursor-pointer select-none transition-all duration-700 animate-fadeIn"
           style={{
-            background: 'radial-gradient(ellipse at center, rgba(15,28,52,0.98) 0%, rgba(5,13,26,0.99) 70%, #050D1A 100%)'
+            background: 'radial-gradient(ellipse at center, rgba(15,28,52,0.98) 0%, rgba(5,13,26,0.99) 70%, #050D1A 100%)',
+            WebkitOverflowScrolling: 'touch',
           }}
         >
           {/* Top balance spacer */}
@@ -767,12 +768,13 @@ export default function VideoScreen({
       {hasVideo && soundPromptVisible && (
         <div
           onClick={handleUserInteraction}
-          className="absolute inset-0 z-50 flex items-center justify-center cursor-pointer p-4 transition-all duration-500 animate-fadeIn"
+          className="absolute inset-0 z-50 overflow-y-auto overflow-x-hidden touch-pan-y flex flex-col items-center justify-start cursor-pointer p-4 transition-all duration-500 animate-fadeIn"
           style={{
-            background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0.88) 100%)'
+            background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0.88) 100%)',
+            WebkitOverflowScrolling: 'touch',
           }}
         >
-          <div className="flex flex-col items-center justify-center text-center max-w-xl w-full select-none px-4 max-h-screen py-2">
+          <div className="flex flex-col items-center justify-center text-center max-w-xl w-full select-none px-4 my-auto py-4">
             {/* Tagline with Gold Diamonds */}
             <div className="flex items-center gap-2 mb-2 sm:mb-4">
               <span className="text-[#C9A84C] text-[9px] sm:text-[10px]">❖</span>
