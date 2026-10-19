@@ -1261,17 +1261,6 @@ export default function VideoScreen({
                 {showPersonalGreeting ? (
                   /* ── STAGE 1 (4 SECONDS): PERSONALIZED GREETING + RSVP & ADD TO CALENDAR ── */
                   <div className="w-full max-w-xl mx-auto flex flex-col items-center justify-center text-center px-2 sm:px-4 animate-fade-up">
-                    {/* Dynamic Status Micro-Badge */}
-                    <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1 rounded-full border border-[#C9A84C]/55 bg-[#050D1A]/90 backdrop-blur-md mb-2 shadow-[0_2px_14px_rgba(0,0,0,0.85)]">
-                      <span className="text-[9px] sm:text-[11px] tracking-[0.22em] uppercase font-semibold text-[#FCE18F]">
-                        {isAttending
-                          ? "✦ COUNTDOWN IS ON • CAN'T WAIT TO CELEBRATE ✦"
-                          : isDeclined
-                          ? "✦ A SPECIAL REQUEST • WE TRULY MISS YOU ✦"
-                          : "✦ RSVP PENDING • STILL WAITING FOR YOUR REPLY ✦"}
-                      </span>
-                    </div>
-
                     {/* Personalized Guest Name */}
                     <h2
                       className="font-marcellus text-xl sm:text-3xl md:text-4xl font-bold tracking-[0.16em] uppercase leading-tight mb-2"
@@ -1286,7 +1275,7 @@ export default function VideoScreen({
                     </h2>
 
                     {/* Concise 3-Format Personalized Message */}
-                    <div className="font-serif text-xs sm:text-sm md:text-base text-[#F5ECD7]/95 max-w-lg leading-relaxed px-2 mb-3 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] space-y-1">
+                    <div className="font-serif text-xs sm:text-sm md:text-base text-[#F5ECD7]/95 max-w-lg leading-relaxed px-2 mb-2.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] space-y-1">
                       {isAttending ? (
                         <>
                           <p className="italic">
@@ -1308,22 +1297,28 @@ export default function VideoScreen({
                           We&rsquo;ll truly miss you! If your plans change, we&rsquo;d be overjoyed to welcome you to the celebration. ✨
                         </p>
                       ) : (
-                        <>
-                          <p className="italic">
-                            {isDiwali
-                              ? "The night won’t be the same without you — join us for an unforgettable Grand Diwali Celebration! ✨"
-                              : (
-                                <>
-                                  The night won&rsquo;t be the same without you — join us for an unforgettable evening of{' '}
-                                  <strong className="font-bold not-italic text-[#FCE18F]">40 &amp; FESTIVE</strong>! ✨
-                                </>
-                              )}
-                          </p>
-                          <p className="font-sans font-semibold text-[10px] sm:text-xs tracking-[0.14em] uppercase text-[#FCE18F] mt-1">
-                            Still waiting for your RSVP reply!
-                          </p>
-                        </>
+                        <p className="italic">
+                          {isDiwali
+                            ? "The night won’t be the same without you — join us for an unforgettable Grand Diwali Celebration! ✨"
+                            : (
+                              <>
+                                The night won&rsquo;t be the same without you — join us for an unforgettable evening of{' '}
+                                <strong className="font-bold not-italic text-[#FCE18F]">40 &amp; FESTIVE</strong>! ✨
+                              </>
+                            )}
+                        </p>
                       )}
+                    </div>
+
+                    {/* Dynamic Status Micro-Badge (Below the message text) */}
+                    <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1 rounded-full border border-[#C9A84C]/55 bg-[#050D1A]/90 backdrop-blur-md mb-3 shadow-[0_2px_14px_rgba(0,0,0,0.85)]">
+                      <span className="text-[9px] sm:text-[11px] tracking-[0.22em] uppercase font-semibold text-[#FCE18F]">
+                        {isAttending
+                          ? "✦ COUNTDOWN IS ON • CAN'T WAIT TO CELEBRATE ✦"
+                          : isDeclined
+                          ? "✦ A SPECIAL REQUEST • WE TRULY MISS YOU ✦"
+                          : "✦ RSVP PENDING • STILL WAITING FOR YOUR REPLY ✦"}
+                      </span>
                     </div>
 
                     {/* RSVP & ADD TO CALENDAR BUTTONS (STAGE 1) */}
