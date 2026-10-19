@@ -180,15 +180,14 @@ body {
   animation: pulseRing 2s ease-in-out infinite;
 }
 
-/* ── Landscape Widescreen 2-Column Grid for Stage 2 One-Screen RSVP & Venue Card ── */
+/* ── Landscape Widescreen 2-Column Grid for Stage 2 One-Screen Venue & Countdown Card ── */
 @media (orientation: landscape) {
   .rsvp-landscape-grid {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
     grid-template-areas:
-      "venue buttons"
-      "venue signoff"
-      "venue clock" !important;
+      "venue clock"
+      "venue signoff" !important;
     column-gap: 1.25rem !important;
     row-gap: 0.35rem !important;
     align-items: center !important;
@@ -198,7 +197,6 @@ body {
     margin-right: auto !important;
   }
   .rsvp-area-venue   { grid-area: venue; }
-  .rsvp-area-buttons { grid-area: buttons; }
   .rsvp-area-signoff { grid-area: signoff; }
   .rsvp-area-clock   { grid-area: clock; }
 }
