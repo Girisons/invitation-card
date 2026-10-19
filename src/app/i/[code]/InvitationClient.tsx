@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Guest, trackEvent, updateGuestStatus, submitRSVP, updateGuestInviteDetails } from '@/lib/supabase'
+import { Guest, trackEvent, updateGuestStatus, submitRSVP, updateGuestInviteDetails, parseGuestNotes } from '@/lib/supabase'
 import OpeningScreen from '@/components/OpeningScreen'
 import VideoScreen from '@/components/VideoScreen'
 import ConfirmationScreen from '@/components/ConfirmationScreen'
@@ -42,10 +42,14 @@ export default function InvitationClient({ guest, inviteCode, inviteType }: Prop
         std_type: isDiwali ? 'diwali' : '40_festive'
       })
     } else {
-      updateGuestInviteDetails(guest.id, {
-        main_status: 'seen',
-        main_type: isDiwali ? 'diwali' : '40_festive'
-      })
+      const currentNotes = parseGuestNotes(guest.notes)
+      // Only mark main invite as seen if it was previously sent by the hosts
+      if (currentNotes.main_status === 'sent') {
+        updateGuestInviteDetails(guest.id, {
+          main_status: 'seen',
+          main_type: isDiwali ? 'diwali' : (currentNotes.main_type || '40_festive')
+        })
+      }
     }
   }, [guest.id, inviteCode, isSaveTheDate, isDiwali, isDiwaliSaveDate, isDiwaliMain])
 
