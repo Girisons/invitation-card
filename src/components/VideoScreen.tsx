@@ -538,11 +538,12 @@ export default function VideoScreen({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full full-viewport-height bg-black overflow-hidden select-none ${
+      className={`relative w-full full-viewport-height bg-black overflow-y-auto overflow-x-hidden touch-pan-y select-none ${
         soundPromptVisible || soundMuted || (!isFullscreen && typeof window !== 'undefined' && window.innerWidth > window.innerHeight)
           ? 'cursor-pointer'
           : 'cursor-default'
       }`}
+      style={{ WebkitOverflowScrolling: 'touch' }}
       onClick={handleContainerClick}
     >
       {/* ── FLOATING TOP CONTROLS BAR: FULLSCREEN (MAIN INVITE ONLY) & SKIP ── */}
@@ -779,7 +780,7 @@ export default function VideoScreen({
                 className="font-marcellus text-[9px] sm:text-[11px] tracking-[0.45em] uppercase text-[#C9A84C] font-semibold"
                 style={{ filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.95)) drop-shadow(0 -1px 0.5px rgba(255,249,210,0.5))' }}
               >
-                A PERSONAL INVITATION
+                {isDiwaliEvent ? 'A FESTIVE INVITATION' : 'A PERSONAL INVITATION'}
               </p>
               <span className="text-[#C9A84C] text-[9px] sm:text-[10px]">❖</span>
             </div>
@@ -819,7 +820,7 @@ export default function VideoScreen({
               <div className="flex-1 h-[1.5px] bg-gradient-to-l from-transparent via-[#C9A84C] to-[#FFF5BD]" />
             </div>
 
-            {/* BIG: THE NIGHT AWAITS or SAVE THE DATE (Monumental 3D Embossed Marcellus) */}
+            {/* BIG: THE FESTIVAL OF LIGHTS AWAITS or THE NIGHT AWAITS or SAVE THE DATE (Monumental 3D Embossed Marcellus) */}
             <h1
               className="font-marcellus text-3xl sm:text-5xl md:text-6xl font-bold tracking-[0.14em] uppercase my-1 sm:my-2 leading-tight"
               style={{
@@ -829,7 +830,11 @@ export default function VideoScreen({
                 filter: 'drop-shadow(0 4px 4px rgba(0,0,0,0.98)) drop-shadow(0 -1.8px 1px rgba(255,255,255,0.7)) drop-shadow(0 0 16px rgba(212,166,59,0.45))',
               }}
             >
-              {isSaveDate ? 'SAVE THE DATE' : 'THE NIGHT AWAITS'}
+              {isSaveDate
+                ? 'SAVE THE DATE'
+                : isDiwaliEvent
+                ? 'THE FESTIVAL OF LIGHTS AWAITS'
+                : 'THE NIGHT AWAITS'}
             </h1>
 
             {/* Event Subtitle */}
@@ -908,14 +913,13 @@ export default function VideoScreen({
             </div>
           )}
 
-          {/* ── PATHWAY OVERLAY (04s - 08s): ONE NIGHT. TWO REASONS TO CELEBRATE ── */}
+          {/* ── PATHWAY OVERLAY (04s - 08s): THE FESTIVAL OF LIGHTS AWAITS / ONE NIGHT. TWO REASONS TO CELEBRATE ── */}
           {isMainInvite && (
             <div
               className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-1000 pointer-events-none select-none px-6 text-center z-20 ${
                 isPathwayBeat ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
               }`}
             >
-              {/* Title: ONE NIGHT. TWO REASONS TO CELEBRATE */}
               <h2
                 className="font-marcellus text-xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase max-w-4xl leading-tight px-4"
                 style={{
@@ -925,13 +929,19 @@ export default function VideoScreen({
                   filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
                 }}
               >
-                <span className="block sm:inline">ONE NIGHT. </span>
-                <span className="block sm:inline">TWO REASONS TO CELEBRATE</span>
+                {isDiwaliEvent ? (
+                  <span>THE FESTIVAL OF LIGHTS AWAITS</span>
+                ) : (
+                  <>
+                    <span className="block sm:inline">ONE NIGHT. </span>
+                    <span className="block sm:inline">TWO REASONS TO CELEBRATE</span>
+                  </>
+                )}
               </h2>
             </div>
           )}
 
-          {/* ── CELEBRATION TITLE OVERLAY (10.0s - 17.0s): ARPIT'S 40TH & DIWALI CELEBRATION (SAME AS 2ND IMAGE ONLY) ── */}
+          {/* ── CELEBRATION TITLE OVERLAY (10.0s - 17.0s): KHANDELWAL DIWALI CELEBRATION / ARPIT'S 40TH & DIWALI CELEBRATION ── */}
           {isMainInvite && (
             <div
               className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-1000 pointer-events-none select-none px-6 text-center z-20 ${
@@ -947,8 +957,14 @@ export default function VideoScreen({
                   filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
                 }}
               >
-                <span className="block sm:inline">{isDiwaliEvent ? 'KHANDELWAL ' : "ARPIT'S 40TH "}</span>
-                <span className="block sm:inline">&amp; DIWALI CELEBRATION</span>
+                {isDiwaliEvent ? (
+                  <span>KHANDELWAL DIWALI CELEBRATION</span>
+                ) : (
+                  <>
+                    <span className="block sm:inline">ARPIT&apos;S 40TH </span>
+                    <span className="block sm:inline">&amp; DIWALI CELEBRATION</span>
+                  </>
+                )}
               </h2>
             </div>
           )}
@@ -1111,80 +1127,84 @@ export default function VideoScreen({
             </div>
           )}
 
-          {/* BEAT 3: Climax & Interactive CTAs */}
-          <div className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 z-30 ${
-            isBeat3 ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
-          }`}>
-            {isSaveDate ? (
-              /* ── SAVE THE DATE FLOW ── */
-              <div className="flex flex-col items-center text-center px-4 max-w-sm mb-4">
-                {isDiwali ? (
-                  <>
-                    <div className="text-amber-400 text-3xl mb-2 flame-animate" style={{ filter: 'drop-shadow(0 0 16px rgba(232,129,10,0.9))' }}>
-                      🪔
-                    </div>
-                    <p className="font-sans text-[10px] sm:text-xs tracking-[0.4em] uppercase text-[#C9A84C]/90 mb-1 font-semibold">
-                      FESTIVAL OF LIGHTS
-                    </p>
-                    <h2
-                      className="font-serif font-bold text-2xl sm:text-3xl text-[#F5ECD7] mb-2 leading-tight"
-                      style={{
-                        background: 'linear-gradient(135deg, #FFF6D6 0%, #E8D5A3 50%, #C9A84C 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                      }}
+          {/* BEAT 3: Climax & Interactive CTAs (Scrollable in portrait & landscape) */}
+          <div
+            className={`absolute inset-0 overflow-y-auto overflow-x-hidden touch-pan-y overscroll-contain transition-all duration-700 z-30 ${
+              isBeat3 ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
+            }`}
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            <div className="min-h-full w-full flex flex-col items-center justify-start py-3 sm:py-5 px-2">
+              {isSaveDate ? (
+                /* ── SAVE THE DATE FLOW ── */
+                <div className="flex flex-col items-center text-center px-4 max-w-sm my-auto py-2">
+                  {isDiwali ? (
+                    <>
+                      <div className="text-amber-400 text-3xl mb-2 flame-animate" style={{ filter: 'drop-shadow(0 0 16px rgba(232,129,10,0.9))' }}>
+                        🪔
+                      </div>
+                      <p className="font-sans text-[10px] sm:text-xs tracking-[0.4em] uppercase text-[#C9A84C]/90 mb-1 font-semibold">
+                        FESTIVAL OF LIGHTS
+                      </p>
+                      <h2
+                        className="font-serif font-bold text-2xl sm:text-3xl text-[#F5ECD7] mb-2 leading-tight"
+                        style={{
+                          background: 'linear-gradient(135deg, #FFF6D6 0%, #E8D5A3 50%, #C9A84C 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                        }}
+                      >
+                        Diwali Party Celebration
+                      </h2>
+                      <div className="h-[1px] w-20 bg-gradient-to-r from-transparent via-[#C9A84C]/60 to-transparent my-1.5" />
+                      <p className="font-serif italic text-sm sm:text-base text-[#F5ECD7]/90 mb-1">
+                        {guestName ? `A Warm Invitation For ${formatGuestTitleCase(guestName)}` : 'A Warm Invitation For You'}
+                      </p>
+                      <p className="font-sans text-xs tracking-[0.25em] uppercase text-[#C9A84C] font-semibold mb-1">
+                        Friday, 23rd October 2026 · Jaipur
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-sans text-[10px] sm:text-xs tracking-[0.4em] uppercase text-[#C9A84C]/90 mb-2">
+                        DIWALI VIBES • FAB 40 • MEMORIES
+                      </p>
+                      <h3 className="font-serif text-2xl sm:text-4xl text-[#F5ECD7] font-bold mb-2">
+                        FRIDAY | OCT 23, 2026
+                      </h3>
+                      <p className="font-sans text-[11px] tracking-[0.25em] uppercase text-white/60 mb-6">
+                        JAIPUR · RAJASTHAN
+                      </p>
+                    </>
+                  )}
+
+                  <div className="flex flex-col gap-2.5 w-full max-w-xs px-4">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onSelectYes() }}
+                      className="w-full py-3.5 px-6 bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white font-sans font-bold text-xs tracking-[0.2em] uppercase rounded-sm shadow-xl shadow-[#C9A84C]/25 hover:brightness-110 active:scale-95 transition-all"
                     >
-                      Diwali Party Celebration
-                    </h2>
-                    <div className="h-[1px] w-20 bg-gradient-to-r from-transparent via-[#C9A84C]/60 to-transparent my-1.5" />
-                    <p className="font-serif italic text-sm sm:text-base text-[#F5ECD7]/90 mb-1">
-                      {guestName ? `A Warm Invitation For ${formatGuestTitleCase(guestName)}` : 'A Warm Invitation For You'}
-                    </p>
-                    <p className="font-sans text-xs tracking-[0.25em] uppercase text-[#C9A84C] font-semibold mb-1">
-                      Friday, 23rd October 2026 · Jaipur
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="font-sans text-[10px] sm:text-xs tracking-[0.4em] uppercase text-[#C9A84C]/90 mb-2">
-                      DIWALI VIBES • FAB 40 • MEMORIES
-                    </p>
-                    <h3 className="font-serif text-2xl sm:text-4xl text-[#F5ECD7] font-bold mb-2">
-                      FRIDAY | OCT 23, 2026
-                    </h3>
-                    <p className="font-sans text-[11px] tracking-[0.25em] uppercase text-white/60 mb-6">
-                      JAIPUR · RAJASTHAN
-                    </p>
-                  </>
-                )}
-
-                <div className="flex flex-col gap-2.5 w-full max-w-xs px-4">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onSelectYes() }}
-                    className="w-full py-3.5 px-6 bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white font-sans font-bold text-xs tracking-[0.2em] uppercase rounded-sm shadow-xl shadow-[#C9A84C]/25 hover:brightness-110 active:scale-95 transition-all"
-                  >
-                    YES, I'LL BE THERE
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onSelectNo() }}
-                    className="w-full py-3.5 px-6 glass border border-white/20 text-[#F5ECD7]/80 font-sans font-medium text-xs tracking-[0.2em] uppercase rounded-sm hover:border-white/50 hover:text-white active:scale-95 transition-all opacity-85 hover:opacity-100"
-                  >
-                    SORRY, CAN'T MAKE IT
-                  </button>
-                  <button
-                    onClick={handleCalendar}
-                    className="w-full py-3 px-6 glass border border-[#C9A84C]/40 text-[#C9A84C] font-sans font-medium text-xs tracking-[0.2em] uppercase rounded-sm hover:bg-[#C9A84C]/10 active:scale-95 transition-all flex items-center justify-center gap-2"
-                  >
-                    <span>📅</span> ADD TO CALENDAR
-                  </button>
+                      YES, I'LL BE THERE
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onSelectNo() }}
+                      className="w-full py-3.5 px-6 glass border border-white/20 text-[#F5ECD7]/80 font-sans font-medium text-xs tracking-[0.2em] uppercase rounded-sm hover:border-white/50 hover:text-white active:scale-95 transition-all opacity-85 hover:opacity-100"
+                    >
+                      SORRY, CAN'T MAKE IT
+                    </button>
+                    <button
+                      onClick={handleCalendar}
+                      className="w-full py-3 px-6 glass border border-[#C9A84C]/40 text-[#C9A84C] font-sans font-medium text-xs tracking-[0.2em] uppercase rounded-sm hover:bg-[#C9A84C]/10 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    >
+                      <span>📅</span> ADD TO CALENDAR
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              /* ── MAIN INVITATION TWO-STAGE ONE-SCREEN CLIMAX WITH TOP VENUE TAB ── */
-              <div className="relative w-full max-w-4xl mx-auto flex flex-col items-center justify-center text-center px-2 sm:px-5 py-1 z-20 max-h-full overflow-y-auto">
+              ) : (
+                /* ── MAIN INVITATION TWO-STAGE CLIMAX WITH TOP VENUE TAB (SCROLLABLE) ── */
+                <div className="relative w-full max-w-4xl mx-auto my-auto flex flex-col items-center justify-start text-center px-2 sm:px-5 py-2 z-20">
 
-                {/* ── TOP TAB BAR: SWITCH BETWEEN RSVP & VENUE ── */}
-                <div className="inline-flex items-center p-0.5 sm:p-1 rounded-full border border-[#C9A84C]/60 bg-[#050D1A]/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.85)] mb-1.5 sm:mb-2 landscape:mb-1.5 z-30 shrink-0">
+                  {/* ── TOP TAB BAR: SWITCH BETWEEN RSVP & VENUE ── */}
+                  <div className="inline-flex items-center p-0.5 sm:p-1 rounded-full border-2 border-[#C9A84C]/85 bg-[#050D1A]/95 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.95),0_0_14px_rgba(201,168,76,0.25)] mb-2 sm:mb-2.5 landscape:mb-1.5 z-30 shrink-0">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -1193,10 +1213,10 @@ export default function VideoScreen({
                       if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current)
                       setShowPersonalGreeting(true)
                     }}
-                    className={`px-3.5 sm:px-5 py-1 rounded-full font-sans text-[10px] sm:text-xs tracking-[0.18em] uppercase font-bold transition-all cursor-pointer ${
+                    className={`px-4 sm:px-5 py-1 landscape:py-0.5 rounded-full font-sans text-[10px] sm:text-xs tracking-[0.18em] uppercase font-bold transition-all cursor-pointer ${
                       showPersonalGreeting
-                        ? 'bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white shadow-[0_0_12px_rgba(201,168,76,0.45)]'
-                        : 'text-[#FCE18F]/80 hover:text-white'
+                        ? 'bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white shadow-[0_0_12px_rgba(201,168,76,0.55)]'
+                        : 'text-[#FFF3B0] hover:text-white'
                     }`}
                   >
                     ✦ RSVP
@@ -1209,10 +1229,10 @@ export default function VideoScreen({
                       if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current)
                       setShowPersonalGreeting(false)
                     }}
-                    className={`px-3.5 sm:px-5 py-1 rounded-full font-sans text-[10px] sm:text-xs tracking-[0.18em] uppercase font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-4 sm:px-5 py-1 landscape:py-0.5 rounded-full font-sans text-[10px] sm:text-xs tracking-[0.18em] uppercase font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                       !showPersonalGreeting
-                        ? 'bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white shadow-[0_0_12px_rgba(201,168,76,0.45)]'
-                        : 'text-[#FCE18F] hover:text-white animate-pulse'
+                        ? 'bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white shadow-[0_0_12px_rgba(201,168,76,0.55)]'
+                        : 'text-[#FFF3B0] hover:text-white animate-pulse'
                     }`}
                   >
                     <span>📍</span> VENUE
@@ -1224,19 +1244,19 @@ export default function VideoScreen({
                   <div className="w-full max-w-2xl mx-auto flex flex-col items-center justify-center text-center px-2 sm:px-4 animate-fade-up">
                     {/* Personalized Guest Name */}
                     <h2
-                      className="font-marcellus text-lg sm:text-2xl md:text-3xl landscape:text-xl font-bold tracking-[0.16em] uppercase leading-tight mb-1 sm:mb-1.5"
+                      className="font-marcellus text-lg sm:text-2xl md:text-3xl landscape:text-lg font-bold tracking-[0.16em] uppercase leading-tight mb-1 sm:mb-1.5 landscape:mb-0.5"
                       style={{
-                        background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
+                        background: 'linear-gradient(135deg, #FFFFFF 0%, #FFF3B0 35%, #E2BE5A 75%, #C9A84C 100%)',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
-                        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.95)) drop-shadow(0 0 16px rgba(212,175,55,0.45))',
+                        filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.98)) drop-shadow(0 0 16px rgba(212,175,55,0.5))',
                       }}
                     >
                       {guestName ? `DEAR ${formatGuestTitleCase(guestName).toUpperCase()}` : 'DEAR HONORED GUEST'}
                     </h2>
 
                     {/* Concise 3-Format Personalized Message */}
-                    <div className="font-serif text-xs sm:text-sm landscape:text-xs text-[#F5ECD7]/95 max-w-lg leading-snug px-2 mb-1.5 sm:mb-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] space-y-0.5">
+                    <div className="font-serif text-xs sm:text-sm landscape:text-xs text-[#FFFDF5] font-medium max-w-lg leading-snug px-2 mb-1.5 sm:mb-2 landscape:mb-1 drop-shadow-[0_2px_6px_rgba(0,0,0,1)] space-y-0.5">
                       {isAttending ? (
                         <>
                           <p className="italic">
@@ -1245,11 +1265,11 @@ export default function VideoScreen({
                               : (
                                 <>
                                   You&rsquo;ve confirmed your presence, and we&rsquo;re delighted to have you join us for{' '}
-                                  <strong className="font-bold not-italic text-[#FCE18F]">40 &amp; FESTIVE</strong>! ✨
+                                  <strong className="font-bold not-italic text-[#FFE89E]">40 &amp; FESTIVE</strong>! ✨
                                 </>
                               )}
                           </p>
-                          <p className="font-semibold text-[#FFFDF0]">
+                          <p className="font-bold text-white">
                             The night shines brighter with you! ❤️
                           </p>
                         </>
@@ -1264,7 +1284,7 @@ export default function VideoScreen({
                             : (
                               <>
                                 The night won&rsquo;t be the same without you — join us for an unforgettable evening of{' '}
-                                <strong className="font-bold not-italic text-[#FCE18F]">40 &amp; FESTIVE</strong>! ✨
+                                <strong className="font-bold not-italic text-[#FFE89E]">40 &amp; FESTIVE</strong>! ✨
                               </>
                             )}
                         </p>
@@ -1272,8 +1292,8 @@ export default function VideoScreen({
                     </div>
 
                     {/* Dynamic Status Micro-Badge (Below the message text) */}
-                    <div className="inline-flex items-center gap-2 px-3 py-0.5 sm:py-1 rounded-full border border-[#C9A84C]/55 bg-[#050D1A]/90 backdrop-blur-md mb-2 landscape:mb-1.5 shadow-[0_2px_14px_rgba(0,0,0,0.85)]">
-                      <span className="text-[8px] sm:text-[10px] tracking-[0.2em] uppercase font-semibold text-[#FCE18F]">
+                    <div className="inline-flex items-center gap-2 px-3 py-0.5 sm:py-1 landscape:py-0.5 rounded-full border border-[#C9A84C]/80 bg-[#050D1A]/95 backdrop-blur-md mb-2 landscape:mb-1.5 shadow-[0_2px_14px_rgba(0,0,0,0.95)]">
+                      <span className="text-[9px] sm:text-[10px] landscape:text-[9px] tracking-[0.18em] uppercase font-bold text-[#FFE89E]">
                         {isAttending
                           ? "✦ COUNTDOWN IS ON • CAN'T WAIT TO CELEBRATE ✦"
                           : isDeclined
@@ -1283,11 +1303,11 @@ export default function VideoScreen({
                     </div>
 
                     {/* RSVP & ADD TO CALENDAR BUTTONS (STAGE 1) */}
-                    <div className="w-full flex flex-col gap-1.5 sm:gap-2 max-w-md items-center mx-auto">
+                    <div className="w-full flex flex-col gap-1.5 sm:gap-2 landscape:gap-1 max-w-md items-center mx-auto">
                       {isAttending ? (
                         <button
                           onClick={handleCalendar}
-                          className="w-full max-w-xs py-2 px-5 glass border border-[#C9A84C]/60 hover:border-[#C9A84C] text-[#FCE18F] hover:text-white bg-[#C9A84C]/15 hover:bg-[#C9A84C]/25 font-sans font-semibold text-xs tracking-[0.16em] uppercase rounded-md shadow-lg shadow-[#C9A84C]/15 active:scale-95 transition-all flex items-center justify-center gap-2"
+                          className="w-full max-w-xs py-2 landscape:py-1.5 px-5 glass border-2 border-[#C9A84C]/85 hover:border-[#C9A84C] text-[#FFF3B0] hover:text-white bg-[#C9A84C]/25 hover:bg-[#C9A84C]/35 font-sans font-bold text-xs tracking-[0.16em] uppercase rounded-md shadow-lg shadow-[#C9A84C]/25 active:scale-95 transition-all flex items-center justify-center gap-2"
                         >
                           <span>📅</span> ADD TO CALENDAR
                         </button>
@@ -1296,7 +1316,7 @@ export default function VideoScreen({
                           {/* Primary RSVP Button */}
                           <button
                             onClick={(e) => { e.stopPropagation(); onSelectYes() }}
-                            className="w-full py-2 sm:py-2.5 landscape:py-1.5 px-5 bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white font-sans font-bold text-xs tracking-[0.18em] uppercase rounded-md shadow-xl shadow-[#C9A84C]/30 hover:brightness-110 active:scale-95 transition-all"
+                            className="w-full py-2 sm:py-2.5 landscape:py-1.5 px-5 bg-gradient-to-r from-[#8B1A28] via-[#C9A84C] to-[#E8810A] text-white font-sans font-bold text-xs tracking-[0.18em] uppercase rounded-md shadow-xl shadow-[#C9A84C]/35 border border-[#FFF3B0]/40 hover:brightness-110 active:scale-95 transition-all"
                           >
                             {isDeclined
                               ? "🎉 CHANGE TO YES! I'LL BE THERE"
@@ -1307,7 +1327,7 @@ export default function VideoScreen({
                           <div className="grid grid-cols-2 gap-1.5 sm:gap-2 w-full">
                             <button
                               onClick={(e) => { e.stopPropagation(); onSelectNo() }}
-                              className="w-full py-1.5 sm:py-2 landscape:py-1.5 px-2.5 glass border border-white/20 text-[#F5ECD7]/80 hover:text-white hover:border-white/40 font-sans font-medium text-[10px] sm:text-xs tracking-[0.12em] uppercase rounded-md active:scale-95 transition-all opacity-90 hover:opacity-100 flex items-center justify-center"
+                              className="w-full py-1.5 sm:py-2 landscape:py-1 px-2.5 glass border border-white/45 bg-black/65 text-white hover:border-white font-sans font-semibold text-[10px] sm:text-xs landscape:text-[10px] tracking-[0.12em] uppercase rounded-md active:scale-95 transition-all flex items-center justify-center"
                             >
                               {isDeclined
                                 ? "STILL CAN'T MAKE IT"
@@ -1316,7 +1336,7 @@ export default function VideoScreen({
 
                             <button
                               onClick={handleCalendar}
-                              className="w-full py-1.5 sm:py-2 landscape:py-1.5 px-2.5 glass border border-[#C9A84C]/50 hover:border-[#C9A84C] text-[#C9A84C] hover:text-[#FCE18F] bg-[#C9A84C]/10 hover:bg-[#C9A84C]/20 font-sans font-semibold text-[10px] sm:text-xs tracking-[0.12em] uppercase rounded-md active:scale-95 transition-all flex items-center justify-center gap-1"
+                              className="w-full py-1.5 sm:py-2 landscape:py-1 px-2.5 glass border border-[#C9A84C]/85 hover:border-[#C9A84C] text-[#FFF3B0] hover:text-white bg-[#C9A84C]/20 hover:bg-[#C9A84C]/30 font-sans font-bold text-[10px] sm:text-xs landscape:text-[10px] tracking-[0.12em] uppercase rounded-md active:scale-95 transition-all flex items-center justify-center gap-1"
                             >
                               <span>📅</span> ADD TO CALENDAR
                             </button>
@@ -1327,35 +1347,35 @@ export default function VideoScreen({
                   </div>
                 ) : (
                   /* ── STAGE 2: ONE-SCREEN VENUE + SIGNOFF ── */
-                  <div className="w-full flex flex-col items-center gap-2.5 sm:gap-3 animate-fade-up">
+                  <div className="w-full flex flex-col items-center gap-2 sm:gap-2.5 landscape:gap-1 animate-fade-up">
 
                     {/* 1. VENUE AREA: ROYAL PLAQUE */}
                     <div className="w-full flex justify-center">
-                      <div className="relative w-full max-w-md px-4 sm:px-6 py-3 sm:py-3.5 rounded-xl border border-[#C9A84C]/50 bg-gradient-to-b from-black/85 via-black/75 to-black/90 backdrop-blur-md shadow-[0_8px_24px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.15)] flex flex-col items-center">
+                      <div className="relative w-full max-w-md px-4 sm:px-6 py-2.5 sm:py-3 landscape:py-2 rounded-xl border-2 border-[#C9A84C]/80 bg-[#050D1A]/95 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.95),0_0_20px_rgba(201,168,76,0.2)] flex flex-col items-center">
                         {/* Date & Time Header (Single line so it stays compact in landscape) */}
-                        <div className="flex items-center justify-center gap-1.5 text-[#FCE18F] font-marcellus text-[10px] sm:text-xs landscape:text-[10px] tracking-[0.12em] uppercase font-bold whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1.5 text-[#FFE89E] font-marcellus text-[11px] sm:text-xs landscape:text-[11px] tracking-[0.12em] uppercase font-bold whitespace-nowrap">
                           <span>🗓️ FRIDAY, OCT 23, 2026</span>
-                          <span className="text-[#C9A84C]/60">•</span>
+                          <span className="text-[#C9A84C]">•</span>
                           <span>⏰ 8:00 PM ONWARDS</span>
                         </div>
 
-                        <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-[#C9A84C]/60 to-transparent my-1.5" />
+                        <div className="h-[1px] w-28 bg-gradient-to-r from-transparent via-[#C9A84C]/85 to-transparent my-1.5 landscape:my-1" />
 
                         {/* Venue Name */}
                         <h3
-                          className="font-marcellus text-sm sm:text-base md:text-lg font-bold tracking-[0.15em] uppercase text-center"
+                          className="font-marcellus text-base sm:text-lg md:text-xl landscape:text-base font-bold tracking-[0.15em] uppercase text-center"
                           style={{
-                            background: 'linear-gradient(135deg, #FFFFFF 0%, #FFF2BD 40%, #E2BE5A 100%)',
+                            background: 'linear-gradient(135deg, #FFFFFF 0%, #FFF6C8 45%, #E2BE5A 100%)',
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
-                            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.9))',
+                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.95))',
                           }}
                         >
                           &ldquo;THE FOOTHILLS VILLAS&rdquo;
                         </h3>
 
                         {/* Venue Address */}
-                        <p className="text-[10px] sm:text-xs text-[#F5ECD7]/85 font-sans tracking-wide mt-0.5 leading-snug text-center">
+                        <p className="text-[11px] sm:text-xs landscape:text-[11px] text-white font-sans font-medium tracking-wide mt-0.5 leading-snug text-center drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
                           Near RAJASTHALI RESORT &amp; SPA, Kukas, Delhi Road, Jaipur
                         </p>
 
@@ -1365,32 +1385,32 @@ export default function VideoScreen({
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#C9A84C]/15 border border-[#C9A84C]/40 text-[10px] sm:text-xs font-sans font-medium text-[#FCE18F] hover:bg-[#C9A84C]/30 hover:text-white tracking-wider transition-all"
+                          className="mt-2 landscape:mt-1.5 inline-flex items-center gap-1.5 px-4 py-1 landscape:py-0.5 rounded-full bg-gradient-to-r from-[#C9A84C]/30 via-[#C9A84C]/25 to-[#C9A84C]/30 border border-[#C9A84C]/90 text-[11px] sm:text-xs landscape:text-[10px] font-sans font-semibold text-[#FFF6C8] hover:bg-[#C9A84C]/40 hover:text-white tracking-wider shadow-[0_2px_10px_rgba(201,168,76,0.25)] transition-all"
                         >
                           <span>📍</span> Open in Google Maps ➔
                         </a>
                       </div>
                     </div>
 
-                    {/* 2. SIGNOFF AREA */}
-                    <div className="w-full flex justify-center text-center">
-                      <p className="font-serif italic text-xs sm:text-[13px] text-[#FCE18F]/85 my-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                    {/* 2. SIGNOFF + ADD TO CALENDAR ROW (Compact side-by-side in landscape, stacked in portrait) */}
+                    <div className="w-full flex flex-col landscape:flex-row items-center justify-center gap-1.5 landscape:gap-4 mt-0.5">
+                      <p className="font-serif italic text-xs sm:text-sm landscape:text-xs text-[#FFE89E] font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
                         {isDiwali ? 'Warmly, The Khandelwal Family' : 'Warmly, Tanvi'}
                       </p>
-                    </div>
 
-                    {/* 3. ADD TO CALENDAR BUTTON */}
-                    <button
-                      onClick={handleCalendar}
-                      className="mt-0.5 w-full max-w-xs py-2 px-5 glass border border-[#C9A84C]/60 hover:border-[#C9A84C] text-[#FCE18F] hover:text-white bg-[#C9A84C]/15 hover:bg-[#C9A84C]/25 font-sans font-semibold text-xs tracking-[0.16em] uppercase rounded-md shadow-lg shadow-[#C9A84C]/15 active:scale-95 transition-all flex items-center justify-center gap-2"
-                    >
-                      <span>📅</span> ADD TO CALENDAR
-                    </button>
+                      <button
+                        onClick={handleCalendar}
+                        className="w-full max-w-[220px] landscape:w-auto py-1.5 sm:py-2 landscape:py-1 px-4 glass border-2 border-[#C9A84C]/80 hover:border-[#C9A84C] text-[#FFF3B0] hover:text-white bg-[#C9A84C]/20 hover:bg-[#C9A84C]/30 font-sans font-bold text-[10px] sm:text-xs landscape:text-[10px] tracking-[0.15em] uppercase rounded-md shadow-lg shadow-[#C9A84C]/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <span>📅</span> ADD TO CALENDAR
+                      </button>
+                    </div>
 
                   </div>
                 )}
               </div>
             )}
+            </div>
           </div>
 
         </div>
