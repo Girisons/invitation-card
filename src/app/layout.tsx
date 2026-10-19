@@ -59,6 +59,11 @@ export const metadata: Metadata = {
     description: 'Personal Video Invitation • Tap to open',
     images: ['https://khandelwalinvite.vercel.app/og-main.jpg?v=3'],
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: "The Night Awaits",
+  },
   robots: 'noindex, nofollow',
 }
 

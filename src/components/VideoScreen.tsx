@@ -8,7 +8,8 @@ import {
   isCurrentlyFullscreen,
   enterFullscreen,
   exitFullscreen,
-  toggleFullscreen
+  toggleFullscreen,
+  collapseAddressBar
 } from '@/lib/fullscreen'
 
 interface Props {
@@ -83,22 +84,55 @@ export default function VideoScreen({
 
     let prevOrientation = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait'
 
+    const handleFirstLandscapeTouch = () => {
+      if (window.innerWidth > window.innerHeight && !isCurrentlyFullscreen()) {
+        enterFullscreen(containerRef.current)
+        collapseAddressBar()
+      }
+    }
+
+    const armTouchListeners = () => {
+      window.addEventListener('touchstart', handleFirstLandscapeTouch, { capture: true, passive: true })
+      window.addEventListener('pointerdown', handleFirstLandscapeTouch, { capture: true, passive: true })
+      window.addEventListener('click', handleFirstLandscapeTouch, { capture: true })
+    }
+
+    const removeTouchListeners = () => {
+      window.removeEventListener('touchstart', handleFirstLandscapeTouch, true)
+      window.removeEventListener('pointerdown', handleFirstLandscapeTouch, true)
+      window.removeEventListener('click', handleFirstLandscapeTouch, true)
+    }
+
     const handleOrientation = () => {
       const isLandscape = window.innerWidth > window.innerHeight
       const currentOrientation = isLandscape ? 'landscape' : 'portrait'
       const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
       if (prevOrientation !== currentOrientation) {
-        if (isLandscape && isMobile && !soundPromptVisible) {
-          // Entering landscape on mobile after video started -> request fullscreen
-          enterFullscreen()
+        if (isLandscape && isMobile) {
+          // Entering landscape on mobile:
+          // 1. Attempt fullscreen immediately with address bar collapse
+          enterFullscreen(containerRef.current)
+          collapseAddressBar()
+
+          // 2. Also arm one-time touch listener in case browser requires immediate direct user gesture
+          armTouchListeners()
         } else if (!isLandscape && isMobile) {
           // Exiting landscape back to portrait on mobile -> smoothly exit fullscreen
+          removeTouchListeners()
           exitFullscreen()
         }
+      } else if (isLandscape && isMobile && !isCurrentlyFullscreen()) {
+        armTouchListeners()
       }
 
       prevOrientation = currentOrientation
+    }
+
+    // If opened already in landscape on mobile, arm touch listeners and attempt collapse
+    if (window.innerWidth > window.innerHeight) {
+      armTouchListeners()
+      collapseAddressBar()
     }
 
     window.addEventListener('resize', handleOrientation)
@@ -108,13 +142,14 @@ export default function VideoScreen({
     }
 
     return () => {
+      removeTouchListeners()
       window.removeEventListener('resize', handleOrientation)
       window.removeEventListener('orientationchange', handleOrientation)
       if (typeof screen !== 'undefined' && screen.orientation) {
         screen.orientation.removeEventListener('change', handleOrientation)
       }
     }
-  }, [soundPromptVisible])
+  }, [])
 
   useEffect(() => {
     onStartRef.current = onStart
@@ -172,9 +207,10 @@ export default function VideoScreen({
 
     const handleOrientationChange = () => {
       // If mobile device is physically rotated to landscape, dismiss immediately and enter fullscreen
-      if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight && window.innerWidth <= 900) {
+      if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
         setRotatePromptActive(false)
-        enterFullscreen()
+        enterFullscreen(containerRef.current)
+        collapseAddressBar()
       }
     }
 
@@ -430,6 +466,13 @@ export default function VideoScreen({
       video.volume = 1.0
 
       const playPromise = video.play()
+
+      // If user taps to enter while already in landscape, trigger fullscreen immediately with user activation
+      if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
+        enterFullscreen(containerRef.current)
+        collapseAddressBar()
+      }
+
       if (playPromise !== undefined) {
         playPromise
           .then(() => {
@@ -440,6 +483,10 @@ export default function VideoScreen({
             if (!startedRef.current) {
               startedRef.current = true
               onStartRef.current()
+            }
+            if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
+              enterFullscreen(containerRef.current)
+              collapseAddressBar()
             }
           })
           .catch((err) => {
@@ -500,13 +547,29 @@ export default function VideoScreen({
   const isDeclined = prevRsvpStatus === 'declined'
   const isPending = !isAttending && !isDeclined
 
+  // Click handler on main container: when video is playing in landscape and not yet fullscreen,
+  // any tap on the screen immediately enters fullscreen and collapses address bar.
+  const handleContainerClick = (e: React.MouseEvent) => {
+    if (soundPromptVisible || (videoState === 'playing' && soundMuted)) {
+      handleUserInteraction(e)
+      return
+    }
+
+    if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight && !isFullscreen) {
+      enterFullscreen(containerRef.current)
+      collapseAddressBar()
+    }
+  }
+
   return (
     <div
       ref={containerRef}
       className={`relative w-full full-viewport-height bg-black overflow-hidden select-none ${
-        soundPromptVisible || soundMuted ? 'cursor-pointer' : 'cursor-default'
+        soundPromptVisible || soundMuted || (!isFullscreen && typeof window !== 'undefined' && window.innerWidth > window.innerHeight)
+          ? 'cursor-pointer'
+          : 'cursor-default'
       }`}
-      onClick={soundPromptVisible || (videoState === 'playing' && soundMuted) ? handleUserInteraction : undefined}
+      onClick={handleContainerClick}
     >
       {/* ── FLOATING TOP CONTROLS BAR: FULLSCREEN & SKIP ── */}
       <div className="fixed top-3 inset-x-3 sm:top-4 sm:inset-x-6 flex items-center justify-between pointer-events-none z-[70]">
@@ -515,9 +578,13 @@ export default function VideoScreen({
           type="button"
           onClick={(e) => {
             e.stopPropagation()
-            toggleFullscreen()
+            toggleFullscreen(containerRef.current)
           }}
-          className="pointer-events-auto glass px-3 py-1.5 rounded-full border border-[#C9A84C]/50 bg-[#050D1A]/85 text-[#F5ECD7] hover:text-white hover:border-[#C9A84C] hover:bg-[#C9A84C]/25 transition-all active:scale-95 shadow-[0_2px_12px_rgba(0,0,0,0.85)] flex items-center gap-1.5 backdrop-blur-md cursor-pointer"
+          className={`pointer-events-auto glass px-3 py-1.5 rounded-full border border-[#C9A84C]/50 bg-[#050D1A]/85 text-[#F5ECD7] hover:text-white hover:border-[#C9A84C] hover:bg-[#C9A84C]/25 transition-all active:scale-95 shadow-[0_2px_12px_rgba(0,0,0,0.85)] flex items-center gap-1.5 backdrop-blur-md cursor-pointer ${
+            !isFullscreen && typeof window !== 'undefined' && window.innerWidth > window.innerHeight
+              ? 'ring-2 ring-[#C9A84C] shadow-[0_0_15px_rgba(201,168,76,0.6)] animate-pulse'
+              : ''
+          }`}
           title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
         >
           <span className="text-[#C9A84C] text-xs font-bold leading-none">
@@ -540,6 +607,23 @@ export default function VideoScreen({
           </button>
         ) : <div />}
       </div>
+
+      {/* ── FLOATING LANDSCAPE FULLSCREEN PROMPT (WHEN ROTATED TO LANDSCAPE AND ADDRESS BAR SHOWING) ── */}
+      {hasVideo && !soundPromptVisible && !isFullscreen && videoState === 'playing' && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation()
+            enterFullscreen(containerRef.current)
+            collapseAddressBar()
+          }}
+          className="hidden landscape:flex fixed top-3 left-1/2 -translate-x-1/2 z-[75] items-center gap-2 px-4 py-1.5 rounded-full bg-black/85 border border-[#C9A84C]/80 text-[#E8D5A3] shadow-[0_4px_20px_rgba(0,0,0,0.9)] backdrop-blur-md cursor-pointer animate-pulse transition-all duration-300 hover:scale-105 active:scale-95"
+        >
+          <span className="text-[#C9A84C] text-xs font-bold">⛶</span>
+          <span className="font-marcellus text-[11px] tracking-[0.2em] uppercase text-white font-medium">
+            Tap anywhere for Fullscreen
+          </span>
+        </div>
+      )}
 
       {/* Ambient Luxury Backdrop for Main Invite 16:9 on Portrait Mobile */}
       {hasVideo && isMainInvite && (
@@ -612,6 +696,10 @@ export default function VideoScreen({
           onClick={(e) => {
             e.stopPropagation()
             setRotatePromptActive(false)
+            if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
+              enterFullscreen(containerRef.current)
+              collapseAddressBar()
+            }
           }}
           className="absolute inset-0 z-[60] flex flex-col items-center justify-between p-6 sm:p-10 cursor-pointer select-none transition-all duration-700 animate-fadeIn"
           style={{
@@ -683,6 +771,10 @@ export default function VideoScreen({
               onClick={(e) => {
                 e.stopPropagation()
                 setRotatePromptActive(false)
+                if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
+                  enterFullscreen(containerRef.current)
+                  collapseAddressBar()
+                }
               }}
               className="text-[#C9A84C]/70 hover:text-[#C9A84C] text-[11px] font-marcellus tracking-[0.25em] uppercase underline underline-offset-4 transition-colors cursor-pointer"
             >
