@@ -130,30 +130,6 @@ export default function VideoScreen({
     onStartRef.current = onStart
   }, [onStart])
 
-  // Live Digital Countdown to Grand Celebration (Friday, Oct 23, 2026, 8:00 PM IST)
-  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number }>({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0
-  })
-
-  useEffect(() => {
-    const targetTime = new Date('2026-10-23T20:00:00+05:30').getTime()
-    const updateCountdown = () => {
-      const now = Date.now()
-      const diff = Math.max(0, targetTime - now)
-      setTimeLeft({
-        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-        seconds: Math.floor((diff % (1000 * 60)) / 1000)
-      })
-    }
-    updateCountdown()
-    const interval = setInterval(updateCountdown, 1000)
-    return () => clearInterval(interval)
-  }, [])
 
   const isDiwaliSaveDate = Boolean(
     inviteType === 'save_date_diwali' ||
@@ -419,17 +395,6 @@ export default function VideoScreen({
     }
   }, [showRsvpPrompt, videoState])
 
-  // Show Stage 1 (Personal Greeting + RSVP & Add to Calendar) for 4 seconds first, then transition to Stage 2 (Venue + Sign-off + Countdown)
-  useEffect(() => {
-    if (!showRsvpPrompt || !isMainInvite || !showPersonalGreeting) return
-    if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current)
-    greetingTimerRef.current = setTimeout(() => {
-      setShowPersonalGreeting(false)
-    }, 4000)
-    return () => {
-      if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current)
-    }
-  }, [showRsvpPrompt, isMainInvite, showPersonalGreeting])
 
   // Handle user interaction (tap card or screen to start video immediately WITH AUDIO)
   const handleUserInteraction = (e?: React.SyntheticEvent) => {
@@ -1347,12 +1312,12 @@ export default function VideoScreen({
                     </div>
                   </div>
                 ) : (
-                  /* ── STAGE 2: ONE-SCREEN VENUE + SIGNOFF + COUNTDOWN CLIMAX ── */
-                  <div className="rsvp-landscape-grid w-full flex flex-col items-center gap-2 landscape:gap-1.5 animate-fade-up">
+                  /* ── STAGE 2: ONE-SCREEN VENUE + SIGNOFF ── */
+                  <div className="w-full flex flex-col items-center gap-2.5 sm:gap-3 animate-fade-up">
 
                     {/* 1. VENUE AREA: ROYAL PLAQUE */}
-                    <div className="rsvp-area-venue w-full flex justify-center">
-                      <div className="relative w-full max-w-md px-3 sm:px-5 py-2 sm:py-2.5 landscape:py-2 rounded-xl border border-[#C9A84C]/50 bg-gradient-to-b from-black/85 via-black/75 to-black/90 backdrop-blur-md shadow-[0_8px_24px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.15)] flex flex-col items-center">
+                    <div className="w-full flex justify-center">
+                      <div className="relative w-full max-w-md px-4 sm:px-6 py-3 sm:py-3.5 rounded-xl border border-[#C9A84C]/50 bg-gradient-to-b from-black/85 via-black/75 to-black/90 backdrop-blur-md shadow-[0_8px_24px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.15)] flex flex-col items-center">
                         {/* Date & Time Header (Single line so it stays compact in landscape) */}
                         <div className="flex items-center justify-center gap-1.5 text-[#FCE18F] font-marcellus text-[10px] sm:text-xs landscape:text-[10px] tracking-[0.12em] uppercase font-bold whitespace-nowrap">
                           <span>🗓️ FRIDAY, OCT 23, 2026</span>
@@ -1360,11 +1325,11 @@ export default function VideoScreen({
                           <span>⏰ 8:00 PM ONWARDS</span>
                         </div>
 
-                        <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-[#C9A84C]/60 to-transparent my-1" />
+                        <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-[#C9A84C]/60 to-transparent my-1.5" />
 
                         {/* Venue Name */}
                         <h3
-                          className="font-marcellus text-sm sm:text-base landscape:text-sm font-bold tracking-[0.15em] uppercase text-center"
+                          className="font-marcellus text-sm sm:text-base md:text-lg font-bold tracking-[0.15em] uppercase text-center"
                           style={{
                             background: 'linear-gradient(135deg, #FFFFFF 0%, #FFF2BD 40%, #E2BE5A 100%)',
                             WebkitBackgroundClip: 'text',
@@ -1376,7 +1341,7 @@ export default function VideoScreen({
                         </h3>
 
                         {/* Venue Address */}
-                        <p className="text-[10px] sm:text-xs landscape:text-[10px] text-[#F5ECD7]/85 font-sans tracking-wide mt-0.5 leading-tight text-center">
+                        <p className="text-[10px] sm:text-xs text-[#F5ECD7]/85 font-sans tracking-wide mt-0.5 leading-snug text-center">
                           Near RAJASTHALI RESORT &amp; SPA, Kukas, Delhi Road, Jaipur
                         </p>
 
@@ -1386,7 +1351,7 @@ export default function VideoScreen({
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="mt-1.5 landscape:mt-1 inline-flex items-center gap-1.5 px-3 py-0.5 sm:py-1 landscape:py-0.5 rounded-full bg-[#C9A84C]/15 border border-[#C9A84C]/40 text-[10px] sm:text-xs landscape:text-[10px] font-sans font-medium text-[#FCE18F] hover:bg-[#C9A84C]/30 hover:text-white tracking-wider transition-all"
+                          className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#C9A84C]/15 border border-[#C9A84C]/40 text-[10px] sm:text-xs font-sans font-medium text-[#FCE18F] hover:bg-[#C9A84C]/30 hover:text-white tracking-wider transition-all"
                         >
                           <span>📍</span> Open in Google Maps ➔
                         </a>
@@ -1394,117 +1359,19 @@ export default function VideoScreen({
                     </div>
 
                     {/* 2. SIGNOFF AREA */}
-                    <div className="rsvp-area-signoff w-full flex justify-center text-center">
-                      <p className="font-serif italic text-xs sm:text-[13px] landscape:text-xs text-[#FCE18F]/85 my-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                    <div className="w-full flex justify-center text-center">
+                      <p className="font-serif italic text-xs sm:text-[13px] text-[#FCE18F]/85 my-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                         {isDiwali ? 'Warmly, The Khandelwal Family' : 'Warmly, Tanvi'}
                       </p>
                     </div>
 
-                    {/* 3. CLOCK AREA: DIGITAL COUNTDOWN STRUCTURE */}
-                    <div className="rsvp-area-clock w-full flex flex-col items-center">
-                      <div className="w-full max-w-sm sm:max-w-md mx-auto flex flex-col items-center select-none">
-                        {/* Pulsing micro-badge */}
-                        <div className="flex items-center gap-1.5 mb-1 px-2.5 py-0.5 rounded-full bg-[#C9A84C]/10 border border-[#C9A84C]/35">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#FCE18F] animate-ping" />
-                          <span className="font-sans text-[8px] sm:text-[10px] landscape:text-[9px] tracking-[0.22em] uppercase font-semibold text-[#FCE18F]">
-                            THE SPARKLE BEGINS IN…
-                          </span>
-                        </div>
-
-                        {/* Digital Clock Structure Container */}
-                        <div className="flex items-center justify-center gap-1 sm:gap-2 px-2.5 py-1.5 landscape:py-1 rounded-xl border border-[#C9A84C]/60 bg-gradient-to-b from-[#0A1324]/95 via-black/95 to-[#070D18]/95 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.15)]">
-                          {/* DAYS */}
-                          <div className="flex flex-col items-center min-w-[44px] sm:min-w-[54px] landscape:min-w-[46px]">
-                            <div className="relative w-full py-1 px-1.5 rounded-md bg-gradient-to-b from-[#141C2B] to-[#0A0F1A] border border-[#C9A84C]/45 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] overflow-hidden">
-                              <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 pointer-events-none z-10" />
-                              <span
-                                className="font-mono text-lg sm:text-xl landscape:text-lg font-extrabold tracking-wider tabular-nums leading-none z-0"
-                                style={{
-                                  background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2BD 50%, #E2BE5A 100%)',
-                                  WebkitBackgroundClip: 'text',
-                                  WebkitTextFillColor: 'transparent',
-                                  filter: 'drop-shadow(0 0 8px rgba(226,190,90,0.6))',
-                                }}
-                              >
-                                {String(timeLeft.days).padStart(2, '0')}
-                              </span>
-                            </div>
-                            <span className="font-sans text-[8px] tracking-[0.2em] uppercase font-bold text-[#C9A84C] mt-0.5">
-                              DAYS
-                            </span>
-                          </div>
-
-                          <span className="text-[#FCE18F] text-sm sm:text-base font-bold pb-2 animate-pulse">:</span>
-
-                          {/* HOURS */}
-                          <div className="flex flex-col items-center min-w-[44px] sm:min-w-[54px] landscape:min-w-[46px]">
-                            <div className="relative w-full py-1 px-1.5 rounded-md bg-gradient-to-b from-[#141C2B] to-[#0A0F1A] border border-[#C9A84C]/45 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] overflow-hidden">
-                              <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 pointer-events-none z-10" />
-                              <span
-                                className="font-mono text-lg sm:text-xl landscape:text-lg font-extrabold tracking-wider tabular-nums leading-none z-0"
-                                style={{
-                                  background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2BD 50%, #E2BE5A 100%)',
-                                  WebkitBackgroundClip: 'text',
-                                  WebkitTextFillColor: 'transparent',
-                                  filter: 'drop-shadow(0 0 8px rgba(226,190,90,0.6))',
-                                }}
-                              >
-                                {String(timeLeft.hours).padStart(2, '0')}
-                              </span>
-                            </div>
-                            <span className="font-sans text-[8px] tracking-[0.2em] uppercase font-bold text-[#C9A84C] mt-0.5">
-                              HOURS
-                            </span>
-                          </div>
-
-                          <span className="text-[#FCE18F] text-sm sm:text-base font-bold pb-2 animate-pulse">:</span>
-
-                          {/* MINUTES */}
-                          <div className="flex flex-col items-center min-w-[44px] sm:min-w-[54px] landscape:min-w-[46px]">
-                            <div className="relative w-full py-1 px-1.5 rounded-md bg-gradient-to-b from-[#141C2B] to-[#0A0F1A] border border-[#C9A84C]/45 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] overflow-hidden">
-                              <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 pointer-events-none z-10" />
-                              <span
-                                className="font-mono text-lg sm:text-xl landscape:text-lg font-extrabold tracking-wider tabular-nums leading-none z-0"
-                                style={{
-                                  background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2BD 50%, #E2BE5A 100%)',
-                                  WebkitBackgroundClip: 'text',
-                                  WebkitTextFillColor: 'transparent',
-                                  filter: 'drop-shadow(0 0 8px rgba(226,190,90,0.6))',
-                                }}
-                              >
-                                {String(timeLeft.minutes).padStart(2, '0')}
-                              </span>
-                            </div>
-                            <span className="font-sans text-[8px] tracking-[0.2em] uppercase font-bold text-[#C9A84C] mt-0.5">
-                              MINS
-                            </span>
-                          </div>
-
-                          <span className="text-[#FCE18F] text-sm sm:text-base font-bold pb-2 animate-pulse">:</span>
-
-                          {/* SECONDS */}
-                          <div className="flex flex-col items-center min-w-[44px] sm:min-w-[54px] landscape:min-w-[46px]">
-                            <div className="relative w-full py-1 px-1.5 rounded-md bg-gradient-to-b from-[#141C2B] to-[#0A0F1A] border border-[#C9A84C]/45 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] overflow-hidden">
-                              <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/80 pointer-events-none z-10" />
-                              <span
-                                className="font-mono text-lg sm:text-xl landscape:text-lg font-extrabold tracking-wider tabular-nums leading-none z-0"
-                                style={{
-                                  background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF2BD 50%, #E2BE5A 100%)',
-                                  WebkitBackgroundClip: 'text',
-                                  WebkitTextFillColor: 'transparent',
-                                  filter: 'drop-shadow(0 0 8px rgba(226,190,90,0.6))',
-                                }}
-                              >
-                                {String(timeLeft.seconds).padStart(2, '0')}
-                              </span>
-                            </div>
-                            <span className="font-sans text-[8px] tracking-[0.2em] uppercase font-bold text-[#C9A84C] mt-0.5">
-                              SECS
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    {/* 3. ADD TO CALENDAR BUTTON */}
+                    <button
+                      onClick={handleCalendar}
+                      className="mt-0.5 w-full max-w-xs py-2 px-5 glass border border-[#C9A84C]/60 hover:border-[#C9A84C] text-[#FCE18F] hover:text-white bg-[#C9A84C]/15 hover:bg-[#C9A84C]/25 font-sans font-semibold text-xs tracking-[0.16em] uppercase rounded-md shadow-lg shadow-[#C9A84C]/15 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    >
+                      <span>📅</span> ADD TO CALENDAR
+                    </button>
 
                   </div>
                 )}
