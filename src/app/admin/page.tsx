@@ -1100,25 +1100,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Message Link Template Selector */}
-        <div className="flex items-center gap-1.5 bg-[#0A1931] border border-[#C9A84C]/30 px-3 py-2 rounded-sm">
-          <span className="text-[10px] uppercase tracking-wider text-[#C9A84C] font-semibold">Invite:</span>
-          <select
-            value={messageTemplate}
-            onChange={e => setMessageTemplate(e.target.value as MessageTemplateMode)}
-            className="bg-transparent text-[#F5ECD7] text-xs outline-none font-medium cursor-pointer"
-          >
-            <optgroup label="🎂 40 &amp; Festive">
-              <option value="save_date" className="bg-[#0A1931]">🗓️ 40 &amp; Festive - Save The Date</option>
-              <option value="invite" className="bg-[#0A1931]">💌 40 &amp; Festive - Main Invite</option>
-            </optgroup>
-            <optgroup label="🪔 Diwali Party (Family)">
-              <option value="save_date_diwali" className="bg-[#0A1931]">✨ Diwali Party - Save The Date</option>
-              <option value="invite_diwali" className="bg-[#0A1931]">🎉 Diwali Party - Main Invite</option>
-            </optgroup>
-          </select>
-        </div>
-
         <button onClick={() => { setShowForm(true); setForm(emptyForm()) }}
           className="btn-primary px-4 py-2 text-sm tracking-wider whitespace-nowrap">+ Add Guest</button>
         {currentUser.role === 'super_admin' && (

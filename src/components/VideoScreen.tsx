@@ -568,10 +568,10 @@ export default function VideoScreen({
       }`}
       onClick={handleContainerClick}
     >
-      {/* ── FLOATING TOP CONTROLS BAR: FULLSCREEN & SKIP ── */}
+      {/* ── FLOATING TOP CONTROLS BAR: FULLSCREEN (MAIN INVITE ONLY) & SKIP ── */}
       <div className="fixed top-3 inset-x-3 sm:top-4 sm:inset-x-6 flex items-center justify-between pointer-events-none z-[70]">
-        {/* Luxury Fullscreen Toggle Pill (Shown only when browser supports Fullscreen API) */}
-        {canFullscreen ? (
+        {/* Luxury Fullscreen Toggle Pill (Main Invite only) */}
+        {isMainInvite && canFullscreen ? (
           <button
             type="button"
             onClick={(e) => {
@@ -594,20 +594,27 @@ export default function VideoScreen({
           </button>
         ) : <div />}
 
-        {/* RSVP/VENUE Button (when video is playing) */}
+        {/* Skip Button: 'RSVP/VENUE' on Main Invite, original 'Skip to RSVP ⏭' on Save The Date */}
         {videoState === 'playing' && showSkip && !isBeat3 ? (
           <button
             type="button"
             onClick={handleSkip}
             className="pointer-events-auto glass px-3.5 py-1.5 rounded-full border border-[#C9A84C]/50 bg-[#050D1A]/85 text-[10px] font-sans font-semibold tracking-[0.2em] uppercase text-[#F5ECD7]/90 hover:text-white hover:border-[#C9A84C] hover:bg-[#C9A84C]/25 transition-all active:scale-95 flex items-center gap-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.85)] backdrop-blur-md cursor-pointer"
           >
-            <span>RSVP/VENUE</span>
+            {isMainInvite ? (
+              <span>RSVP/VENUE</span>
+            ) : (
+              <>
+                <span>Skip to RSVP</span>
+                <span className="text-xs">⏭</span>
+              </>
+            )}
           </button>
         ) : <div />}
       </div>
 
-      {/* ── FLOATING LANDSCAPE FULLSCREEN PROMPT (WHEN ROTATED TO LANDSCAPE AND ADDRESS BAR SHOWING) ── */}
-      {hasVideo && !soundPromptVisible && !isFullscreen && canFullscreen && videoState === 'playing' && (
+      {/* ── FLOATING LANDSCAPE FULLSCREEN PROMPT (MAIN INVITE ONLY) ── */}
+      {isMainInvite && hasVideo && !soundPromptVisible && !isFullscreen && canFullscreen && videoState === 'playing' && (
         <div
           onClick={(e) => {
             e.stopPropagation()
@@ -1129,7 +1136,7 @@ export default function VideoScreen({
           <div className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 z-30 ${
             isBeat3 ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
           }`}>
-            {isSaveTheDate ? (
+            {isSaveDate ? (
               /* ── SAVE THE DATE FLOW ── */
               <div className="flex flex-col items-center text-center px-4 max-w-sm mb-4">
                 {isDiwali ? (

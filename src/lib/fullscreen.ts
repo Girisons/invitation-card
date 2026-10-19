@@ -27,8 +27,29 @@ function notifyFullscreenChange() {
   }
 }
 
+export function isIOS(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return (
+    /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  )
+}
+
+export function isIPhone(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /iPhone|iPod/i.test(navigator.userAgent)
+}
+
+export function isAndroid(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /Android/i.test(navigator.userAgent)
+}
+
 export function isFullscreenSupported(): boolean {
   if (typeof document === 'undefined') return false
+  // Apple iPhone strictly blocks HTMLElement Fullscreen API by OS design
+  if (isIPhone()) return false
+
   const doc = document as FsDocument
   const docEl = document.documentElement as FsElement
 
@@ -37,8 +58,7 @@ export function isFullscreenSupported(): boolean {
     doc.webkitFullscreenEnabled ||
     doc.mozFullScreenEnabled ||
     doc.msFullscreenEnabled ||
-    (docEl && typeof docEl.requestFullscreen === 'function') ||
-    (docEl && typeof docEl.webkitRequestFullscreen === 'function')
+    (docEl && typeof docEl.requestFullscreen === 'function')
   )
 }
 
