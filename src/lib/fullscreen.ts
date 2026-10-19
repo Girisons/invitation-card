@@ -47,8 +47,8 @@ export function isAndroid(): boolean {
 
 export function isFullscreenSupported(): boolean {
   if (typeof document === 'undefined') return false
-  // Apple iPhone strictly blocks HTMLElement Fullscreen API by OS design
-  if (isIPhone()) return false
+  // Apple iOS (iPhone & iPad Safari) does not hide browser tabs/address bar via DOM Fullscreen API
+  if (isIOS() || isIPhone()) return false
 
   const doc = document as FsDocument
   const docEl = document.documentElement as FsElement
