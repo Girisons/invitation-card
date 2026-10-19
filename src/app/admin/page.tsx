@@ -864,7 +864,7 @@ export default function AdminPage() {
       ? `${BASE_URL}/i/${code}?type=main_diwali`
       : messageTemplate === 'save_date'
       ? `${BASE_URL}/i/${code}?type=save_date`
-      : `${BASE_URL}/i/${code}`
+      : `${BASE_URL}/i/${code}?type=main`
     navigator.clipboard.writeText(linkUrl)
     setCopied(code); setTimeout(() => setCopied(null), 2000)
   }
@@ -907,10 +907,21 @@ export default function AdminPage() {
       }))
     }
 
-    const mainInviteLink = `${BASE_URL}/i/${g.invite_code}`
+    const mainInviteLink = `${BASE_URL}/i/${g.invite_code}?type=main`
     const mainDiwaliInviteLink = `${BASE_URL}/i/${g.invite_code}?type=main_diwali`
     const saveDateLink = `${BASE_URL}/i/${g.invite_code}?type=save_date`
     const saveDateDiwaliLink = `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali`
+
+    // Pre-warm the invite route & OG image on Vercel edge/lambda before WhatsApp scraper requests it
+    const warmLink = activeMode === 'save_date_diwali'
+      ? saveDateDiwaliLink
+      : activeMode === 'invite_diwali'
+      ? mainDiwaliInviteLink
+      : activeMode === 'save_date'
+      ? saveDateLink
+      : mainInviteLink
+    fetch(warmLink, { mode: 'no-cors' }).catch(() => {})
+
     const isCouple = (g.send_together && !!g.partner_name) || (g.invited_count && g.invited_count > 1)
 
     const pDisplay = (g.nickname && g.nickname.trim())

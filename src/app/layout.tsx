@@ -64,7 +64,6 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: "The Night Awaits",
   },
-  robots: 'noindex, nofollow',
 }
 
 export const viewport: Viewport = {
