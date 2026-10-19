@@ -65,22 +65,15 @@ export async function updateGuestInviteDetails(
   try {
     const { data: g } = await supabase
       .from('guests')
-      .select('notes, linked_guest_id, send_together')
+      .select('notes')
       .eq('id', guestId)
       .single()
-
-    const targetIds = [guestId]
-    if (g && g.linked_guest_id && g.send_together) {
-      targetIds.push(g.linked_guest_id)
-    }
 
     const current = parseGuestNotes(g?.notes)
     const merged = { ...current, ...updates }
     const serialized = JSON.stringify(merged)
 
-    for (const tId of targetIds) {
-      await supabase.from('guests').update({ notes: serialized }).eq('id', tId)
-    }
+    await supabase.from('guests').update({ notes: serialized }).eq('id', guestId)
     return merged
   } catch (err) {
     console.error('Error updating guest invite details in notes:', err)

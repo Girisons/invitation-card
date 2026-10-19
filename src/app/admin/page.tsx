@@ -13,27 +13,26 @@ export function getEffectiveInviteDetails(g: Guest, allGuests: Guest[]): GuestIn
     }
   }
 
-  // Derive from invitation_status if notes.std_status is missing/empty
-  const rawSt = (g.invitation_status || '').toLowerCase()
-  const derivedStdStatus: 'seen' | 'sent' | 'pending' =
-    ['seen', 'message_seen', 'entered', 'opened', 'rsvp_yes', 'rsvp_no', 'attending', 'declined', 'yes', 'no'].includes(rawSt)
-      ? 'seen'
-      : ['sent', 'message_sent'].includes(rawSt)
-      ? 'sent'
-      : 'pending'
-
-  // Derive template from guest_of if notes.std_type is missing/empty
+  // Template Type (Diwali vs 40 & Festive): own first, then partner default if couple together, then host default
   const host = (g.guest_of || '').toLowerCase().trim()
-  const derivedStdType: 'diwali' | '40_festive' | '' =
-    derivedStdStatus !== 'pending'
-      ? (host === 'vipul' || host === 'jitu' ? 'diwali' : '40_festive')
-      : ''
+  const defaultType: 'diwali' | '40_festive' = (host === 'vipul' || host === 'jitu') ? 'diwali' : '40_festive'
+  const std_type = own.std_type || (g.send_together ? partnerDetails.std_type : '') || defaultType
+  const main_type = own.main_type || (g.send_together ? partnerDetails.main_type : '') || defaultType
 
-  const std_status = own.std_status || partnerDetails.std_status || derivedStdStatus
-  const std_type = own.std_type || partnerDetails.std_type || derivedStdType
+  // Message Status (pending / sent / seen): STRICTLY INDIVIDUAL TO THIS GUEST.
+  // Never inherit partner's status!
+  let std_status: 'pending' | 'sent' | 'seen' = own.std_status || 'pending'
+  let main_status: 'pending' | 'sent' | 'seen' = own.main_status || 'pending'
 
-  const main_status = own.main_status || partnerDetails.main_status || 'pending'
-  const main_type = own.main_type || partnerDetails.main_type || ''
+  // If notes did not specify an explicit status yet, check this guest's own passive invitation_status (entered / sent)
+  if (!own.std_status) {
+    const rawSt = (g.invitation_status || '').toLowerCase()
+    if (['seen', 'message_seen', 'entered', 'opened'].includes(rawSt)) {
+      std_status = 'seen'
+    } else if (['sent', 'message_sent'].includes(rawSt)) {
+      std_status = 'sent'
+    }
+  }
 
   return { std_status, std_type, main_status, main_type }
 }
@@ -786,10 +785,11 @@ export default function AdminPage() {
     field: 'type' | 'status',
     value: string
   ) => {
-    const targetIds = [g.id]
-    if (g.linked_guest_id && g.send_together) {
-      targetIds.push(g.linked_guest_id)
-    }
+    // If updating template TYPE (Diwali vs 40 & Festive) and send_together is active, keep couple on same event template.
+    // If updating message STATUS (pending/sent/seen), ONLY update this specific individual guest!
+    const targetIds = (field === 'type' && g.linked_guest_id && g.send_together)
+      ? [g.id, g.linked_guest_id]
+      : [g.id]
 
     // 1. Optimistic UI update
     setGuests(prev => prev.map(item => {
@@ -899,7 +899,7 @@ export default function AdminPage() {
     if (Object.keys(inviteUpdates).length > 0) {
       await updateGuestInviteDetails(g.id, inviteUpdates)
       setGuests(prev => prev.map(item => {
-        if (item.id === g.id || (g.send_together && item.id === g.linked_guest_id)) {
+        if (item.id === g.id) {
           const curr = parseGuestNotes(item.notes)
           return { ...item, notes: JSON.stringify({ ...curr, ...inviteUpdates }) }
         }
