@@ -60,6 +60,7 @@ export default function VideoScreen({
   const greetingTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [showRsvpPrompt, setShowRsvpPrompt] = useState(false)
   const [showPersonalGreeting, setShowPersonalGreeting] = useState(true)
+  const hasAutoSwitchedRef = useRef(false)
   const onStartRef = useRef(onStart)
   const containerRef = useRef<HTMLDivElement>(null)
   const festiveOverlayRef = useRef<HTMLDivElement>(null)
@@ -395,8 +396,19 @@ export default function VideoScreen({
     }
   }, [showRsvpPrompt, videoState])
 
+  // Auto-switch: Show Stage 1 (Personal Greeting + RSVP & Add to Calendar) for 4 seconds, then automatically transition to Stage 2 (Venue + Sign-off)
+  useEffect(() => {
+    if (!showRsvpPrompt || !isMainInvite || hasAutoSwitchedRef.current) return
+    if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current)
+    greetingTimerRef.current = setTimeout(() => {
+      hasAutoSwitchedRef.current = true
+      setShowPersonalGreeting(false)
+    }, 4000)
+    return () => {
+      if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current)
+    }
+  }, [showRsvpPrompt, isMainInvite])
 
-  // Handle user interaction (tap card or screen to start video immediately WITH AUDIO)
   const handleUserInteraction = (e?: React.SyntheticEvent) => {
     if (e) {
       e.stopPropagation()
@@ -653,9 +665,9 @@ export default function VideoScreen({
       {/* Dark Vignette Overlay for Crisp Typography Contrast */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/25 to-black/80 pointer-events-none" />
 
-      {/* Dimming overlay when RSVP buttons appear (2.5s after video ends) */}
+      {/* Dimming overlay when RSVP buttons appear */}
       <div
-        className={`absolute inset-0 bg-black/65 backdrop-blur-[2px] transition-opacity duration-1000 pointer-events-none z-10 ${
+        className={`absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-700 pointer-events-none z-[15] ${
           isBeat3 ? 'opacity-100' : 'opacity-0'
         }`}
       />
@@ -1177,6 +1189,7 @@ export default function VideoScreen({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation()
+                      hasAutoSwitchedRef.current = true
                       if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current)
                       setShowPersonalGreeting(true)
                     }}
@@ -1192,6 +1205,7 @@ export default function VideoScreen({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation()
+                      hasAutoSwitchedRef.current = true
                       if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current)
                       setShowPersonalGreeting(false)
                     }}
