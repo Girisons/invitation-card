@@ -37,6 +37,55 @@ export interface Guest {
   video_url?: string
   std_video_url?: string
   prev_rsvp_status?: 'attending' | 'declined' | 'pending'
+  notes?: string
+}
+
+export interface GuestInviteDetails {
+  std_type?: 'diwali' | '40_festive' | ''
+  std_status?: 'pending' | 'sent' | 'seen'
+  main_type?: 'diwali' | '40_festive' | ''
+  main_status?: 'pending' | 'sent' | 'seen'
+}
+
+export function parseGuestNotes(notes?: string | null): GuestInviteDetails {
+  if (!notes || typeof notes !== 'string') return {}
+  try {
+    const parsed = JSON.parse(notes)
+    if (parsed && typeof parsed === 'object') return parsed
+    return {}
+  } catch {
+    return {}
+  }
+}
+
+export async function updateGuestInviteDetails(
+  guestId: string,
+  updates: Partial<GuestInviteDetails>
+) {
+  try {
+    const { data: g } = await supabase
+      .from('guests')
+      .select('notes, linked_guest_id, send_together')
+      .eq('id', guestId)
+      .single()
+
+    const targetIds = [guestId]
+    if (g && g.linked_guest_id && g.send_together) {
+      targetIds.push(g.linked_guest_id)
+    }
+
+    const current = parseGuestNotes(g?.notes)
+    const merged = { ...current, ...updates }
+    const serialized = JSON.stringify(merged)
+
+    for (const tId of targetIds) {
+      await supabase.from('guests').update({ notes: serialized }).eq('id', tId)
+    }
+    return merged
+  } catch (err) {
+    console.error('Error updating guest invite details in notes:', err)
+    return null
+  }
 }
 
 export interface RSVP {

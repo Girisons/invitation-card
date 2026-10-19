@@ -922,24 +922,35 @@ export default function VideoScreen({
                 isPathwayBeat ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
               }`}
             >
-              <h2
-                className="font-marcellus text-xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase max-w-4xl leading-tight px-4"
-                style={{
-                  background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
-                }}
-              >
-                {isDiwaliEvent ? (
-                  <span>THE FESTIVAL OF LIGHTS AWAITS</span>
-                ) : (
-                  <>
-                    <span className="block sm:inline">ONE NIGHT. </span>
-                    <span className="block sm:inline">TWO REASONS TO CELEBRATE</span>
-                  </>
-                )}
-              </h2>
+              <div className="relative inline-flex flex-col items-center justify-center max-w-4xl px-4 text-center">
+                {/* Soft Ambient Contrast Pillow */}
+                <div
+                  className="absolute -inset-x-8 sm:-inset-x-16 -inset-y-4 sm:-inset-y-8 rounded-full pointer-events-none -z-10"
+                  style={{
+                    background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.48) 45%, rgba(0,0,0,0) 78%)',
+                    filter: 'blur(16px)',
+                  }}
+                />
+                <h2
+                  className="font-marcellus text-xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase leading-tight px-4"
+                  style={{
+                    background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    WebkitTextStroke: '0.4px rgba(0,0,0,0.85)',
+                    filter: 'drop-shadow(0 0 1.5px rgba(0,0,0,1)) drop-shadow(0 2px 4px rgba(0,0,0,0.98)) drop-shadow(0 4px 14px rgba(0,0,0,0.92))',
+                  }}
+                >
+                  {isDiwaliEvent ? (
+                    <span>THE FESTIVAL OF LIGHTS AWAITS</span>
+                  ) : (
+                    <>
+                      <span className="block sm:inline">ONE NIGHT. </span>
+                      <span className="block sm:inline">TWO REASONS TO CELEBRATE</span>
+                    </>
+                  )}
+                </h2>
+              </div>
             </div>
           )}
 
@@ -950,24 +961,35 @@ export default function VideoScreen({
                 isHedgeBeat ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
               }`}
             >
-              <h2
-                className="font-marcellus text-xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase max-w-4xl leading-tight px-4"
-                style={{
-                  background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
-                }}
-              >
-                {isDiwaliEvent ? (
-                  <span>KHANDELWAL DIWALI CELEBRATION</span>
-                ) : (
-                  <>
-                    <span className="block sm:inline">ARPIT&apos;S 40TH </span>
-                    <span className="block sm:inline">&amp; DIWALI CELEBRATION</span>
-                  </>
-                )}
-              </h2>
+              <div className="relative inline-flex flex-col items-center justify-center max-w-4xl px-4 text-center">
+                {/* Soft Ambient Contrast Pillow */}
+                <div
+                  className="absolute -inset-x-8 sm:-inset-x-16 -inset-y-4 sm:-inset-y-8 rounded-full pointer-events-none -z-10"
+                  style={{
+                    background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.48) 45%, rgba(0,0,0,0) 78%)',
+                    filter: 'blur(16px)',
+                  }}
+                />
+                <h2
+                  className="font-marcellus text-xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase leading-tight px-4"
+                  style={{
+                    background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    WebkitTextStroke: '0.4px rgba(0,0,0,0.85)',
+                    filter: 'drop-shadow(0 0 1.5px rgba(0,0,0,1)) drop-shadow(0 2px 4px rgba(0,0,0,0.98)) drop-shadow(0 4px 14px rgba(0,0,0,0.92))',
+                  }}
+                >
+                  {isDiwaliEvent ? (
+                    <span>KHANDELWAL DIWALI CELEBRATION</span>
+                  ) : (
+                    <>
+                      <span className="block sm:inline">ARPIT&apos;S 40TH </span>
+                      <span className="block sm:inline">&amp; DIWALI CELEBRATION</span>
+                    </>
+                  )}
+                </h2>
+              </div>
             </div>
           )}
 
@@ -981,18 +1003,29 @@ export default function VideoScreen({
                 transform: 'translate3d(0vw, 0%, 0) scale(0.90)',
               }}
             >
-              <h2
-                className="font-marcellus text-xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase max-w-4xl leading-tight px-4"
-                style={{
-                  background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
-                }}
-              >
-                <span className="block sm:inline">MORE MEANINGFUL </span>
-                <span className="block sm:inline">BECAUSE OF YOU</span>
-              </h2>
+              <div className="relative inline-flex flex-col items-center justify-center max-w-4xl px-4 text-center">
+                {/* Soft Ambient Contrast Pillow */}
+                <div
+                  className="absolute -inset-x-8 sm:-inset-x-16 -inset-y-4 sm:-inset-y-8 rounded-full pointer-events-none -z-10"
+                  style={{
+                    background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.48) 45%, rgba(0,0,0,0) 78%)',
+                    filter: 'blur(16px)',
+                  }}
+                />
+                <h2
+                  className="font-marcellus text-xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase leading-tight px-4"
+                  style={{
+                    background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    WebkitTextStroke: '0.4px rgba(0,0,0,0.85)',
+                    filter: 'drop-shadow(0 0 1.5px rgba(0,0,0,1)) drop-shadow(0 2px 4px rgba(0,0,0,0.98)) drop-shadow(0 4px 14px rgba(0,0,0,0.92))',
+                  }}
+                >
+                  <span className="block sm:inline">MORE MEANINGFUL </span>
+                  <span className="block sm:inline">BECAUSE OF YOU</span>
+                </h2>
+              </div>
             </div>
           )}
 
@@ -1005,16 +1038,25 @@ export default function VideoScreen({
                 opacity: 0,
               }}
             >
-              {/* Centered directly inside the glowing LED Stage Screen */}
-              <div className="relative flex flex-col items-center justify-center px-2 py-1 max-w-[210px] sm:max-w-[380px]">
-                {/* Personalized Guest Name glowing on the LED Screen */}
+              {/* Centered directly inside the glowing LED Stage Screen with dark contrast pillow */}
+              <div className="relative flex flex-col items-center justify-center px-3 py-1.5 max-w-[220px] sm:max-w-[390px]">
+                {/* Stage LED Contrast Pillow */}
+                <div
+                  className="absolute inset-0 rounded-xl pointer-events-none -z-10"
+                  style={{
+                    background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 70%, rgba(0,0,0,0.2) 100%)',
+                    filter: 'blur(8px)',
+                  }}
+                />
+                {/* Personalized Guest Name glowing on the LED Screen with Chiseled Outline */}
                 <h2
                   className="font-marcellus text-sm sm:text-2xl md:text-3xl font-bold tracking-wide leading-tight px-1"
                   style={{
                     background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF8E0 45%, #F5D06A 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
-                    filter: 'drop-shadow(0 0 8px rgba(255,238,180,0.95)) drop-shadow(0 0 20px rgba(240,196,90,0.65)) drop-shadow(0 1.5px 3px rgba(35,12,0,0.85))',
+                    WebkitTextStroke: '0.35px rgba(0,0,0,0.85)',
+                    filter: 'drop-shadow(0 0 1.5px rgba(0,0,0,1)) drop-shadow(0 2px 4px rgba(0,0,0,0.95)) drop-shadow(0 0 10px rgba(240,196,90,0.5))',
                   }}
                 >
                   {formatGuestTitleCase(guestName)}
@@ -1029,9 +1071,9 @@ export default function VideoScreen({
 
                 {/* Below Guest Name inside LED Screen: THE NIGHT ISN'T COMPLETE WITHOUT YOU */}
                 <p
-                  className="font-marcellus text-[8px] sm:text-xs md:text-sm font-bold tracking-[0.16em] uppercase text-[#FFFDF5] leading-snug"
+                  className="font-marcellus text-[10px] sm:text-xs md:text-sm font-bold tracking-[0.16em] uppercase text-[#FFFDF5] leading-snug"
                   style={{
-                    filter: 'drop-shadow(0 0 6px rgba(245,210,120,0.85)) drop-shadow(0 1px 2px rgba(35,12,0,0.85))',
+                    filter: 'drop-shadow(0 0 1.5px rgba(0,0,0,1)) drop-shadow(0 1.5px 3px rgba(0,0,0,0.95))',
                   }}
                 >
                   THE NIGHT ISN&apos;T COMPLETE
@@ -1041,69 +1083,102 @@ export default function VideoScreen({
             </div>
           )}
 
-          {/* ── WHERE MUSIC MEETS THE SOUL (31.0s - 32.5s): CENTERED LIKE ONE NIGHT. TWO REASONS TO CELEBRATE ── */}
+          {/* ── WHERE MUSIC MEETS THE SOUL (31.0s - 32.5s): CENTERED ── */}
           {isMainInvite && (
             <div
               className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 pointer-events-none select-none px-6 text-center z-20 ${
                 isMusicBeat ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
               }`}
             >
-              <h2
-                className="font-marcellus text-xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase max-w-4xl leading-tight px-4"
-                style={{
-                  background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
-                }}
-              >
-                <span className="block sm:inline">WHERE MUSIC </span>
-                <span className="block sm:inline">MEETS THE SOUL</span>
-              </h2>
+              <div className="relative inline-flex flex-col items-center justify-center max-w-4xl px-4 text-center">
+                {/* Soft Ambient Contrast Pillow */}
+                <div
+                  className="absolute -inset-x-8 sm:-inset-x-16 -inset-y-4 sm:-inset-y-8 rounded-full pointer-events-none -z-10"
+                  style={{
+                    background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.48) 45%, rgba(0,0,0,0) 78%)',
+                    filter: 'blur(16px)',
+                  }}
+                />
+                <h2
+                  className="font-marcellus text-xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase leading-tight px-4"
+                  style={{
+                    background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    WebkitTextStroke: '0.4px rgba(0,0,0,0.85)',
+                    filter: 'drop-shadow(0 0 1.5px rgba(0,0,0,1)) drop-shadow(0 2px 4px rgba(0,0,0,0.98)) drop-shadow(0 4px 14px rgba(0,0,0,0.92))',
+                  }}
+                >
+                  <span className="block sm:inline">WHERE MUSIC </span>
+                  <span className="block sm:inline">MEETS THE SOUL</span>
+                </h2>
+              </div>
             </div>
           )}
 
-          {/* ── WHERE THE SPIRITS SOAR (35.0s - 37.0s): CENTERED LIKE ONE NIGHT. TWO REASONS TO CELEBRATE ── */}
+          {/* ── WHERE THE SPIRITS SOAR (35.0s - 37.0s): CENTERED ── */}
           {isMainInvite && (
             <div
               className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 pointer-events-none select-none px-6 text-center z-20 ${
                 isSpiritsBeat ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
               }`}
             >
-              <h2
-                className="font-marcellus text-xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase max-w-4xl leading-tight px-4"
-                style={{
-                  background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
-                }}
-              >
-                <span className="block sm:inline">WHERE THE </span>
-                <span className="block sm:inline">SPIRITS SOAR</span>
-              </h2>
+              <div className="relative inline-flex flex-col items-center justify-center max-w-4xl px-4 text-center">
+                {/* Soft Ambient Contrast Pillow */}
+                <div
+                  className="absolute -inset-x-8 sm:-inset-x-16 -inset-y-4 sm:-inset-y-8 rounded-full pointer-events-none -z-10"
+                  style={{
+                    background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.48) 45%, rgba(0,0,0,0) 78%)',
+                    filter: 'blur(16px)',
+                  }}
+                />
+                <h2
+                  className="font-marcellus text-xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase leading-tight px-4"
+                  style={{
+                    background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    WebkitTextStroke: '0.4px rgba(0,0,0,0.85)',
+                    filter: 'drop-shadow(0 0 1.5px rgba(0,0,0,1)) drop-shadow(0 2px 4px rgba(0,0,0,0.98)) drop-shadow(0 4px 14px rgba(0,0,0,0.92))',
+                  }}
+                >
+                  <span className="block sm:inline">WHERE THE </span>
+                  <span className="block sm:inline">SPIRITS SOAR</span>
+                </h2>
+              </div>
             </div>
           )}
 
-          {/* ── WHEN THE NIGHT COMES ALIVE (40.0s - 42.0s): CENTERED LIKE ONE NIGHT. TWO REASONS TO CELEBRATE ── */}
+          {/* ── WHEN THE NIGHT COMES ALIVE (40.0s - 42.0s): CENTERED ── */}
           {isMainInvite && (
             <div
               className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 pointer-events-none select-none px-6 text-center z-20 ${
                 isStageBeat ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
               }`}
             >
-              <h2
-                className="font-marcellus text-xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase max-w-4xl leading-tight px-4"
-                style={{
-                  background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
-                }}
-              >
-                <span className="block sm:inline">WHEN THE NIGHT </span>
-                <span className="block sm:inline">COMES ALIVE</span>
-              </h2>
+              <div className="relative inline-flex flex-col items-center justify-center max-w-4xl px-4 text-center">
+                {/* Soft Ambient Contrast Pillow */}
+                <div
+                  className="absolute -inset-x-8 sm:-inset-x-16 -inset-y-4 sm:-inset-y-8 rounded-full pointer-events-none -z-10"
+                  style={{
+                    background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.48) 45%, rgba(0,0,0,0) 78%)',
+                    filter: 'blur(16px)',
+                  }}
+                />
+                <h2
+                  className="font-marcellus text-xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase leading-tight px-4"
+                  style={{
+                    background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    WebkitTextStroke: '0.4px rgba(0,0,0,0.85)',
+                    filter: 'drop-shadow(0 0 1.5px rgba(0,0,0,1)) drop-shadow(0 2px 4px rgba(0,0,0,0.98)) drop-shadow(0 4px 14px rgba(0,0,0,0.92))',
+                  }}
+                >
+                  <span className="block sm:inline">WHEN THE NIGHT </span>
+                  <span className="block sm:inline">COMES ALIVE</span>
+                </h2>
+              </div>
             </div>
           )}
 
@@ -1114,18 +1189,29 @@ export default function VideoScreen({
                 isFinaleBeat ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
               }`}
             >
-              <h2
-                className="font-marcellus text-xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase max-w-4xl leading-tight px-4"
-                style={{
-                  background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.98)) drop-shadow(0 -1.5px 1px rgba(255,255,255,0.6)) drop-shadow(0 0 20px rgba(212,175,55,0.45))',
-                }}
-              >
-                <span className="block sm:inline">YOUR PRESENCE. </span>
-                <span className="block sm:inline">THE PERFECT FINALE</span>
-              </h2>
+              <div className="relative inline-flex flex-col items-center justify-center max-w-4xl px-4 text-center">
+                {/* Soft Ambient Contrast Pillow */}
+                <div
+                  className="absolute -inset-x-8 sm:-inset-x-16 -inset-y-4 sm:-inset-y-8 rounded-full pointer-events-none -z-10"
+                  style={{
+                    background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.48) 45%, rgba(0,0,0,0) 78%)',
+                    filter: 'blur(16px)',
+                  }}
+                />
+                <h2
+                  className="font-marcellus text-xl sm:text-4xl md:text-5xl font-bold tracking-[0.16em] uppercase leading-tight px-4"
+                  style={{
+                    background: 'linear-gradient(135deg, #FFFDF0 0%, #F5DE9C 30%, #D4AF37 70%, #9C731A 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    WebkitTextStroke: '0.4px rgba(0,0,0,0.85)',
+                    filter: 'drop-shadow(0 0 1.5px rgba(0,0,0,1)) drop-shadow(0 2px 4px rgba(0,0,0,0.98)) drop-shadow(0 4px 14px rgba(0,0,0,0.92))',
+                  }}
+                >
+                  <span className="block sm:inline">YOUR PRESENCE. </span>
+                  <span className="block sm:inline">THE PERFECT FINALE</span>
+                </h2>
+              </div>
             </div>
           )}
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Guest, trackEvent, updateGuestStatus, submitRSVP } from '@/lib/supabase'
+import { Guest, trackEvent, updateGuestStatus, submitRSVP, updateGuestInviteDetails } from '@/lib/supabase'
 import OpeningScreen from '@/components/OpeningScreen'
 import VideoScreen from '@/components/VideoScreen'
 import ConfirmationScreen from '@/components/ConfirmationScreen'
@@ -30,12 +30,24 @@ export default function InvitationClient({ guest, inviteCode, inviteType }: Prop
     ? (guest.std_video_url || '/videos/save-the-date.mp4')
     : (guest.video_url || '/videos/main-invite.mp4')
 
-  // Track invitation opened & entered video directly
+  // Track invitation opened & entered video directly and update specific invite status
   useEffect(() => {
     trackEvent(guest.id, inviteCode, isDiwali ? 'diwali_opened' : isSaveTheDate ? 'std_opened' : 'invitation_opened')
     trackEvent(guest.id, inviteCode, isDiwali ? 'diwali_entered' : isSaveTheDate ? 'std_entered' : 'invitation_entered')
     updateGuestStatus(guest.id, 'entered')
-  }, [guest.id, inviteCode, isSaveTheDate, isDiwali])
+
+    if (isSaveTheDate) {
+      updateGuestInviteDetails(guest.id, {
+        std_status: 'seen',
+        std_type: isDiwali ? 'diwali' : '40_festive'
+      })
+    } else {
+      updateGuestInviteDetails(guest.id, {
+        main_status: 'seen',
+        main_type: isDiwali ? 'diwali' : '40_festive'
+      })
+    }
+  }, [guest.id, inviteCode, isSaveTheDate, isDiwali, isDiwaliSaveDate, isDiwaliMain])
 
   const handleEnter = () => {
     trackEvent(guest.id, inviteCode, 'invitation_entered')

@@ -1,7 +1,26 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { supabase, Guest } from '@/lib/supabase'
+import { supabase, Guest, parseGuestNotes, updateGuestInviteDetails, GuestInviteDetails } from '@/lib/supabase'
+
+export function getEffectiveInviteDetails(g: Guest, allGuests: Guest[]): GuestInviteDetails {
+  const own = parseGuestNotes(g.notes)
+  let partnerDetails: GuestInviteDetails = {}
+  if (g.linked_guest_id && g.send_together) {
+    const partner = allGuests.find(p => p.id === g.linked_guest_id)
+    if (partner) {
+      partnerDetails = parseGuestNotes(partner.notes)
+    }
+  }
+
+  const std_status = own.std_status || partnerDetails.std_status || 'pending'
+  const std_type = own.std_type || partnerDetails.std_type || ''
+
+  const main_status = own.main_status || partnerDetails.main_status || 'pending'
+  const main_type = own.main_type || partnerDetails.main_type || ''
+
+  return { std_status, std_type, main_status, main_type }
+}
 
 const ADMIN_PASS = process.env.NEXT_PUBLIC_ADMIN_PASS || 'arpit40'
 
@@ -718,6 +737,45 @@ export default function AdminPage() {
     fetchGuests()
   }
 
+  // ── QUICK CHANGE INVITE PHASE (SAVE THE DATE & MAIN INVITE - TYPE & STATUS) ──
+  const handleUpdateInvitePhase = async (
+    g: Guest,
+    phase: 'std' | 'main',
+    field: 'type' | 'status',
+    value: string
+  ) => {
+    const targetIds = [g.id]
+    if (g.linked_guest_id && g.send_together) {
+      targetIds.push(g.linked_guest_id)
+    }
+
+    // 1. Optimistic UI update
+    setGuests(prev => prev.map(item => {
+      if (!targetIds.includes(item.id)) return item
+      const curr = parseGuestNotes(item.notes)
+      const updated: GuestInviteDetails = {
+        ...curr,
+        ...(phase === 'std'
+          ? (field === 'type' ? { std_type: value as any } : { std_status: value as any })
+          : (field === 'type' ? { main_type: value as any } : { main_status: value as any }))
+      }
+      return { ...item, notes: JSON.stringify(updated) }
+    }))
+
+    // 2. Persist in Supabase for all targets
+    for (const tId of targetIds) {
+      const targetGuest = guests.find(x => x.id === tId)
+      const curr = parseGuestNotes(targetGuest?.notes)
+      const updated: GuestInviteDetails = {
+        ...curr,
+        ...(phase === 'std'
+          ? (field === 'type' ? { std_type: value as any } : { std_status: value as any })
+          : (field === 'type' ? { main_type: value as any } : { main_status: value as any }))
+      }
+      await supabase.from('guests').update({ notes: JSON.stringify(updated) }).eq('id', tId)
+    }
+  }
+
   // ── EDIT GUEST ──
   const startEdit = (g: Guest) => {
     setEditingGuest(g)
@@ -778,6 +836,33 @@ export default function AdminPage() {
       await supabase.from('guests').update({ invitation_status: 'sent' }).eq('id', g.id)
       g.invitation_status = 'sent'
       fetchGuests()
+    }
+
+    // Track which specific invite was sent in notes
+    const inviteUpdates: Partial<GuestInviteDetails> = {}
+    if (activeMode === 'save_date_diwali') {
+      inviteUpdates.std_type = 'diwali'
+      inviteUpdates.std_status = 'sent'
+    } else if (activeMode === 'save_date') {
+      inviteUpdates.std_type = '40_festive'
+      inviteUpdates.std_status = 'sent'
+    } else if (activeMode === 'invite_diwali') {
+      inviteUpdates.main_type = 'diwali'
+      inviteUpdates.main_status = 'sent'
+    } else if (activeMode === 'invite') {
+      inviteUpdates.main_type = '40_festive'
+      inviteUpdates.main_status = 'sent'
+    }
+
+    if (Object.keys(inviteUpdates).length > 0) {
+      await updateGuestInviteDetails(g.id, inviteUpdates)
+      setGuests(prev => prev.map(item => {
+        if (item.id === g.id || (g.send_together && item.id === g.linked_guest_id)) {
+          const curr = parseGuestNotes(item.notes)
+          return { ...item, notes: JSON.stringify({ ...curr, ...inviteUpdates }) }
+        }
+        return item
+      }))
     }
 
     const mainInviteLink = `${BASE_URL}/i/${g.invite_code}`
@@ -852,7 +937,15 @@ export default function AdminPage() {
       msg = `Dear *${name}*,\n\nIt gives me immense joy to invite you to a once-in-a-lifetime celebration — *Arpit’s 40th birthday* combined with the *Festival of Lights*. This evening is about cherishing friendships, sharing laughter, and creating memories under the glow of Diwali.\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${clock} *8:00 PM Onwards*\n${EMOJI.pin} *"The Foothills Villas", Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur*\n\nYour presence will make this milestone truly unforgettable. Please join us for an evening of warmth, music, festive cheer, and togetherness.\n\nWe would be delighted to have you with us — because celebrations are brighter when shared.\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${mainInviteLink}\n\nWarmly,\n*Tanvi*`
     }
 
-    const phone = formatWhatsAppPhone(g.mobile || '')
+    // Phone resolution with intelligent fallbacks
+    let rawPhone = g.mobile || ''
+    if (!rawPhone.trim() && g.partner_mobile) {
+      rawPhone = g.partner_mobile
+    }
+    if (!rawPhone.trim() && g.linked_guest_id && guestMap[g.linked_guest_id]?.mobile) {
+      rawPhone = guestMap[g.linked_guest_id].mobile
+    }
+    const phone = formatWhatsAppPhone(rawPhone)
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 
     let targetUrl = ''
@@ -871,10 +964,24 @@ export default function AdminPage() {
 
   // ── EXPORT CSV ──
   const exportCSV = () => {
-    const headers = ['Name', 'Nickname', 'Mobile', 'Partner', 'Partner Mobile', 'Attendance', 'Food', 'Drinks', 'Invited By', 'Group', 'Status', 'Invite Code', 'Invite Link']
+    const headers = [
+      'Name', 'Nickname', 'Mobile', 'Partner', 'Partner Mobile',
+      'Attendance', 'Food', 'Drinks', 'Invited By', 'Group',
+      'Save The Date Type', 'Save The Date Status',
+      'Main Invite Type', 'Main Invite Status',
+      'Invite Code', 'Save The Date Link', 'Main Invite Link'
+    ]
     const rows = visibleGuests.map(g => {
       const st = (g.invitation_status || '').toLowerCase()
       const attendance = (st === 'rsvp_yes' || st === 'attending' || st === 'yes') ? 'Attending' : (st === 'rsvp_no' || st === 'declined' || st === 'no') ? 'Declined' : 'Pending'
+      const d = getEffectiveInviteDetails(g, guests)
+      const stdType = d.std_type === 'diwali' ? 'Diwali Party' : d.std_type === '40_festive' ? '40 & Festive' : 'None'
+      const stdStatus = (d.std_status || 'pending').toUpperCase()
+      const mainType = d.main_type === 'diwali' ? 'Diwali Party' : d.main_type === '40_festive' ? '40 & Festive' : 'None'
+      const mainStatus = (d.main_status || 'pending').toUpperCase()
+      const stdLink = d.std_type === 'diwali' ? `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali` : `${BASE_URL}/i/${g.invite_code}?type=save_date`
+      const mainLink = d.main_type === 'diwali' ? `${BASE_URL}/i/${g.invite_code}?type=main_diwali` : `${BASE_URL}/i/${g.invite_code}`
+
       return [
         `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`,
         g.nickname || '',
@@ -886,9 +993,13 @@ export default function AdminPage() {
         g.liquor_preference || '',
         g.guest_of || '',
         g.relationship_group || '',
-        g.invitation_status,
+        stdType,
+        stdStatus,
+        mainType,
+        mainStatus,
         g.invite_code,
-        `${BASE_URL}/i/${g.invite_code}`
+        stdLink,
+        mainLink
       ]
     })
     const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -974,12 +1085,22 @@ export default function AdminPage() {
 
   const visibleGuests = filtered
 
-  // Attendance stats counts for visible guests
+  // Attendance & invite status stats counts for visible guests
   const pendingCount = visibleGuests.filter(g => !g.invitation_status || ['pending', 'not_sent'].includes((g.invitation_status || '').toLowerCase())).length
-  const messageSentCount = visibleGuests.filter(g => ['sent', 'message_sent'].includes((g.invitation_status || '').toLowerCase())).length
-  const messageSeenCount = visibleGuests.filter(g => ['opened', 'entered', 'seen', 'message_seen', 'attending', 'declined', 'rsvp_yes', 'rsvp_no', 'yes', 'no'].includes((g.invitation_status || '').toLowerCase())).length
   const attendingCount = visibleGuests.filter(g => ['rsvp_yes', 'attending', 'yes'].includes((g.invitation_status || '').toLowerCase())).length
   const declinedCount = visibleGuests.filter(g => ['rsvp_no', 'declined', 'not_attending', 'no'].includes((g.invitation_status || '').toLowerCase())).length
+
+  // Save The Date stats (Sent / Seen / Types)
+  const stdSentCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).std_status === 'sent').length
+  const stdSeenCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).std_status === 'seen').length
+  const stdDiwaliCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).std_type === 'diwali').length
+  const std40Count = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).std_type === '40_festive').length
+
+  // Main Invite stats (Sent / Seen / Types)
+  const mainSentCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).main_status === 'sent').length
+  const mainSeenCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).main_status === 'seen').length
+  const mainDiwaliCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).main_type === 'diwali').length
+  const main40Count = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).main_type === '40_festive').length
 
   // List of distinct hosts for Super Admin filter
   const distinctHosts = Array.from(new Set(guests.map(g => (g.guest_of || 'Unassigned').trim()).filter(Boolean)))
@@ -1062,20 +1183,56 @@ export default function AdminPage() {
       </div>
 
       {/* Stats Bar */}
-      <div className="grid grid-cols-6 border-b border-[#C9A84C]/10">
-        {[
-          { label: 'Total Guests', val: visibleGuests.length, color: 'text-[#C9A84C]' },
-          { label: 'Pending', val: pendingCount, color: 'text-white/40' },
-          { label: 'Message Sent', val: messageSentCount, color: 'text-blue-400' },
-          { label: 'Message Seen', val: messageSeenCount, color: 'text-yellow-400' },
-          { label: 'Attending', val: attendingCount, color: 'text-green-400' },
-          { label: 'Not Attending', val: declinedCount, color: 'text-red-400' },
-        ].map(s => (
-          <div key={s.label} className="px-4 py-3 text-center border-r border-[#C9A84C]/10 last:border-0">
-            <p className={`text-lg font-serif ${s.color}`}>{s.val}</p>
-            <p className="text-[9px] text-white/30 tracking-widest uppercase">{s.label}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 border-b border-[#C9A84C]/10 bg-[#050D1A]/50">
+        <div className="px-4 py-3 text-center border-r border-b lg:border-b-0 border-[#C9A84C]/10">
+          <p className="text-xl font-serif text-[#C9A84C]">{visibleGuests.length}</p>
+          <p className="text-[9px] text-white/40 tracking-widest uppercase">Total Guests</p>
+          <p className="text-[10px] text-white/30 mt-0.5">{guests.length !== visibleGuests.length ? `(${guests.length} in DB)` : 'Complete List'}</p>
+        </div>
+
+        <div className="px-4 py-3 text-center border-r border-b lg:border-b-0 border-[#C9A84C]/10 bg-amber-500/5">
+          <p className="text-xl font-serif text-amber-300 font-bold">{stdSeenCount + stdSentCount}</p>
+          <p className="text-[9px] text-amber-400/80 tracking-widest uppercase font-semibold">🗓️ Save The Date</p>
+          <p className="text-[10px] text-white/50 mt-0.5">
+            <span className="text-yellow-400 font-semibold">{stdSeenCount} Seen</span> · <span className="text-blue-400">{stdSentCount} Sent</span>
+          </p>
+        </div>
+
+        <div className="px-4 py-3 text-center border-r border-b lg:border-b-0 border-[#C9A84C]/10 bg-amber-500/5">
+          <p className="text-sm font-serif text-[#F5ECD7] font-semibold flex items-center justify-center gap-2 mt-1">
+            <span>🪔 {stdDiwaliCount}</span>
+            <span className="text-white/20">|</span>
+            <span>🎂 {std40Count}</span>
+          </p>
+          <p className="text-[9px] text-amber-400/80 tracking-widest uppercase font-semibold mt-1">STD Breakdown</p>
+          <p className="text-[10px] text-white/40 mt-0.5">Diwali vs 40 &amp; Festive</p>
+        </div>
+
+        <div className="px-4 py-3 text-center border-r border-b md:border-b-0 border-[#C9A84C]/10 bg-yellow-500/5">
+          <p className="text-xl font-serif text-yellow-300 font-bold">{mainSeenCount + mainSentCount}</p>
+          <p className="text-[9px] text-yellow-400/80 tracking-widest uppercase font-semibold">💌 Main Invite</p>
+          <p className="text-[10px] text-white/50 mt-0.5">
+            <span className="text-yellow-400 font-semibold">{mainSeenCount} Seen</span> · <span className="text-blue-400">{mainSentCount} Sent</span>
+          </p>
+        </div>
+
+        <div className="px-4 py-3 text-center border-r border-b md:border-b-0 border-[#C9A84C]/10 bg-yellow-500/5">
+          <p className="text-sm font-serif text-[#F5ECD7] font-semibold flex items-center justify-center gap-2 mt-1">
+            <span>🪔 {mainDiwaliCount}</span>
+            <span className="text-white/20">|</span>
+            <span>🎂 {main40Count}</span>
+          </p>
+          <p className="text-[9px] text-yellow-400/80 tracking-widest uppercase font-semibold mt-1">Main Breakdown</p>
+          <p className="text-[10px] text-white/40 mt-0.5">Diwali vs 40 &amp; Festive</p>
+        </div>
+
+        <div className="px-4 py-3 text-center last:border-0">
+          <p className="text-xl font-serif text-green-400 font-bold">{attendingCount}</p>
+          <p className="text-[9px] text-green-400 tracking-widest uppercase font-semibold">Attending (RSVP)</p>
+          <p className="text-[10px] text-white/50 mt-0.5">
+            <span className="text-red-400">{declinedCount} No</span> · <span className="text-white/40">{pendingCount} Awaiting</span>
+          </p>
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -1198,52 +1355,70 @@ export default function AdminPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[#C9A84C]/10 text-[10px] uppercase tracking-widest text-white/30">
-              <th className="px-4 py-3 text-left">Name</th>
-              <th className="px-4 py-3 text-left">Nickname</th>
-              <th className="px-4 py-3 text-left">Mobile</th>
-              <th className="px-4 py-3 text-left">Partner</th>
-              <th className="px-4 py-3 text-left">Partner Mob</th>
-              <th className="px-4 py-3 text-left text-[#C9A84C]/90">Attendance</th>
-              <th className="px-4 py-3 text-left">Food</th>
-              <th className="px-4 py-3 text-left">Drinks</th>
-              <th className="px-4 py-3 text-left">Invited By (Host)</th>
-              <th className="px-4 py-3 text-left">Group</th>
-              <th className="px-4 py-3 text-left">Msg Status</th>
-              <th className="px-4 py-3 text-left">Send As</th>
-              <th className="px-4 py-3 text-left">Code</th>
-              <th className="px-4 py-3 text-left">Actions</th>
+              <th className="px-3 py-3 text-left">Name</th>
+              <th className="px-2 py-3 text-left">Nickname</th>
+              <th className="px-3 py-3 text-left">Mobile</th>
+              <th className="px-3 py-3 text-left">Partner</th>
+              <th className="px-3 py-3 text-left">Partner Mob</th>
+              <th className="px-3 py-3 text-left text-[#C9A84C]/90">Attendance</th>
+              <th className="px-2 py-3 text-left">Food</th>
+              <th className="px-2 py-3 text-left">Drinks</th>
+              <th className="px-3 py-3 text-left">Host</th>
+              <th className="px-2 py-3 text-left">Group</th>
+              <th className="px-3 py-3 text-left text-amber-300 font-semibold bg-amber-500/5 border-l border-amber-500/20">🗓️ Save The Date</th>
+              <th className="px-3 py-3 text-left text-yellow-300 font-semibold bg-yellow-500/5 border-l border-yellow-500/20">💌 Main Invite</th>
+              <th className="px-2 py-3 text-left border-l border-white/5">Send As</th>
+              <th className="px-2 py-3 text-left">Code</th>
+              <th className="px-3 py-3 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={14} className="px-4 py-16 text-center text-white/30">Loading...</td></tr>
+              <tr><td colSpan={15} className="px-4 py-16 text-center text-white/30">Loading...</td></tr>
             ) : visibleGuests.length === 0 ? (
-              <tr><td colSpan={14} className="px-4 py-16 text-center text-white/30">
+              <tr><td colSpan={15} className="px-4 py-16 text-center text-white/30">
                 <p className="font-serif text-lg mb-1">No guests found</p>
                 <p className="text-xs">Click "+ Add Guest" to add your guests</p>
               </td></tr>
             ) : visibleGuests.map(g => {
-              const info = getStatusInfo(g.invitation_status)
               const st = (g.invitation_status || '').toLowerCase()
               const isYes = st === 'rsvp_yes' || st === 'attending' || st === 'yes'
               const isNo = st === 'rsvp_no' || st === 'declined' || st === 'not_attending' || st === 'no'
+              const inviteDetails = getEffectiveInviteDetails(g, guests)
 
               return (
                 <tr key={g.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
-                  <td className="px-4 py-3 font-serif text-[#F5ECD7] whitespace-nowrap">
+                  <td className="px-3 py-3 font-serif text-[#F5ECD7] whitespace-nowrap">
                     {g.first_name}{g.last_name ? ' ' + g.last_name : ''}
                   </td>
-                  <td className="px-4 py-3 text-[#C9A84C]/60 italic text-xs">{g.nickname || '—'}</td>
-                  <td className="px-4 py-3 text-white/60 font-mono text-xs whitespace-nowrap">{g.mobile || '—'}</td>
-                  <td className="px-4 py-3 text-white/50 whitespace-nowrap">
+                  <td className="px-2 py-3 text-[#C9A84C]/60 italic text-xs">{g.nickname || '—'}</td>
+                  
+                  {/* MOBILE COLUMN (With fallback to partner mobile) */}
+                  <td className="px-3 py-3 font-mono text-xs whitespace-nowrap">
+                    {g.mobile && g.mobile.trim() ? (
+                      <span className="text-white/70">{g.mobile}</span>
+                    ) : g.partner_mobile && g.partner_mobile.trim() ? (
+                      <span className="text-amber-400/80" title="Primary mobile empty; will send via partner mobile">
+                        {g.partner_mobile} <span className="text-[9px] text-white/30 italic">(partner)</span>
+                      </span>
+                    ) : g.linked_guest_id && guestMap[g.linked_guest_id]?.mobile ? (
+                      <span className="text-amber-400/80" title="Primary mobile empty; will send via partner mobile">
+                        {guestMap[g.linked_guest_id].mobile} <span className="text-[9px] text-white/30 italic">(partner)</span>
+                      </span>
+                    ) : (
+                      <span className="text-white/20">—</span>
+                    )}
+                  </td>
+
+                  <td className="px-3 py-3 text-white/50 whitespace-nowrap">
                     {g.partner_name || (g.linked_guest_id && guestMap[g.linked_guest_id]?.name) || '—'}
                   </td>
-                  <td className="px-4 py-3 text-white/40 font-mono text-xs whitespace-nowrap">
+                  <td className="px-3 py-3 text-white/40 font-mono text-xs whitespace-nowrap">
                     {g.partner_mobile || (g.linked_guest_id && guestMap[g.linked_guest_id]?.mobile) || '—'}
                   </td>
 
                   {/* ATTENDANCE COLUMN */}
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <select
                       value={isYes ? 'rsvp_yes' : isNo ? 'rsvp_no' : 'pending'}
                       onChange={(e) => handleAttendanceChange(g, e.target.value)}
@@ -1262,11 +1437,11 @@ export default function AdminPage() {
                   </td>
 
                   {/* FOOD COLUMN */}
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-2 py-3 whitespace-nowrap">
                     <select
                       value={(g.food_preference || '').toLowerCase()}
                       onChange={(e) => handleFieldChange(g, 'food_preference', e.target.value)}
-                      className="bg-white/5 border border-white/10 text-white/80 text-[11px] px-2.5 py-1 rounded-full outline-none cursor-pointer hover:border-[#C9A84C]/40 transition-all font-sans"
+                      className="bg-white/5 border border-white/10 text-white/80 text-[11px] px-2 py-1 rounded-full outline-none cursor-pointer hover:border-[#C9A84C]/40 transition-all font-sans"
                     >
                       <option value="" className="bg-[#0A1931] text-white/40">— None</option>
                       <option value="vegetarian" className="bg-[#0A1931] text-green-400 font-medium">🥗 Veg</option>
@@ -1277,11 +1452,11 @@ export default function AdminPage() {
                   </td>
 
                   {/* DRINKS COLUMN */}
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-2 py-3 whitespace-nowrap">
                     <select
                       value={(g.liquor_preference || '').toLowerCase()}
                       onChange={(e) => handleFieldChange(g, 'liquor_preference', e.target.value)}
-                      className="bg-white/5 border border-white/10 text-white/80 text-[11px] px-2.5 py-1 rounded-full outline-none cursor-pointer hover:border-[#C9A84C]/40 transition-all font-sans"
+                      className="bg-white/5 border border-white/10 text-white/80 text-[11px] px-2 py-1 rounded-full outline-none cursor-pointer hover:border-[#C9A84C]/40 transition-all font-sans"
                     >
                       <option value="" className="bg-[#0A1931] text-white/40">— None</option>
                       <option value="yes" className="bg-[#0A1931] text-amber-400 font-medium">🥂 Yes</option>
@@ -1291,7 +1466,7 @@ export default function AdminPage() {
                   </td>
 
                   {/* INVITED BY (HOST) COLUMN */}
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <select
                       value={g.guest_of || ''}
                       onChange={(e) => handleFieldChange(g, 'guest_of', e.target.value)}
@@ -1307,7 +1482,7 @@ export default function AdminPage() {
                   </td>
 
                   {/* GROUP COLUMN */}
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-2 py-3 whitespace-nowrap">
                     {(() => {
                       const rawGrp = (g.relationship_group || '').trim()
                       const options = ['Family', 'Friends', 'Relatives', 'Business', 'VIP', 'Work', 'School', 'College']
@@ -1329,29 +1504,97 @@ export default function AdminPage() {
                       )
                     })()}
                   </td>
-                  {/* MSG STATUS COLUMN */}
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {(() => {
-                      const st = (g.invitation_status || '').toLowerCase()
-                      const msgVal = ['seen', 'message_seen', 'entered', 'opened', 'rsvp_yes', 'rsvp_no', 'attending', 'declined', 'yes', 'no'].includes(st)
-                        ? 'seen'
-                        : ['sent', 'message_sent'].includes(st)
-                        ? 'sent'
-                        : 'pending'
-                      return (
+
+                  {/* ── SAVE THE DATE COLUMN (TYPE + STATUS + QUICK WA) ── */}
+                  <td className="px-3 py-2 whitespace-nowrap bg-amber-500/5 border-l border-amber-500/20">
+                    <div className="flex flex-col gap-1 min-w-[140px]">
+                      {/* Row 1: Type selector + Quick WA button */}
+                      <div className="flex items-center gap-1">
                         <select
-                          value={msgVal}
-                          onChange={(e) => handleFieldChange(g, 'invitation_status', e.target.value)}
-                          className={`text-[9px] font-semibold px-2 py-1 border rounded-sm tracking-wider whitespace-nowrap outline-none cursor-pointer ${info.color}`}
+                          value={inviteDetails.std_type || ''}
+                          onChange={(e) => handleUpdateInvitePhase(g, 'std', 'type', e.target.value)}
+                          className="flex-1 bg-[#0A1931] border border-amber-500/40 text-amber-200 text-[10px] font-semibold px-1.5 py-0.5 rounded outline-none cursor-pointer hover:border-amber-400"
+                          title="Select which Save The Date template goes to this guest"
                         >
-                          <option value="pending" className="bg-[#0A1931] text-white/50">PENDING</option>
-                          <option value="sent" className="bg-[#0A1931] text-blue-400 font-semibold">MESSAGE SENT</option>
-                          <option value="seen" className="bg-[#0A1931] text-yellow-400 font-semibold">MESSAGE SEEN</option>
+                          <option value="" className="bg-[#0A1931] text-white/40">— No STD</option>
+                          <option value="diwali" className="bg-[#0A1931] text-amber-300">🪔 Diwali</option>
+                          <option value="40_festive" className="bg-[#0A1931] text-[#E8D5A3]">🎂 40 &amp; Festive</option>
                         </select>
-                      )
-                    })()}
+                        <button
+                          type="button"
+                          onClick={() => sendWhatsApp(g, inviteDetails.std_type === 'diwali' ? 'save_date_diwali' : 'save_date')}
+                          title={`Send ${inviteDetails.std_type === 'diwali' ? 'Diwali' : '40 & Festive'} Save The Date via WhatsApp`}
+                          className="px-1.5 py-0.5 border border-green-500/40 text-green-400 hover:bg-green-500/20 rounded text-[9px] font-bold transition-all whitespace-nowrap"
+                        >
+                          💬 WA
+                        </button>
+                      </div>
+
+                      {/* Row 2: Status pill / dropdown */}
+                      <select
+                        value={inviteDetails.std_status || 'pending'}
+                        onChange={(e) => handleUpdateInvitePhase(g, 'std', 'status', e.target.value)}
+                        className={`text-[9px] font-semibold px-2 py-0.5 border rounded outline-none cursor-pointer tracking-wider ${
+                          inviteDetails.std_status === 'seen'
+                            ? 'text-yellow-400 bg-yellow-500/10 border-yellow-500/40'
+                            : inviteDetails.std_status === 'sent'
+                            ? 'text-blue-400 bg-blue-500/10 border-blue-500/40'
+                            : 'text-white/40 bg-white/5 border-white/10'
+                        }`}
+                      >
+                        <option value="pending" className="bg-[#0A1931] text-white/50">⏳ PENDING</option>
+                        <option value="sent" className="bg-[#0A1931] text-blue-400 font-semibold">📨 SENT</option>
+                        <option value="seen" className="bg-[#0A1931] text-yellow-400 font-semibold">👁️ SEEN</option>
+                      </select>
+                    </div>
                   </td>
-                  <td className="px-4 py-3">
+
+                  {/* ── MAIN INVITE COLUMN (TYPE + STATUS + QUICK WA) ── */}
+                  <td className="px-3 py-2 whitespace-nowrap bg-yellow-500/5 border-l border-yellow-500/20">
+                    <div className="flex flex-col gap-1 min-w-[140px]">
+                      {/* Row 1: Type selector + Quick WA button */}
+                      <div className="flex items-center gap-1">
+                        <select
+                          value={inviteDetails.main_type || ''}
+                          onChange={(e) => handleUpdateInvitePhase(g, 'main', 'type', e.target.value)}
+                          className="flex-1 bg-[#0A1931] border border-yellow-500/40 text-yellow-200 text-[10px] font-semibold px-1.5 py-0.5 rounded outline-none cursor-pointer hover:border-yellow-400"
+                          title="Select which Main Invite template goes to this guest"
+                        >
+                          <option value="" className="bg-[#0A1931] text-white/40">— No Main</option>
+                          <option value="diwali" className="bg-[#0A1931] text-amber-300">🪔 Diwali</option>
+                          <option value="40_festive" className="bg-[#0A1931] text-[#E8D5A3]">🎂 40 &amp; Festive</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => sendWhatsApp(g, inviteDetails.main_type === 'diwali' ? 'invite_diwali' : 'invite')}
+                          title={`Send ${inviteDetails.main_type === 'diwali' ? 'Diwali' : '40 & Festive'} Main Invite via WhatsApp`}
+                          className="px-1.5 py-0.5 border border-green-500/40 text-green-400 hover:bg-green-500/20 rounded text-[9px] font-bold transition-all whitespace-nowrap"
+                        >
+                          💬 WA
+                        </button>
+                      </div>
+
+                      {/* Row 2: Status pill / dropdown */}
+                      <select
+                        value={inviteDetails.main_status || 'pending'}
+                        onChange={(e) => handleUpdateInvitePhase(g, 'main', 'status', e.target.value)}
+                        className={`text-[9px] font-semibold px-2 py-0.5 border rounded outline-none cursor-pointer tracking-wider ${
+                          inviteDetails.main_status === 'seen'
+                            ? 'text-yellow-400 bg-yellow-500/10 border-yellow-500/40'
+                            : inviteDetails.main_status === 'sent'
+                            ? 'text-blue-400 bg-blue-500/10 border-blue-500/40'
+                            : 'text-white/40 bg-white/5 border-white/10'
+                        }`}
+                      >
+                        <option value="pending" className="bg-[#0A1931] text-white/50">⏳ PENDING</option>
+                        <option value="sent" className="bg-[#0A1931] text-blue-400 font-semibold">📨 SENT</option>
+                        <option value="seen" className="bg-[#0A1931] text-yellow-400 font-semibold">👁️ SEEN</option>
+                      </select>
+                    </div>
+                  </td>
+
+                  {/* TOGETHER / SEPARATE */}
+                  <td className="px-3 py-3 border-l border-white/5 whitespace-nowrap">
                     {g.linked_guest_id ? (
                       <button onClick={() => toggleTogether(g)} title={g.send_together ? 'Click to send separately' : 'Click to send together'}
                         className={`px-2 py-1 border rounded-sm text-[10px] whitespace-nowrap transition-all ${g.send_together ? 'border-[#C9A84C]/50 text-[#C9A84C] bg-[#C9A84C]/5' : 'border-white/15 text-white/35 hover:border-[#C9A84C]/30'}`}>
@@ -1359,8 +1602,11 @@ export default function AdminPage() {
                       </button>
                     ) : <span className="text-white/15 text-[10px]">—</span>}
                   </td>
-                  <td className="px-4 py-3 font-mono text-[11px] text-[#C9A84C]/60">{g.invite_code}</td>
-                  <td className="px-4 py-3">
+
+                  <td className="px-3 py-3 font-mono text-[11px] text-[#C9A84C]/60 whitespace-nowrap">{g.invite_code}</td>
+
+                  {/* ACTIONS */}
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <div className="flex gap-1 items-center">
                       <button onClick={() => copyLink(g.invite_code)} title="Copy Card link (/i/code)"
                         className={`px-2 py-1 border rounded-sm text-[10px] transition-all whitespace-nowrap ${copied === g.invite_code ? 'border-green-500/40 text-green-400' : 'border-[#C9A84C]/40 text-[#C9A84C] hover:bg-[#C9A84C]/10'}`}>
