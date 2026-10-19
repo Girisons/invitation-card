@@ -862,6 +862,29 @@ export default function AdminPage() {
   const sendWhatsApp = async (g: Guest, modeOverride?: MessageTemplateMode) => {
     const activeMode = modeOverride || messageTemplate
 
+    const guestSt = (g.invitation_status || '').toLowerCase()
+    const isYes = guestSt === 'rsvp_yes' || guestSt === 'attending' || guestSt === 'yes'
+    const isNo = guestSt === 'rsvp_no' || guestSt === 'declined' || guestSt === 'not_attending' || guestSt === 'no'
+
+    const mainInviteLink = isNo
+      ? `${BASE_URL}/i/${g.invite_code}?type=main&v=2`
+      : `${BASE_URL}/i/${g.invite_code}?type=main`
+    const mainDiwaliInviteLink = isNo
+      ? `${BASE_URL}/i/${g.invite_code}?type=main_diwali&v=2`
+      : `${BASE_URL}/i/${g.invite_code}?type=main_diwali`
+    const saveDateLink = `${BASE_URL}/i/${g.invite_code}?type=save_date`
+    const saveDateDiwaliLink = `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali`
+
+    // Pre-warm the invite route & OG image on Vercel edge/lambda immediately (before DB calls)
+    const warmLink = activeMode === 'save_date_diwali'
+      ? saveDateDiwaliLink
+      : activeMode === 'invite_diwali'
+      ? mainDiwaliInviteLink
+      : activeMode === 'save_date'
+      ? saveDateLink
+      : mainInviteLink
+    fetch(warmLink, { mode: 'no-cors' }).catch(() => {})
+
     const currentSt = (g.invitation_status || '').toLowerCase()
     if (!currentSt || currentSt === 'pending' || currentSt === 'not_sent') {
       await supabase.from('guests').update({ invitation_status: 'sent' }).eq('id', g.id)
@@ -895,21 +918,6 @@ export default function AdminPage() {
         return item
       }))
     }
-
-    const mainInviteLink = `${BASE_URL}/i/${g.invite_code}?type=main`
-    const mainDiwaliInviteLink = `${BASE_URL}/i/${g.invite_code}?type=main_diwali`
-    const saveDateLink = `${BASE_URL}/i/${g.invite_code}?type=save_date`
-    const saveDateDiwaliLink = `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali`
-
-    // Pre-warm the invite route & OG image on Vercel edge/lambda before WhatsApp scraper requests it
-    const warmLink = activeMode === 'save_date_diwali'
-      ? saveDateDiwaliLink
-      : activeMode === 'invite_diwali'
-      ? mainDiwaliInviteLink
-      : activeMode === 'save_date'
-      ? saveDateLink
-      : mainInviteLink
-    fetch(warmLink, { mode: 'no-cors' }).catch(() => {})
 
     const isCouple = (g.send_together && !!g.partner_name) || (g.invited_count && g.invited_count > 1)
 
@@ -956,9 +964,6 @@ export default function AdminPage() {
       camera: String.fromCodePoint(0x1F4F8),
     }
 
-    const guestSt = (g.invitation_status || '').toLowerCase()
-    const isYes = guestSt === 'rsvp_yes' || guestSt === 'attending' || guestSt === 'yes'
-    const isNo = guestSt === 'rsvp_no' || guestSt === 'declined' || guestSt === 'not_attending' || guestSt === 'no'
     const clock = String.fromCodePoint(0x23F0)
 
     let msg = ''
@@ -972,7 +977,7 @@ export default function AdminPage() {
       if (isYes) {
         msg = `Dear *${name}*,\n\nWe are truly delighted that you will be joining us for the *Khandelwal Diwali Celebration!* ✨\n\nThis evening is about cherishing friendships, sharing laughter, and creating memories under the glow of Diwali, and having you with us makes it complete.\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${clock} *8:00 PM Onwards*\n${EMOJI.pin} *“The Foothills Villas”, Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur*\n\nWe cannot wait to celebrate together under the festive lights. Tap below anytime for your digital pass and venue directions:\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${mainDiwaliInviteLink}\n\nLooking forward to welcoming you!\n\nWarmly,\n*Khandelwal Family*`
       } else if (isNo) {
-        msg = `Dear *${name}*,\n\nWe received your response regarding the *Khandelwal Diwali Celebration*, and we truly feel our gathering will be incomplete without you! 🪔\n\nDiwali is about togetherness and celebrating with the people who matter most to us. We completely understand busy festive schedules, but our family earnestly requests you to reconsider and join us — even if it’s for a short while to share festive cheer and dinner!\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${clock} *8:00 PM Onwards*\n${EMOJI.pin} *“The Foothills Villas”, Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur*\n\nPlease do see if you can make it happen. We would love nothing more than having you celebrate with us. ✨\n\n🎁 *Your Personal Digital Invitation & Venue Details:*\n${mainDiwaliInviteLink}\n\nWarmly,\n*Khandelwal Family*`
+        msg = `Dear *${name}*,\n\nWe received your response regarding the *Khandelwal Diwali Celebration*, and our gathering will truly feel incomplete without you! ${EMOJI.sparkles}\n\nWe completely understand busy festive schedules, but our family earnestly requests you to reconsider and join us — even if for a short while to share festive cheer and dinner!\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${clock} *8:00 PM Onwards*\n${EMOJI.pin} *“The Foothills Villas”, Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur*\n\n${EMOJI.gift} *Your Personal Digital Invitation & Venue Details:*\n${mainDiwaliInviteLink}\n\nWe would love nothing more than celebrating with you! ${EMOJI.sparkles}\n\nWarmly,\n*Khandelwal Family*`
       } else {
         // Pending / Initial Invite
         msg = `Dear *${name}*,\n\nIt gives us immense joy to warmly invite you to the *Khandelwal Diwali Celebration* — an evening of lights, laughter, music, and togetherness. This evening is about cherishing friendships and creating memories under the glow of Diwali.\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${clock} *8:00 PM Onwards*\n${EMOJI.pin} *“The Foothills Villas”, Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur*\n\nYour presence will make our celebration truly brighter. Please tap the link below to view your digital invitation and kindly confirm your presence:\n\nWe would be delighted to have you with us — because celebrations are brighter when shared.\n\n${EMOJI.gift} *Your Personal Digital Invitation & RSVP:*\n${mainDiwaliInviteLink}\n\nWarmly,\n*Khandelwal Family*`
@@ -991,7 +996,7 @@ export default function AdminPage() {
       if (isYes) {
         msg = `Dear *${name}*,\n\nWe are truly delighted that you will be joining us to celebrate *Arpit’s 40th Birthday & Diwali Celebration!* ✨\n\nYour presence will make this milestone truly unforgettable. We are so excited to celebrate an evening of warmth, music, festive cheer, and togetherness with you.\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${clock} *8:00 PM Onwards*\n${EMOJI.pin} *“The Foothills Villas”, Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur*\n\nTap below anytime for your personal digital pass and venue directions:\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${mainInviteLink}\n\nLooking forward to welcoming you!\n\nWarmly,\n*Tanvi*`
       } else if (isNo) {
-        msg = `Dear *${name}*,\n\nWe received your response regarding *Arpit’s 40th Birthday & Diwali Celebration*, and we truly feel the evening will be incomplete without you! 💛\n\nMilestones like this come once in a lifetime, and the celebration genuinely wouldn't be the same without your presence and laughter. We completely understand busy schedules, but we earnestly request you to reconsider and join us — even if it’s just for a little while to raise a toast together!\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${clock} *8:00 PM Onwards*\n${EMOJI.pin} *“The Foothills Villas”, Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur*\n\nPlease do see if you can make it happen. We would be overjoyed to have you with us! ✨\n\n🎁 *Your Personal Digital Invitation & Venue Details:*\n${mainInviteLink}\n\nWarmly,\n*Tanvi*`
+        msg = `Dear *${name}*,\n\nWe received your response regarding *Arpit’s 40th Birthday & Diwali Celebration*, and the evening will truly feel incomplete without you! ${EMOJI.heart}\n\nMilestones like this come once in a lifetime — we completely understand busy schedules, but we earnestly request you to reconsider and join us, even if just for a little while to raise a toast together!\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${clock} *8:00 PM Onwards*\n${EMOJI.pin} *“The Foothills Villas”, Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur*\n\n${EMOJI.gift} *Your Personal Digital Invitation & Venue Details:*\n${mainInviteLink}\n\nWe would be overjoyed to have you with us! ${EMOJI.sparkles}\n\nWarmly,\n*Tanvi*`
       } else {
         // Pending / Initial Invite
         msg = `Dear *${name}*,\n\nIt gives me immense joy to invite you to a once-in-a-lifetime celebration — *Arpit’s 40th birthday* combined with the *Festival of Lights*. This evening is about cherishing friendships, sharing laughter, and creating memories under the glow of Diwali.\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${clock} *8:00 PM Onwards*\n${EMOJI.pin} *“The Foothills Villas”, Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur*\n\nYour presence will make this milestone truly unforgettable. Please join us for an evening of warmth, music, festive cheer, and togetherness.\n\nWe would be delighted to have you with us — because celebrations are brighter when shared.\n\n${EMOJI.gift} *Your Personal Digital Invitation & RSVP:*\n${mainInviteLink}\n\nWarmly,\n*Tanvi*`
