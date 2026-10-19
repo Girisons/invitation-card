@@ -396,14 +396,14 @@ export default function VideoScreen({
     }
   }, [showRsvpPrompt, videoState])
 
-  // Auto-switch: Show Stage 1 (Personal Greeting + RSVP & Add to Calendar) for 4 seconds, then automatically transition to Stage 2 (Venue + Sign-off)
+  // Auto-switch: Show Stage 1 (Personal Greeting + RSVP & Add to Calendar) for 5 seconds, then automatically transition to Stage 2 (Venue + Sign-off)
   useEffect(() => {
     if (!showRsvpPrompt || !isMainInvite || hasAutoSwitchedRef.current) return
     if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current)
     greetingTimerRef.current = setTimeout(() => {
       hasAutoSwitchedRef.current = true
       setShowPersonalGreeting(false)
-    }, 4000)
+    }, 5000)
     return () => {
       if (greetingTimerRef.current) clearTimeout(greetingTimerRef.current)
     }
