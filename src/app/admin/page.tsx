@@ -940,6 +940,11 @@ export default function AdminPage() {
       camera: String.fromCodePoint(0x1F4F8),
     }
 
+    const guestSt = (g.invitation_status || '').toLowerCase()
+    const isYes = guestSt === 'rsvp_yes' || guestSt === 'attending' || guestSt === 'yes'
+    const isNo = guestSt === 'rsvp_no' || guestSt === 'declined' || guestSt === 'not_attending' || guestSt === 'no'
+    const clock = String.fromCodePoint(0x23F0)
+
     let msg = ''
 
     if (activeMode === 'save_date_diwali') {
@@ -947,7 +952,15 @@ export default function AdminPage() {
       const pointRight = String.fromCodePoint(0x1F449)
       msg = `${EMOJI.sparkles} *SAVE THE DATE* ${EMOJI.sparkles}\n\nDear *${name}*,\n\nGet ready for an unforgettable night of music, lights, and celebration! Mark your calendar for the *Khandelwal Diwali Bash*.\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur, Rajasthan*\n${headphones} *Drinks · Dance · Celebration*\n\n${pointRight} ${saveDateDiwaliLink}\n\nWarmly,\n*The Khandelwal Family*`
     } else if (activeMode === 'invite_diwali') {
-      msg = `🪔 *FESTIVAL OF LIGHTS • A GRAND CELEBRATION!* 🪔\n\nDear *${name}*, ${EMOJI.heart}\n\nWe warmly invite ${youTarget} to join us for a grand *Diwali Party Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\nCome celebrate the festival of lights with warmth, joy, music, and wonderful memories together! ✨\n\nWith lots of love,\n*Khandelwal Family*\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${mainDiwaliInviteLink}`
+      // Diwali Main Invite: Sender is Khandelwal Family; adapts to RSVP status
+      if (isYes) {
+        msg = `Dear *${name}*,\n\nWe are truly delighted that you will be joining us for the *Khandelwal Diwali Celebration!* ✨\n\nThis evening is about cherishing friendships, sharing laughter, and creating memories under the glow of Diwali, and having you with us makes it complete.\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${clock} *8:00 PM Onwards*\n${EMOJI.pin} *“The Foothills Villas”, Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur*\n\nWe cannot wait to celebrate together under the festive lights. Tap below anytime for your digital pass and venue directions:\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${mainDiwaliInviteLink}\n\nLooking forward to welcoming you!\n\nWarmly,\n*Khandelwal Family*`
+      } else if (isNo) {
+        msg = `Dear *${name}*,\n\nThank you for letting us know regarding the *Khandelwal Diwali Celebration*. We are truly going to miss having you with us on *Friday, 23rd October 2026*.\n\nSending you and your family our warmest wishes for a luminous and joyous Diwali filled with happiness and togetherness. If your plans change at any point, our doors are always open for you.\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${mainDiwaliInviteLink}\n\nWarmly,\n*Khandelwal Family*`
+      } else {
+        // Pending / Initial Invite
+        msg = `Dear *${name}*,\n\nIt gives us immense joy to warmly invite you to the *Khandelwal Diwali Celebration* — an evening of lights, laughter, music, and togetherness. This evening is about cherishing friendships and creating memories under the glow of Diwali.\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${clock} *8:00 PM Onwards*\n${EMOJI.pin} *“The Foothills Villas”, Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur*\n\nYour presence will make our celebration truly brighter. Please tap the link below to view your digital invitation and kindly confirm your presence:\n\nWe would be delighted to have you with us — because celebrations are brighter when shared.\n\n${EMOJI.gift} *Your Personal Digital Invitation & RSVP:*\n${mainDiwaliInviteLink}\n\nWarmly,\n*Khandelwal Family*`
+      }
     } else if (activeMode === 'save_date') {
       msg = `${EMOJI.sparkles} *SAVE THE DATE!* ${EMOJI.sparkles}\n\nDear *${name}*, ${EMOJI.heart}\n\nPlease mark your calendar for *ARPIT’s 40th Birthday & Diwali Celebration!*\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur*\n\nDetailed formal invitation to follow soon. We can’t wait to celebrate this special evening with ${youTarget}! ${EMOJI.heart}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*\n\n${EMOJI.gift} *Save The Date Link:*\n${saveDateLink}`
     } else if (activeMode === 'location') {
@@ -958,9 +971,15 @@ export default function AdminPage() {
       const iUrl = (customLinks.instaUrl || 'https://instagram.com').trim()
       msg = `📸 *EVENT PHOTOS & INSTAGRAM LINK* 📸\n\nDear *${name}*, ${EMOJI.heart}\n\nThank you for making Arpit's 40th & Diwali Bash so special! Here are the event photos and Instagram link for ${youTarget}:\n\n🖼️ *Event Photo Gallery Link:*\n${pUrl}\n\n✨ *Instagram Reel / Story Link:*\n${iUrl}\n\n${EMOJI.gift} *Your Invitation Card:*\n${mainInviteLink}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*`
     } else {
-      // Default 'invite' (40 & Festive - Main Invite sent by Tanvi)
-      const clock = String.fromCodePoint(0x23F0)
-      msg = `Dear *${name}*,\n\nIt gives me immense joy to invite you to a once-in-a-lifetime celebration — *Arpit’s 40th birthday* combined with the *Festival of Lights*. This evening is about cherishing friendships, sharing laughter, and creating memories under the glow of Diwali.\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${clock} *8:00 PM Onwards*\n${EMOJI.pin} *"The Foothills Villas", Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur*\n\nYour presence will make this milestone truly unforgettable. Please join us for an evening of warmth, music, festive cheer, and togetherness.\n\nWe would be delighted to have you with us — because celebrations are brighter when shared.\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${mainInviteLink}\n\nWarmly,\n*Tanvi*`
+      // Default 'invite' (40 & Festive - Main Invite sent by Tanvi; adapts to RSVP status)
+      if (isYes) {
+        msg = `Dear *${name}*,\n\nWe are truly delighted that you will be joining us to celebrate *Arpit’s 40th Birthday & Diwali Celebration!* ✨\n\nYour presence will make this milestone truly unforgettable. We are so excited to celebrate an evening of warmth, music, festive cheer, and togetherness with you.\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${clock} *8:00 PM Onwards*\n${EMOJI.pin} *“The Foothills Villas”, Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur*\n\nTap below anytime for your personal digital pass and venue directions:\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${mainInviteLink}\n\nLooking forward to welcoming you!\n\nWarmly,\n*Tanvi*`
+      } else if (isNo) {
+        msg = `Dear *${name}*,\n\nThank you for letting us know regarding *Arpit’s 40th Birthday & Diwali Celebration*. We are truly going to miss celebrating this special milestone with you on *Friday, 23rd October 2026*.\n\nSending you and your family our warmest wishes. If your plans happen to change, you are always welcome to join the celebration!\n\n${EMOJI.gift} *Your Personal Digital Invitation:*\n${mainInviteLink}\n\nWarmly,\n*Tanvi*`
+      } else {
+        // Pending / Initial Invite
+        msg = `Dear *${name}*,\n\nIt gives me immense joy to invite you to a once-in-a-lifetime celebration — *Arpit’s 40th birthday* combined with the *Festival of Lights*. This evening is about cherishing friendships, sharing laughter, and creating memories under the glow of Diwali.\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${clock} *8:00 PM Onwards*\n${EMOJI.pin} *“The Foothills Villas”, Near Rajasthali Resort & Spa, Kukas, Delhi Road, Jaipur*\n\nYour presence will make this milestone truly unforgettable. Please join us for an evening of warmth, music, festive cheer, and togetherness.\n\nWe would be delighted to have you with us — because celebrations are brighter when shared.\n\n${EMOJI.gift} *Your Personal Digital Invitation & RSVP:*\n${mainInviteLink}\n\nWarmly,\n*Tanvi*`
+      }
     }
 
     // Phone resolution with intelligent fallbacks
@@ -1455,9 +1474,9 @@ export default function AdminPage() {
           </span>
           <span className="text-[11px] px-2.5 py-0.5 rounded bg-black/40 border border-[#C9A84C]/30 font-medium text-white/90">
             {messageTemplate === 'save_date' && '🗓️ 40 & Festive — Save The Date'}
-            {messageTemplate === 'invite' && '💌 40 & Festive — Main Invite'}
+            {messageTemplate === 'invite' && '💌 40 & Festive — Main Invite (Sender: Tanvi • Auto RSVP)'}
             {messageTemplate === 'save_date_diwali' && '✨ Diwali Party — Save The Date'}
-            {messageTemplate === 'invite_diwali' && '🎉 Diwali Party — Main Invite'}
+            {messageTemplate === 'invite_diwali' && '🎉 Diwali Party — Main Invite (Sender: Khandelwal Family • Auto RSVP)'}
           </span>
         </div>
 
