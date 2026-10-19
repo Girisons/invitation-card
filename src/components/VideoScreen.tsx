@@ -589,15 +589,14 @@ export default function VideoScreen({
           </span>
         </button>
 
-        {/* Skip to RSVP Button (when video is playing) */}
+        {/* RSVP/VENUE Button (when video is playing) */}
         {videoState === 'playing' && showSkip && !isBeat3 ? (
           <button
             type="button"
             onClick={handleSkip}
             className="pointer-events-auto glass px-3.5 py-1.5 rounded-full border border-[#C9A84C]/50 bg-[#050D1A]/85 text-[10px] font-sans font-semibold tracking-[0.2em] uppercase text-[#F5ECD7]/90 hover:text-white hover:border-[#C9A84C] hover:bg-[#C9A84C]/25 transition-all active:scale-95 flex items-center gap-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.85)] backdrop-blur-md cursor-pointer"
           >
-            <span>Skip to RSVP</span>
-            <span className="text-xs">⏭</span>
+            <span>RSVP/VENUE</span>
           </button>
         ) : <div />}
       </div>
