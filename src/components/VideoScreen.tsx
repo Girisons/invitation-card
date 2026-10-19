@@ -6,6 +6,7 @@ import { EVENT, buildGoogleCalUrl, buildICSContent } from '@/lib/config'
 import { trackEvent } from '@/lib/supabase'
 import {
   isCurrentlyFullscreen,
+  isFullscreenSupported,
   enterFullscreen,
   exitFullscreen,
   toggleFullscreen,
@@ -52,6 +53,7 @@ export default function VideoScreen({
   const [rotatePromptActive, setRotatePromptActive] = useState(true)
   const [rotateCountdown, setRotateCountdown] = useState(5)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [canFullscreen, setCanFullscreen] = useState(false)
   const startedRef = useRef(false)
   const endedCalledRef = useRef(false)
   const endTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -63,8 +65,9 @@ export default function VideoScreen({
   const festiveOverlayRef = useRef<HTMLDivElement>(null)
   const stageOverlayRef = useRef<HTMLDivElement>(null)
 
-  // Sync Fullscreen state from DOM (including iOS Safari fallback state)
+  // Sync Fullscreen state from DOM and check browser support
   useEffect(() => {
+    setCanFullscreen(isFullscreenSupported())
     const updateFsState = () => {
       setIsFullscreen(isCurrentlyFullscreen())
     }
@@ -567,27 +570,29 @@ export default function VideoScreen({
     >
       {/* ── FLOATING TOP CONTROLS BAR: FULLSCREEN & SKIP ── */}
       <div className="fixed top-3 inset-x-3 sm:top-4 sm:inset-x-6 flex items-center justify-between pointer-events-none z-[70]">
-        {/* Luxury Fullscreen Toggle Pill */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            toggleFullscreen(containerRef.current)
-          }}
-          className={`pointer-events-auto glass px-3 py-1.5 rounded-full border border-[#C9A84C]/50 bg-[#050D1A]/85 text-[#F5ECD7] hover:text-white hover:border-[#C9A84C] hover:bg-[#C9A84C]/25 transition-all active:scale-95 shadow-[0_2px_12px_rgba(0,0,0,0.85)] flex items-center gap-1.5 backdrop-blur-md cursor-pointer ${
-            !isFullscreen && typeof window !== 'undefined' && window.innerWidth > window.innerHeight
-              ? 'ring-2 ring-[#C9A84C] shadow-[0_0_15px_rgba(201,168,76,0.6)] animate-pulse'
-              : ''
-          }`}
-          title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-        >
-          <span className="text-[#C9A84C] text-xs font-bold leading-none">
-            {isFullscreen ? '✕' : '⛶'}
-          </span>
-          <span className="font-sans text-[10px] tracking-[0.18em] uppercase font-semibold text-[#E8D5A3]">
-            {isFullscreen ? 'Exit' : 'Fullscreen'}
-          </span>
-        </button>
+        {/* Luxury Fullscreen Toggle Pill (Shown only when browser supports Fullscreen API) */}
+        {canFullscreen ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              toggleFullscreen(containerRef.current)
+            }}
+            className={`pointer-events-auto glass px-3 py-1.5 rounded-full border border-[#C9A84C]/50 bg-[#050D1A]/85 text-[#F5ECD7] hover:text-white hover:border-[#C9A84C] hover:bg-[#C9A84C]/25 transition-all active:scale-95 shadow-[0_2px_12px_rgba(0,0,0,0.85)] flex items-center gap-1.5 backdrop-blur-md cursor-pointer ${
+              !isFullscreen && typeof window !== 'undefined' && window.innerWidth > window.innerHeight
+                ? 'ring-2 ring-[#C9A84C] shadow-[0_0_15px_rgba(201,168,76,0.6)] animate-pulse'
+                : ''
+            }`}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+          >
+            <span className="text-[#C9A84C] text-xs font-bold leading-none">
+              {isFullscreen ? '✕' : '⛶'}
+            </span>
+            <span className="font-sans text-[10px] tracking-[0.18em] uppercase font-semibold text-[#E8D5A3]">
+              {isFullscreen ? 'Exit' : 'Fullscreen'}
+            </span>
+          </button>
+        ) : <div />}
 
         {/* RSVP/VENUE Button (when video is playing) */}
         {videoState === 'playing' && showSkip && !isBeat3 ? (
@@ -602,7 +607,7 @@ export default function VideoScreen({
       </div>
 
       {/* ── FLOATING LANDSCAPE FULLSCREEN PROMPT (WHEN ROTATED TO LANDSCAPE AND ADDRESS BAR SHOWING) ── */}
-      {hasVideo && !soundPromptVisible && !isFullscreen && videoState === 'playing' && (
+      {hasVideo && !soundPromptVisible && !isFullscreen && canFullscreen && videoState === 'playing' && (
         <div
           onClick={(e) => {
             e.stopPropagation()
@@ -638,11 +643,7 @@ export default function VideoScreen({
           ref={videoRef}
           src={targetUrl}
           className={`absolute inset-0 w-full h-full transition-all duration-300 ${
-            isMainInvite
-              ? isFullscreen
-                ? 'object-cover z-10'
-                : 'object-contain z-10'
-              : 'object-cover'
+            isMainInvite ? 'object-contain z-10' : 'object-cover'
           }`}
           playsInline
           webkit-playsinline="true"
