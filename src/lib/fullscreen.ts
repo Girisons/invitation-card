@@ -102,6 +102,7 @@ export function collapseAddressBar() {
 export function enterFullscreen(element?: HTMLElement | null): boolean {
   if (typeof document === 'undefined') return false
   if (isCurrentlyFullscreen()) return true
+  if (isIOS() || isIPhone()) return false
 
   const docEl = document.documentElement as FsElement | null
   const el = (element as FsElement | null) || docEl
@@ -118,7 +119,6 @@ export function enterFullscreen(element?: HTMLElement | null): boolean {
         if (res && typeof (res as Promise<void>).catch === 'function') {
           ;(res as Promise<void>).catch(() => {})
         }
-        collapseAddressBar()
         notifyFullscreenChange()
         return true
       }
@@ -127,7 +127,6 @@ export function enterFullscreen(element?: HTMLElement | null): boolean {
         if (res && typeof (res as Promise<void>).catch === 'function') {
           ;(res as Promise<void>).catch(() => {})
         }
-        collapseAddressBar()
         notifyFullscreenChange()
         return true
       }
@@ -136,7 +135,6 @@ export function enterFullscreen(element?: HTMLElement | null): boolean {
         if (res && typeof (res as Promise<void>).catch === 'function') {
           ;(res as Promise<void>).catch(() => {})
         }
-        collapseAddressBar()
         notifyFullscreenChange()
         return true
       }
@@ -145,7 +143,6 @@ export function enterFullscreen(element?: HTMLElement | null): boolean {
     }
   }
 
-  collapseAddressBar()
   return false
 }
 

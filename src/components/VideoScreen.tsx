@@ -434,18 +434,12 @@ export default function VideoScreen({
     setSoundMuted(false)
 
     if (video) {
-      // IMPORTANT: Call video.play() with muted=false FIRST while user gesture token is fresh
-      // (calling requestFullscreen() before video.play() consumes user activation and mutes audio!)
+      // Direct user gesture: unmute and set full volume before calling play()
       video.muted = false
       video.defaultMuted = false
       video.volume = 1.0
 
       const playPromise = video.play()
-
-      // Treat "TAP TO ENTER" as permission for BOTH Audio ON and Fullscreen!
-      // This enters fullscreen immediately so when guest rotates the mobile, the address bar is already gone.
-      enterFullscreen(containerRef.current)
-      collapseAddressBar()
 
       if (playPromise !== undefined) {
         playPromise
@@ -458,26 +452,56 @@ export default function VideoScreen({
               startedRef.current = true
               onStartRef.current()
             }
-            enterFullscreen(containerRef.current)
-            collapseAddressBar()
-          })
-          .catch((err) => {
-            console.warn('Unmuted play blocked by browser, trying fallback:', err)
-            video.muted = true
-            setSoundMuted(true)
-            video.play()
-              .then(() => {
-                setVideoState('playing')
-                if (!startedRef.current) {
-                  startedRef.current = true
-                  onStartRef.current()
-                }
+            // Safely collapse address bar after video & audio playback have begun smoothly
+            setTimeout(() => {
+              if (typeof window !== 'undefined' && window.innerWidth > window.innerHeight) {
                 enterFullscreen(containerRef.current)
-                collapseAddressBar()
-              })
-              .catch((err2) => {
-                console.error('Video play error:', err2)
-              })
+              }
+              collapseAddressBar()
+            }, 300)
+          })
+          .catch((err: unknown) => {
+            const error = err as { name?: string; message?: string }
+            console.warn('Playback error or interruption:', error)
+            // If interrupted (e.g. AbortError due to fast tap or orientation transition), RETRY UNMUTED!
+            if (error?.name === 'AbortError') {
+              setTimeout(() => {
+                if (video && video.paused) {
+                  video.muted = false
+                  video.volume = 1.0
+                  video.play()
+                    .then(() => {
+                      setSoundMuted(false)
+                      setVideoState('playing')
+                      if (!startedRef.current) {
+                        startedRef.current = true
+                        onStartRef.current()
+                      }
+                    })
+                    .catch((err2) => {
+                      console.warn('Retry result:', err2)
+                      if ((err2 as { name?: string })?.name === 'NotAllowedError') {
+                        video.muted = true
+                        setSoundMuted(true)
+                        video.play().catch(() => {})
+                      }
+                    })
+                }
+              }, 100)
+            } else if (error?.name === 'NotAllowedError') {
+              // Only fallback to muted if browser explicitly disallowed unmuted autoplay
+              video.muted = true
+              setSoundMuted(true)
+              video.play()
+                .then(() => {
+                  setVideoState('playing')
+                  if (!startedRef.current) {
+                    startedRef.current = true
+                    onStartRef.current()
+                  }
+                })
+                .catch(() => {})
+            }
           })
       }
     }
@@ -631,7 +655,6 @@ export default function VideoScreen({
             isMainInvite ? 'object-contain z-10' : 'object-cover'
           }`}
           playsInline
-          webkit-playsinline="true"
           preload="auto"
           loop={false}
           muted={soundMuted}
