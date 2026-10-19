@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { supabase, Guest, parseGuestNotes, updateGuestInviteDetails, GuestInviteDetails } from '@/lib/supabase'
 
 export function getEffectiveInviteDetails(g: Guest, allGuests: Guest[]): GuestInviteDetails {
@@ -299,11 +299,37 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [showUsersModal, setShowUsersModal] = useState(false)
-  const [hostFilter, setHostFilter] = useState<string>('all')
+  const [selectedHosts, setSelectedHosts] = useState<string[]>([])
+  const [showHostFilterDropdown, setShowHostFilterDropdown] = useState(false)
+  const hostFilterRef = useRef<HTMLDivElement>(null)
   const [search, setSearch] = useState('')
   const [copied, setCopied] = useState<string | null>(null)
   const [importMsg, setImportMsg] = useState('')
   const [guestMap, setGuestMap] = useState<Record<string, { name: string; mobile: string }>>({})
+
+  // Close host filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (hostFilterRef.current && !hostFilterRef.current.contains(event.target as Node)) {
+        setShowHostFilterDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const toggleHost = (hostKey: string) => {
+    setSelectedHosts(prev => {
+      if (prev.length === 0) {
+        return [hostKey]
+      }
+      if (prev.includes(hostKey)) {
+        return prev.filter(k => k !== hostKey)
+      } else {
+        return [...prev, hostKey]
+      }
+    })
+  }
 
   // Form states
   const getExistingCodesSet = () => new Set<string>(guests.map(g => g.invite_code?.toUpperCase()).filter(Boolean))
@@ -1069,10 +1095,11 @@ export default function AdminPage() {
     return hostName === userName || hostName === uName || hostName.includes(userName) || userName.includes(hostName)
   })
 
-  // 2. Filter by Selected Host Filter Dropdown (Super Admin only)
+  // 2. Filter by Selected Host Filter (Super Admin only - supports one or more hosts together)
   const hostSelectedGuests = roleFilteredGuests.filter(g => {
-    if (currentUser?.role !== 'super_admin' || hostFilter === 'all') return true
-    return (g.guest_of || '').toLowerCase().trim() === hostFilter.toLowerCase().trim()
+    if (currentUser?.role !== 'super_admin' || selectedHosts.length === 0) return true
+    const gHost = (g.guest_of || 'Unassigned').trim().toLowerCase()
+    return selectedHosts.includes(gHost)
   })
 
   // 3. Filter by Search Query
@@ -1102,8 +1129,24 @@ export default function AdminPage() {
   const mainDiwaliCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).main_type === 'diwali').length
   const main40Count = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).main_type === '40_festive').length
 
-  // List of distinct hosts for Super Admin filter
-  const distinctHosts = Array.from(new Set(guests.map(g => (g.guest_of || 'Unassigned').trim()).filter(Boolean)))
+  // Canonical list of distinct hosts with case-insensitive grouping & counts
+  const hostStats = useMemo(() => {
+    const map = new Map<string, { key: string; displayName: string; count: number }>()
+    roleFilteredGuests.forEach(g => {
+      const raw = (g.guest_of || 'Unassigned').trim()
+      const lower = raw.toLowerCase()
+      if (!map.has(lower)) {
+        map.set(lower, { key: lower, displayName: raw, count: 1 })
+      } else {
+        const item = map.get(lower)!
+        item.count++
+        if (raw !== raw.toUpperCase() && item.displayName === item.displayName.toUpperCase()) {
+          item.displayName = raw
+        }
+      }
+    })
+    return Array.from(map.values()).sort((a, b) => b.count - a.count)
+  }, [roleFilteredGuests])
 
   // ── LOGIN SCREEN ──
   if (!currentUser) {
@@ -1240,20 +1283,149 @@ export default function AdminPage() {
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search guests by name, mobile, host..."
           className="flex-1 min-w-[150px] bg-white/5 border border-white/10 rounded-sm px-4 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-[#C9A84C]/40" />
 
-        {/* Super Admin Host Filter */}
+        {/* Super Admin Multi-Host Filter */}
         {currentUser.role === 'super_admin' && (
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-wider text-[#C9A84C]/70">Filter Host:</span>
-            <select
-              value={hostFilter}
-              onChange={e => setHostFilter(e.target.value)}
-              className="bg-[#0A1931] border border-[#C9A84C]/30 text-[#C9A84C] rounded-sm px-3 py-2 text-xs outline-none font-medium"
-            >
-              <option value="all">🌟 All Hosts ({guests.length})</option>
-              {distinctHosts.map(h => (
-                <option key={h} value={h}>👤 {h}</option>
-              ))}
-            </select>
+          <div className="relative" ref={hostFilterRef}>
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] uppercase tracking-wider text-[#C9A84C]/70 hidden sm:inline">Filter Host:</span>
+              <button
+                type="button"
+                onClick={() => setShowHostFilterDropdown(prev => !prev)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-sm text-xs font-medium border transition-all ${
+                  selectedHosts.length > 0
+                    ? 'bg-[#C9A84C]/15 border-[#C9A84C] text-[#F5ECD7] shadow-sm shadow-[#C9A84C]/20'
+                    : 'bg-[#0A1931] border-[#C9A84C]/40 text-[#C9A84C] hover:border-[#C9A84C]'
+                }`}
+                title="Choose one or more hosts together"
+              >
+                {selectedHosts.length === 0 ? (
+                  <span className="flex items-center gap-1.5">
+                    <span>🌟</span>
+                    <span>All Hosts</span>
+                    <span className="text-[10px] opacity-75 font-mono">({roleFilteredGuests.length})</span>
+                  </span>
+                ) : selectedHosts.length === 1 ? (
+                  <span className="flex items-center gap-1.5">
+                    <span>👤</span>
+                    <span>{hostStats.find(h => h.key === selectedHosts[0])?.displayName || selectedHosts[0]}</span>
+                    <span className="text-[10px] opacity-75 font-mono">({hostSelectedGuests.length})</span>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5">
+                    <span>👥</span>
+                    <span>
+                      {selectedHosts.length === hostStats.length
+                        ? 'All Hosts'
+                        : `${selectedHosts.length} Hosts Selected`}
+                    </span>
+                    <span className="text-[10px] opacity-75 font-mono">({hostSelectedGuests.length})</span>
+                  </span>
+                )}
+
+                <span className={`text-[8px] text-[#C9A84C] transition-transform duration-200 ${showHostFilterDropdown ? 'rotate-180' : ''}`}>
+                  ▼
+                </span>
+              </button>
+
+              {selectedHosts.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedHosts([])}
+                  className="px-1.5 py-1 text-[10px] rounded text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+                  title="Reset to All Hosts"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Dropdown Popover */}
+            {showHostFilterDropdown && (
+              <div className="absolute left-0 mt-1.5 w-64 bg-[#0A1931] border border-[#C9A84C]/40 rounded shadow-2xl z-50 p-2.5 backdrop-blur-xl">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
+                  <span className="text-[10px] uppercase tracking-wider font-semibold text-[#C9A84C]">
+                    Select Hosts {selectedHosts.length > 0 ? `(${selectedHosts.length}/${hostStats.length})` : '(All)'}
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedHosts([])}
+                      className="text-[10px] text-[#C9A84C] hover:underline"
+                    >
+                      All
+                    </button>
+                    <span className="text-white/20 text-[10px]">|</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedHosts(hostStats.map(h => h.key))}
+                      className="text-[10px] text-white/60 hover:text-white hover:underline"
+                    >
+                      Check All
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1 max-h-60 overflow-y-auto pr-1">
+                  {/* All Hosts option */}
+                  <div
+                    onClick={() => setSelectedHosts([])}
+                    className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-white/5 cursor-pointer text-xs transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedHosts.length === 0}
+                        onChange={() => setSelectedHosts([])}
+                        className="accent-[#C9A84C] w-3.5 h-3.5 rounded cursor-pointer"
+                      />
+                      <span className="font-semibold text-amber-200">🌟 All Hosts</span>
+                    </div>
+                    <span className="text-[10px] text-white/40 font-mono">({roleFilteredGuests.length})</span>
+                  </div>
+
+                  <div className="h-px bg-white/10 my-1" />
+
+                  {/* Individual Hosts */}
+                  {hostStats.map(h => {
+                    const isChecked = selectedHosts.includes(h.key)
+                    return (
+                      <div
+                        key={h.key}
+                        onClick={() => toggleHost(h.key)}
+                        className={`flex items-center justify-between px-2 py-1.5 rounded cursor-pointer text-xs transition-colors ${
+                          isChecked ? 'bg-[#C9A84C]/15 text-white font-medium' : 'hover:bg-white/5 text-white/80'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {}}
+                            className="accent-[#C9A84C] w-3.5 h-3.5 rounded cursor-pointer pointer-events-none"
+                          />
+                          <span className="flex items-center gap-1.5">
+                            <span>👤</span>
+                            <span>{h.displayName}</span>
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-white/40 font-mono">({h.count})</span>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[10px] text-white/50">
+                  <span>Showing {hostSelectedGuests.length} guests</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowHostFilterDropdown(false)}
+                    className="px-2.5 py-1 bg-[#C9A84C] text-[#050D1A] font-bold rounded text-[11px] hover:bg-[#d8b556] transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
