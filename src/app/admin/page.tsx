@@ -16,8 +16,10 @@ export function getEffectiveInviteDetails(g: Guest, allGuests: Guest[]): GuestIn
   // Template Type (Diwali vs 40 & Festive): own first, then partner default if couple together, then host default
   const host = (g.guest_of || '').toLowerCase().trim()
   const defaultType: 'diwali' | '40_festive' = (host === 'vipul' || host === 'jitu') ? 'diwali' : '40_festive'
+  const defaultInstaType: '40_festive' | 'soiree' = (host === 'vipul' || host === 'jitu') ? 'soiree' : '40_festive'
   const std_type = own.std_type || (g.send_together ? partnerDetails.std_type : '') || defaultType
   const main_type = own.main_type || (g.send_together ? partnerDetails.main_type : '') || defaultType
+  const insta_type = own.insta_type || (g.send_together ? partnerDetails.insta_type : '') || defaultInstaType
 
   // Message Status (pending / sent / seen): STRICTLY INDIVIDUAL TO THIS GUEST.
   // Never inherit partner's status!
@@ -35,7 +37,7 @@ export function getEffectiveInviteDetails(g: Guest, allGuests: Guest[]): GuestIn
     }
   }
 
-  return { std_status, std_type, main_status, main_type, insta_status }
+  return { std_status, std_type, main_status, main_type, insta_status, insta_type }
 }
 
 const ADMIN_PASS = process.env.NEXT_PUBLIC_ADMIN_PASS || 'arpit40'
@@ -49,7 +51,7 @@ export interface PortalUser {
   created_at?: string
 }
 
-export type MessageTemplateMode = 'invite' | 'save_date' | 'invite_diwali' | 'save_date_diwali' | 'location' | 'photos' | 'insta'
+export type MessageTemplateMode = 'invite' | 'save_date' | 'invite_diwali' | 'save_date_diwali' | 'location' | 'photos' | 'insta' | 'insta_soiree'
 
 const DEFAULT_USERS: PortalUser[] = [
   { id: 'user-admin', username: 'admin', password: 'arpit40', name: 'Super Admin', role: 'super_admin', created_at: new Date().toISOString() },
@@ -787,7 +789,7 @@ export default function AdminPage() {
           ? (field === 'type' ? { std_type: value as any } : { std_status: value as any })
           : phase === 'main'
           ? (field === 'type' ? { main_type: value as any } : { main_status: value as any })
-          : { insta_status: value as any })
+          : (field === 'type' ? { insta_type: value as any } : { insta_status: value as any }))
       }
       return { ...item, notes: JSON.stringify(updated) }
     }))
@@ -802,7 +804,7 @@ export default function AdminPage() {
           ? (field === 'type' ? { std_type: value as any } : { std_status: value as any })
           : phase === 'main'
           ? (field === 'type' ? { main_type: value as any } : { main_status: value as any })
-          : { insta_status: value as any })
+          : (field === 'type' ? { insta_type: value as any } : { insta_status: value as any }))
       }
       await supabase.from('guests').update({ notes: JSON.stringify(updated) }).eq('id', tId)
     }
@@ -854,6 +856,8 @@ export default function AdminPage() {
       ? `${BASE_URL}/i/${code}?type=main_diwali`
       : messageTemplate === 'save_date'
       ? `${BASE_URL}/i/${code}?type=save_date`
+      : messageTemplate === 'insta_soiree'
+      ? `${BASE_URL}/i/${code}?type=insta_soiree&v=2`
       : messageTemplate === 'insta'
       ? `${BASE_URL}/i/${code}?type=insta&v=2`
       : `${BASE_URL}/i/${code}?type=main`
@@ -878,6 +882,7 @@ export default function AdminPage() {
     const saveDateLink = `${BASE_URL}/i/${g.invite_code}?type=save_date`
     const saveDateDiwaliLink = `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali`
     const instaLink = `${BASE_URL}/i/${g.invite_code}?type=insta&v=2`
+    const instaSoireeLink = `${BASE_URL}/i/${g.invite_code}?type=insta_soiree&v=2`
 
     // Pre-warm the invite route & OG image on Vercel edge/lambda immediately (before DB calls)
     const warmLink = activeMode === 'save_date_diwali'
@@ -886,6 +891,8 @@ export default function AdminPage() {
       ? mainDiwaliInviteLink
       : activeMode === 'save_date'
       ? saveDateLink
+      : activeMode === 'insta_soiree'
+      ? instaSoireeLink
       : activeMode === 'insta'
       ? instaLink
       : mainInviteLink
@@ -912,7 +919,11 @@ export default function AdminPage() {
     } else if (activeMode === 'invite') {
       inviteUpdates.main_type = '40_festive'
       inviteUpdates.main_status = 'sent'
+    } else if (activeMode === 'insta_soiree') {
+      inviteUpdates.insta_type = 'soiree'
+      inviteUpdates.insta_status = 'sent'
     } else if (activeMode === 'insta') {
+      inviteUpdates.insta_type = '40_festive'
       inviteUpdates.insta_status = 'sent'
     }
 
@@ -999,6 +1010,8 @@ export default function AdminPage() {
       const pUrl = (customLinks.photoUrl || mainInviteLink).trim()
       const iUrl = (customLinks.instaUrl || 'https://instagram.com').trim()
       msg = `📸 *EVENT PHOTOS & INSTAGRAM LINK* 📸\n\nDear *${name}*, ${EMOJI.heart}\n\nThank you for making Arpit's 40th & Diwali Bash so special! Here are the event photos and Instagram link for ${youTarget}:\n\n🖼️ *Event Photo Gallery Link:*\n${pUrl}\n\n✨ *Instagram Reel / Story Link:*\n${iUrl}\n\n${EMOJI.gift} *Your Invitation Card:*\n${mainInviteLink}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*`
+    } else if (activeMode === 'insta_soiree') {
+      msg = instaSoireeLink
     } else if (activeMode === 'insta') {
       msg = instaLink
     } else {
@@ -1045,7 +1058,7 @@ export default function AdminPage() {
       'Attendance', 'Food', 'Drinks', 'Invited By', 'Group',
       'Save The Date Type', 'Save The Date Status',
       'Main Invite Type', 'Main Invite Status',
-      'Instagram Status',
+      'Instagram Type', 'Instagram Status',
       'Invite Code', 'Save The Date Link', 'Main Invite Link', 'Instagram Link'
     ]
     const rows = visibleGuests.map(g => {
@@ -1056,10 +1069,11 @@ export default function AdminPage() {
       const stdStatus = (d.std_status || 'pending').toUpperCase()
       const mainType = d.main_type === 'diwali' ? 'Diwali Party' : d.main_type === '40_festive' ? '40 & Festive' : 'None'
       const mainStatus = (d.main_status || 'pending').toUpperCase()
+      const instaType = d.insta_type === 'soiree' ? 'The Festive Soirée' : '40 & Festive'
       const instaStatus = (d.insta_status || 'pending').toUpperCase()
       const stdLink = d.std_type === 'diwali' ? `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali` : `${BASE_URL}/i/${g.invite_code}?type=save_date`
       const mainLink = d.main_type === 'diwali' ? `${BASE_URL}/i/${g.invite_code}?type=main_diwali` : `${BASE_URL}/i/${g.invite_code}`
-      const instaLink = `${BASE_URL}/i/${g.invite_code}?type=insta`
+      const instaLink = d.insta_type === 'soiree' ? `${BASE_URL}/i/${g.invite_code}?type=insta_soiree` : `${BASE_URL}/i/${g.invite_code}?type=insta`
 
       return [
         `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`,
@@ -1076,6 +1090,7 @@ export default function AdminPage() {
         stdStatus,
         mainType,
         mainStatus,
+        instaType,
         instaStatus,
         g.invite_code,
         stdLink,
@@ -1525,7 +1540,8 @@ export default function AdminPage() {
             {messageTemplate === 'invite' && '💌 40 & Festive — Main Invite (Sender: Tanvi • Auto RSVP)'}
             {messageTemplate === 'save_date_diwali' && '✨ Diwali Party — Save The Date'}
             {messageTemplate === 'invite_diwali' && '🎉 Diwali Party — Main Invite (Sender: Khandelwal Family • Auto RSVP)'}
-            {messageTemplate === 'insta' && '📸 Instagram — @40andfestive Page (Strictly Individual Name)'}
+            {messageTemplate === 'insta' && '🎂 Instagram — 40 & Festive (@40andfestive)'}
+            {messageTemplate === 'insta_soiree' && '🪔 Instagram — The Festive Soirée (@40andfestive)'}
           </span>
         </div>
 
@@ -1588,7 +1604,7 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {/* Instagram @40andfestive */}
+          {/* Instagram */}
           <div className="flex items-center bg-[#050D1A] rounded p-1 border border-pink-500/30 gap-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-pink-300 px-1.5">
               📸 Instagram:
@@ -1600,9 +1616,20 @@ export default function AdminPage() {
                   ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-amber-500 text-white font-bold shadow-md ring-1 ring-[#FFF8E1]'
                   : 'text-pink-100/70 hover:text-white hover:bg-white/5'
               }`}
-              title="Dedicated @40andfestive Instagram Page (Personalized individual name)"
+              title="Dedicated @40andfestive Instagram Page (40 & Festive branding)"
             >
-              ✨ @40andfestive
+              🎂 40 &amp; Festive
+            </button>
+            <button
+              onClick={() => setMessageTemplate('insta_soiree')}
+              className={`px-2.5 py-1 text-xs font-semibold rounded transition-all ${
+                messageTemplate === 'insta_soiree'
+                  ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-amber-500 text-white font-bold shadow-md ring-1 ring-[#FFF8E1]'
+                  : 'text-pink-100/70 hover:text-white hover:bg-white/5'
+              }`}
+              title="Dedicated @40andfestive Instagram Page (The Festive Soirée branding)"
+            >
+              🪔 The Festive Soirée
             </button>
           </div>
         </div>
@@ -1852,18 +1879,29 @@ export default function AdminPage() {
                     </div>
                   </td>
 
-                  {/* ── INSTAGRAM COLUMN (STATUS + QUICK WA) ── */}
+                  {/* ── INSTAGRAM COLUMN (TYPE + STATUS + QUICK WA) ── */}
                   <td className="px-3 py-2 whitespace-nowrap bg-pink-500/5 border-l border-pink-500/20">
-                    <div className="flex flex-col gap-1 min-w-[130px]">
-                      {/* Row 1: Quick WA button */}
-                      <button
-                        type="button"
-                        onClick={() => sendWhatsApp(g, 'insta')}
-                        title={`Send @40andfestive Instagram Page to ${g.first_name} via WhatsApp`}
-                        className="px-2 py-0.5 border border-pink-500/40 text-pink-300 hover:bg-pink-500/20 rounded text-[9px] font-bold transition-all whitespace-nowrap flex items-center justify-center gap-1"
-                      >
-                        <span>📸 Send WA</span>
-                      </button>
+                    <div className="flex flex-col gap-1 min-w-[140px]">
+                      {/* Row 1: Type selector + Quick WA button */}
+                      <div className="flex items-center gap-1">
+                        <select
+                          value={inviteDetails.insta_type || '40_festive'}
+                          onChange={(e) => handleUpdateInvitePhase(g, 'insta', 'type', e.target.value)}
+                          className="flex-1 bg-[#0A1931] border border-pink-500/40 text-pink-200 text-[10px] font-semibold px-1.5 py-0.5 rounded outline-none cursor-pointer hover:border-pink-400"
+                          title="Select which Instagram template goes to this guest"
+                        >
+                          <option value="40_festive" className="bg-[#0A1931] text-[#E8D5A3]">🎂 40 &amp; Festive</option>
+                          <option value="soiree" className="bg-[#0A1931] text-amber-300">🪔 The Festive Soirée</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => sendWhatsApp(g, inviteDetails.insta_type === 'soiree' ? 'insta_soiree' : 'insta')}
+                          title={`Send ${inviteDetails.insta_type === 'soiree' ? 'The Festive Soirée' : '40 & Festive'} Instagram Page to ${g.first_name} via WhatsApp`}
+                          className="px-1.5 py-0.5 border border-pink-500/40 text-pink-300 hover:bg-pink-500/20 rounded text-[9px] font-bold transition-all whitespace-nowrap"
+                        >
+                          📸 WA
+                        </button>
+                      </div>
 
                       {/* Row 2: Status pill / dropdown */}
                       <select
@@ -1927,11 +1965,14 @@ export default function AdminPage() {
                           <option value="invite_diwali">🎉 Diwali Party - Main Invite</option>
                         </optgroup>
                         <optgroup label="📸 Instagram">
-                          <option value="insta">✨ @40andfestive Instagram Page</option>
+                          <option value="insta">🎂 40 &amp; Festive Instagram</option>
+                          <option value="insta_soiree">🪔 The Festive Soirée Instagram</option>
                         </optgroup>
                       </select>
                       <button onClick={() => {
-                        const previewUrl = messageTemplate === 'insta'
+                        const previewUrl = messageTemplate === 'insta_soiree'
+                          ? `${BASE_URL}/i/${g.invite_code}?type=insta_soiree`
+                          : messageTemplate === 'insta'
                           ? `${BASE_URL}/i/${g.invite_code}?type=insta`
                           : messageTemplate === 'save_date_diwali'
                           ? `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali`

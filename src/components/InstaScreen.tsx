@@ -6,9 +6,11 @@ import { Guest, trackEvent, updateGuestInviteDetails } from '@/lib/supabase'
 interface Props {
   guest?: Guest
   inviteCode?: string
+  theme?: '40_festive' | 'soiree'
 }
 
-export default function InstaScreen({ guest, inviteCode }: Props) {
+export default function InstaScreen({ guest, inviteCode, theme = '40_festive' }: Props) {
+  const isSoiree = theme === 'soiree'
   const [tapped, setTapped] = useState(false)
   const [countdown, setCountdown] = useState(5)
 
@@ -96,8 +98,8 @@ export default function InstaScreen({ guest, inviteCode }: Props) {
         {/* Background Artwork */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/insta-bg.png"
-          alt="40 &amp; Festive — Instagram"
+          src={isSoiree ? '/insta-bg-soiree.png' : '/insta-bg.png'}
+          alt={isSoiree ? 'The Festive Soirée — Instagram' : '40 & Festive — Instagram'}
           className="absolute inset-0 w-full h-full object-cover pointer-events-none"
         />
 
@@ -121,7 +123,7 @@ export default function InstaScreen({ guest, inviteCode }: Props) {
               WebkitTextFillColor: 'transparent',
             }}
           >
-            THE PARTY • THE PEOPLE • THE REELS
+            {isSoiree ? 'THE SOIRÉE • THE PEOPLE • THE REELS' : 'THE PARTY • THE PEOPLE • THE REELS'}
           </div>
 
           {/* Guest Personalization */}
@@ -137,7 +139,9 @@ export default function InstaScreen({ guest, inviteCode }: Props) {
 
           {/* Subtitle */}
           <div className="font-sans text-[9.5px] sm:text-[11px] text-[#E5D0A1]/85 leading-snug max-w-[320px]">
-            Watch the cameraman&apos;s reels &amp; catch the celebration moments.
+            {isSoiree
+              ? "Watch the cameraman's reels & catch the festive moments."
+              : "Watch the cameraman's reels & catch the celebration moments."}
           </div>
         </div>
 

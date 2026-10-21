@@ -16,9 +16,11 @@ interface Props {
 }
 
 export default function InvitationClient({ guest, inviteCode, inviteType }: Props) {
-  const isInsta = inviteType === 'insta' || inviteType === 'instagram' || inviteType === '40andfestive'
+  const isInstaSoiree = inviteType === 'insta_soiree' || inviteType === 'soiree_insta' || inviteType === 'insta_diwali'
+  const isInsta40 = inviteType === 'insta' || inviteType === 'instagram' || inviteType === '40andfestive'
+  const isInsta = isInstaSoiree || isInsta40
   if (isInsta) {
-    return <InstaScreen guest={guest} inviteCode={inviteCode} />
+    return <InstaScreen guest={guest} inviteCode={inviteCode} theme={isInstaSoiree ? 'soiree' : '40_festive'} />
   }
 
   const [screen, setScreen] = useState<Screen>('video')

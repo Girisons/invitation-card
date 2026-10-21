@@ -65,7 +65,9 @@ export async function generateMetadata({ params, searchParams }: Props) {
     ? rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase()
     : ''
 
-  const isInsta = inviteType === 'insta' || inviteType === 'instagram' || inviteType === '40andfestive'
+  const isInstaSoiree = inviteType === 'insta_soiree' || inviteType === 'soiree_insta' || inviteType === 'insta_diwali'
+  const isInsta40 = inviteType === 'insta' || inviteType === 'instagram' || inviteType === '40andfestive'
+  const isInsta = isInstaSoiree || isInsta40
   const isDiwaliSaveDate = inviteType === 'save_date_diwali' || inviteType === 'std_diwali' || inviteType === 'diwali' || inviteType === 'save-date-diwali'
   const isDiwaliMain = inviteType === 'main_diwali' || inviteType === 'invite_diwali' || inviteType === 'diwali_main' || inviteType === 'diwali_invite'
   const isDiwali = isDiwaliSaveDate || isDiwaliMain
@@ -75,7 +77,15 @@ export async function generateMetadata({ params, searchParams }: Props) {
   let description = "Personal Video Invitation • Tap to open"
   let ogImageUrl = "https://khandelwalinvite.vercel.app/og-main.jpg?v=5"
 
-  if (isInsta) {
+  if (isInstaSoiree) {
+    title = individualName
+      ? `The Festive Soirée ✨ • Dear ${individualName}, Follow Us on Instagram @40andfestive!`
+      : "The Festive Soirée ✨ • Follow Us on Instagram @40andfestive!"
+    description = individualName
+      ? `Hey ${individualName}! 📸✨ Please follow our official page @40andfestive to catch all the exclusive celebration reels, live party updates, behind-the-scenes fun & unforgettable memories from The Festive Soirée & Diwali Celebration! Tap here to open & follow ➔ @40andfestive`
+      : "📸✨ Please follow our official page @40andfestive to catch all the exclusive celebration reels, live party updates, behind-the-scenes fun & unforgettable memories from The Festive Soirée & Diwali Celebration! Tap here to open & follow ➔ @40andfestive"
+    ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta-soiree.jpg?v=1"
+  } else if (isInsta40) {
     title = individualName
       ? `40 & Festive ✨ • Dear ${individualName}, Follow Us on Instagram @40andfestive!`
       : "40 & Festive ✨ • Follow Us on Instagram @40andfestive!"
