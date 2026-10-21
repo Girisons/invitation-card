@@ -97,8 +97,8 @@ export async function generateMetadata({ params, searchParams }: Props) {
     // Main Invite
     if (isDiwali) {
       title = "The Festive Soirée — Khandelwal Diwali Celebration"
-      description = "Personal Video Invitation • Tap to open"
-      ogImageUrl = "https://khandelwalinvite.vercel.app/og-diwali-main.jpg?v=6"
+      description = "Diwali Invitation • Tap to open"
+      ogImageUrl = "https://khandelwalinvite.vercel.app/og-diwali-main.jpg?v=7"
     } else {
       title = "The Night Awaits — Arpit's 40th & Diwali Celebration"
       description = "Personal Video Invitation • Tap to open"
