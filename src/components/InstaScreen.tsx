@@ -90,8 +90,9 @@ export default function InstaScreen({ guest, inviteCode }: Props) {
         >
           {/* Top Hook */}
           <div
-            className="font-serif text-[12px] sm:text-[14px] font-extrabold tracking-[0.14em] uppercase mb-1 drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]"
+            className="text-[12px] sm:text-[14px] font-extrabold tracking-[0.14em] uppercase mb-1 drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]"
             style={{
+              fontFamily: 'var(--font-cinzel), serif',
               background: 'linear-gradient(180deg, #FFFFFF 0%, #FFE89E 50%, #E5BE72 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
