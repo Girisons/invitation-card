@@ -695,12 +695,9 @@ export default function AdminPage() {
     } finally { setSaving(false) }
   }
 
-  // ── QUICK CHANGE ATTENDANCE STATUS ──
+  // ── QUICK CHANGE ATTENDANCE STATUS (Strictly individual per guest) ──
   const handleAttendanceChange = async (g: Guest, newStatus: string) => {
     const targetIds = [g.id]
-    if (g.linked_guest_id && g.send_together) {
-      targetIds.push(g.linked_guest_id)
-    }
 
     // 1. Optimistic UI update so the dropdown changes immediately without any lag
     setGuests(prev => prev.map(item => targetIds.includes(item.id) ? { ...item, invitation_status: newStatus } : item))
