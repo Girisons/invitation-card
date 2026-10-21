@@ -45,6 +45,7 @@ export interface GuestInviteDetails {
   std_status?: 'pending' | 'sent' | 'seen'
   main_type?: 'diwali' | '40_festive' | ''
   main_status?: 'pending' | 'sent' | 'seen'
+  insta_status?: 'pending' | 'sent' | 'seen'
 }
 
 export function parseGuestNotes(notes?: string | null): GuestInviteDetails {

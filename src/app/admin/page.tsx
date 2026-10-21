@@ -23,6 +23,7 @@ export function getEffectiveInviteDetails(g: Guest, allGuests: Guest[]): GuestIn
   // Never inherit partner's status!
   let std_status: 'pending' | 'sent' | 'seen' = own.std_status || 'pending'
   let main_status: 'pending' | 'sent' | 'seen' = own.main_status || 'pending'
+  let insta_status: 'pending' | 'sent' | 'seen' = own.insta_status || 'pending'
 
   // If notes did not specify an explicit status yet, check this guest's own passive invitation_status (entered / sent)
   if (!own.std_status) {
@@ -34,7 +35,7 @@ export function getEffectiveInviteDetails(g: Guest, allGuests: Guest[]): GuestIn
     }
   }
 
-  return { std_status, std_type, main_status, main_type }
+  return { std_status, std_type, main_status, main_type, insta_status }
 }
 
 const ADMIN_PASS = process.env.NEXT_PUBLIC_ADMIN_PASS || 'arpit40'
@@ -48,7 +49,7 @@ export interface PortalUser {
   created_at?: string
 }
 
-export type MessageTemplateMode = 'invite' | 'save_date' | 'invite_diwali' | 'save_date_diwali' | 'location' | 'photos'
+export type MessageTemplateMode = 'invite' | 'save_date' | 'invite_diwali' | 'save_date_diwali' | 'location' | 'photos' | 'insta'
 
 const DEFAULT_USERS: PortalUser[] = [
   { id: 'user-admin', username: 'admin', password: 'arpit40', name: 'Super Admin', role: 'super_admin', created_at: new Date().toISOString() },
@@ -763,10 +764,10 @@ export default function AdminPage() {
     }
   }
 
-  // ── QUICK CHANGE INVITE PHASE (SAVE THE DATE & MAIN INVITE - TYPE & STATUS) ──
+  // ── QUICK CHANGE INVITE PHASE (SAVE THE DATE, MAIN INVITE & INSTAGRAM - TYPE & STATUS) ──
   const handleUpdateInvitePhase = async (
     g: Guest,
-    phase: 'std' | 'main',
+    phase: 'std' | 'main' | 'insta',
     field: 'type' | 'status',
     value: string
   ) => {
@@ -784,7 +785,9 @@ export default function AdminPage() {
         ...curr,
         ...(phase === 'std'
           ? (field === 'type' ? { std_type: value as any } : { std_status: value as any })
-          : (field === 'type' ? { main_type: value as any } : { main_status: value as any }))
+          : phase === 'main'
+          ? (field === 'type' ? { main_type: value as any } : { main_status: value as any })
+          : { insta_status: value as any })
       }
       return { ...item, notes: JSON.stringify(updated) }
     }))
@@ -797,7 +800,9 @@ export default function AdminPage() {
         ...curr,
         ...(phase === 'std'
           ? (field === 'type' ? { std_type: value as any } : { std_status: value as any })
-          : (field === 'type' ? { main_type: value as any } : { main_status: value as any }))
+          : phase === 'main'
+          ? (field === 'type' ? { main_type: value as any } : { main_status: value as any })
+          : { insta_status: value as any })
       }
       await supabase.from('guests').update({ notes: JSON.stringify(updated) }).eq('id', tId)
     }
@@ -849,6 +854,8 @@ export default function AdminPage() {
       ? `${BASE_URL}/i/${code}?type=main_diwali`
       : messageTemplate === 'save_date'
       ? `${BASE_URL}/i/${code}?type=save_date`
+      : messageTemplate === 'insta'
+      ? `${BASE_URL}/i/${code}?type=insta`
       : `${BASE_URL}/i/${code}?type=main`
     navigator.clipboard.writeText(linkUrl)
     setCopied(code); setTimeout(() => setCopied(null), 2000)
@@ -870,6 +877,7 @@ export default function AdminPage() {
       : `${BASE_URL}/i/${g.invite_code}?type=main_diwali`
     const saveDateLink = `${BASE_URL}/i/${g.invite_code}?type=save_date`
     const saveDateDiwaliLink = `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali`
+    const instaLink = `${BASE_URL}/i/${g.invite_code}?type=insta`
 
     // Pre-warm the invite route & OG image on Vercel edge/lambda immediately (before DB calls)
     const warmLink = activeMode === 'save_date_diwali'
@@ -878,6 +886,8 @@ export default function AdminPage() {
       ? mainDiwaliInviteLink
       : activeMode === 'save_date'
       ? saveDateLink
+      : activeMode === 'insta'
+      ? instaLink
       : mainInviteLink
     fetch(warmLink, { mode: 'no-cors' }).catch(() => {})
 
@@ -902,6 +912,8 @@ export default function AdminPage() {
     } else if (activeMode === 'invite') {
       inviteUpdates.main_type = '40_festive'
       inviteUpdates.main_status = 'sent'
+    } else if (activeMode === 'insta') {
+      inviteUpdates.insta_status = 'sent'
     }
 
     if (Object.keys(inviteUpdates).length > 0) {
@@ -987,6 +999,11 @@ export default function AdminPage() {
       const pUrl = (customLinks.photoUrl || mainInviteLink).trim()
       const iUrl = (customLinks.instaUrl || 'https://instagram.com').trim()
       msg = `📸 *EVENT PHOTOS & INSTAGRAM LINK* 📸\n\nDear *${name}*, ${EMOJI.heart}\n\nThank you for making Arpit's 40th & Diwali Bash so special! Here are the event photos and Instagram link for ${youTarget}:\n\n🖼️ *Event Photo Gallery Link:*\n${pUrl}\n\n✨ *Instagram Reel / Story Link:*\n${iUrl}\n\n${EMOJI.gift} *Your Invitation Card:*\n${mainInviteLink}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*`
+    } else if (activeMode === 'insta') {
+      const individualName = (g.nickname && g.nickname.trim())
+        ? g.nickname.trim()
+        : (g.first_name || '').trim()
+      msg = `📸 *FOLLOW US ON INSTAGRAM!* 📸\n\nDear *${individualName}*, ${EMOJI.heart}\n\nWe’ve created an exclusive Instagram page to capture and share all the special moments, live stories, and memories from *Arpit’s 40th Birthday & Diwali Bash!* ✨\n\nTap below to connect directly with us on Instagram:\n\n✨ *Tap to Open @40andfestive:*\n${instaLink}\n\nLooking forward to celebrating together!\n*Tanvi Khandelwal & Family*`
     } else {
       // Default 'invite' (40 & Festive - Main Invite sent by Tanvi; adapts to RSVP status)
       if (isYes) {
@@ -1031,7 +1048,8 @@ export default function AdminPage() {
       'Attendance', 'Food', 'Drinks', 'Invited By', 'Group',
       'Save The Date Type', 'Save The Date Status',
       'Main Invite Type', 'Main Invite Status',
-      'Invite Code', 'Save The Date Link', 'Main Invite Link'
+      'Instagram Status',
+      'Invite Code', 'Save The Date Link', 'Main Invite Link', 'Instagram Link'
     ]
     const rows = visibleGuests.map(g => {
       const st = (g.invitation_status || '').toLowerCase()
@@ -1041,8 +1059,10 @@ export default function AdminPage() {
       const stdStatus = (d.std_status || 'pending').toUpperCase()
       const mainType = d.main_type === 'diwali' ? 'Diwali Party' : d.main_type === '40_festive' ? '40 & Festive' : 'None'
       const mainStatus = (d.main_status || 'pending').toUpperCase()
+      const instaStatus = (d.insta_status || 'pending').toUpperCase()
       const stdLink = d.std_type === 'diwali' ? `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali` : `${BASE_URL}/i/${g.invite_code}?type=save_date`
       const mainLink = d.main_type === 'diwali' ? `${BASE_URL}/i/${g.invite_code}?type=main_diwali` : `${BASE_URL}/i/${g.invite_code}`
+      const instaLink = `${BASE_URL}/i/${g.invite_code}?type=insta`
 
       return [
         `${g.first_name}${g.last_name ? ' ' + g.last_name : ''}`,
@@ -1059,9 +1079,11 @@ export default function AdminPage() {
         stdStatus,
         mainType,
         mainStatus,
+        instaStatus,
         g.invite_code,
         stdLink,
-        mainLink
+        mainLink,
+        instaLink
       ]
     })
     const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -1165,6 +1187,10 @@ export default function AdminPage() {
   const mainDiwaliCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).main_type === 'diwali').length
   const main40Count = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).main_type === '40_festive').length
 
+  // Instagram stats (Sent / Seen)
+  const instaSentCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).insta_status === 'sent').length
+  const instaSeenCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).insta_status === 'seen').length
+
   // Canonical list of distinct hosts with case-insensitive grouping & counts
   const hostStats = useMemo(() => {
     const map = new Map<string, { key: string; displayName: string; count: number }>()
@@ -1262,7 +1288,7 @@ export default function AdminPage() {
       </div>
 
       {/* Stats Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 border-b border-[#C9A84C]/10 bg-[#050D1A]/50">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 border-b border-[#C9A84C]/10 bg-[#050D1A]/50">
         <div className="px-4 py-3 text-center border-r border-b lg:border-b-0 border-[#C9A84C]/10">
           <p className="text-xl font-serif text-[#C9A84C]">{visibleGuests.length}</p>
           <p className="text-[9px] text-white/40 tracking-widest uppercase">Total Guests</p>
@@ -1303,6 +1329,14 @@ export default function AdminPage() {
           </p>
           <p className="text-[9px] text-yellow-400/80 tracking-widest uppercase font-semibold mt-1">Main Breakdown</p>
           <p className="text-[10px] text-white/40 mt-0.5">Diwali vs 40 &amp; Festive</p>
+        </div>
+
+        <div className="px-4 py-3 text-center border-r border-b md:border-b-0 border-[#C9A84C]/10 bg-pink-500/5">
+          <p className="text-xl font-serif text-pink-300 font-bold">{instaSeenCount + instaSentCount}</p>
+          <p className="text-[9px] text-pink-400/80 tracking-widest uppercase font-semibold">📸 Instagram</p>
+          <p className="text-[10px] text-white/50 mt-0.5">
+            <span className="text-yellow-400 font-semibold">{instaSeenCount} Seen</span> · <span className="text-blue-400">{instaSentCount} Sent</span>
+          </p>
         </div>
 
         <div className="px-4 py-3 text-center last:border-0">
@@ -1494,6 +1528,7 @@ export default function AdminPage() {
             {messageTemplate === 'invite' && '💌 40 & Festive — Main Invite (Sender: Tanvi • Auto RSVP)'}
             {messageTemplate === 'save_date_diwali' && '✨ Diwali Party — Save The Date'}
             {messageTemplate === 'invite_diwali' && '🎉 Diwali Party — Main Invite (Sender: Khandelwal Family • Auto RSVP)'}
+            {messageTemplate === 'insta' && '📸 Instagram — @40andfestive Page (Strictly Individual Name)'}
           </span>
         </div>
 
@@ -1555,6 +1590,24 @@ export default function AdminPage() {
               🎉 Main Invite
             </button>
           </div>
+
+          {/* Instagram @40andfestive */}
+          <div className="flex items-center bg-[#050D1A] rounded p-1 border border-pink-500/30 gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-pink-300 px-1.5">
+              📸 Instagram:
+            </span>
+            <button
+              onClick={() => setMessageTemplate('insta')}
+              className={`px-2.5 py-1 text-xs font-semibold rounded transition-all ${
+                messageTemplate === 'insta'
+                  ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-amber-500 text-white font-bold shadow-md ring-1 ring-[#FFF8E1]'
+                  : 'text-pink-100/70 hover:text-white hover:bg-white/5'
+              }`}
+              title="Dedicated @40andfestive Instagram Page (Personalized individual name)"
+            >
+              ✨ @40andfestive
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1575,6 +1628,7 @@ export default function AdminPage() {
               <th className="px-2 py-3 text-left">Group</th>
               <th className="px-3 py-3 text-left text-amber-300 font-semibold bg-amber-500/5 border-l border-amber-500/20">🗓️ Save The Date</th>
               <th className="px-3 py-3 text-left text-yellow-300 font-semibold bg-yellow-500/5 border-l border-yellow-500/20">💌 Main Invite</th>
+              <th className="px-3 py-3 text-left text-pink-300 font-semibold bg-pink-500/5 border-l border-pink-500/20">📸 Instagram</th>
               <th className="px-2 py-3 text-left border-l border-white/5">Send As</th>
               <th className="px-2 py-3 text-left">Code</th>
               <th className="px-3 py-3 text-left">Actions</th>
@@ -1582,9 +1636,9 @@ export default function AdminPage() {
           </thead>
           <tbody>
             {loading && guests.length === 0 ? (
-              <tr><td colSpan={15} className="px-4 py-16 text-center text-white/30">Loading...</td></tr>
+              <tr><td colSpan={16} className="px-4 py-16 text-center text-white/30">Loading...</td></tr>
             ) : visibleGuests.length === 0 ? (
-              <tr><td colSpan={15} className="px-4 py-16 text-center text-white/30">
+              <tr><td colSpan={16} className="px-4 py-16 text-center text-white/30">
                 <p className="font-serif text-lg mb-1">No guests found</p>
                 <p className="text-xs">Click "+ Add Guest" to add your guests</p>
               </td></tr>
@@ -1801,6 +1855,38 @@ export default function AdminPage() {
                     </div>
                   </td>
 
+                  {/* ── INSTAGRAM COLUMN (STATUS + QUICK WA) ── */}
+                  <td className="px-3 py-2 whitespace-nowrap bg-pink-500/5 border-l border-pink-500/20">
+                    <div className="flex flex-col gap-1 min-w-[130px]">
+                      {/* Row 1: Quick WA button */}
+                      <button
+                        type="button"
+                        onClick={() => sendWhatsApp(g, 'insta')}
+                        title={`Send @40andfestive Instagram Page to ${g.first_name} via WhatsApp`}
+                        className="px-2 py-0.5 border border-pink-500/40 text-pink-300 hover:bg-pink-500/20 rounded text-[9px] font-bold transition-all whitespace-nowrap flex items-center justify-center gap-1"
+                      >
+                        <span>📸 Send WA</span>
+                      </button>
+
+                      {/* Row 2: Status pill / dropdown */}
+                      <select
+                        value={inviteDetails.insta_status || 'pending'}
+                        onChange={(e) => handleUpdateInvitePhase(g, 'insta', 'status', e.target.value)}
+                        className={`text-[9px] font-semibold px-2 py-0.5 border rounded outline-none cursor-pointer tracking-wider ${
+                          inviteDetails.insta_status === 'seen'
+                            ? 'text-yellow-400 bg-yellow-500/10 border-yellow-500/40'
+                            : inviteDetails.insta_status === 'sent'
+                            ? 'text-blue-400 bg-blue-500/10 border-blue-500/40'
+                            : 'text-white/40 bg-white/5 border-white/10'
+                        }`}
+                      >
+                        <option value="pending" className="bg-[#0A1931] text-white/50">⏳ PENDING</option>
+                        <option value="sent" className="bg-[#0A1931] text-blue-400 font-semibold">📨 SENT</option>
+                        <option value="seen" className="bg-[#0A1931] text-yellow-400 font-semibold">👁️ SEEN</option>
+                      </select>
+                    </div>
+                  </td>
+
                   {/* TOGETHER / SEPARATE */}
                   <td className="px-3 py-3 border-l border-white/5 whitespace-nowrap">
                     {g.linked_guest_id ? (
@@ -1843,9 +1929,14 @@ export default function AdminPage() {
                           <option value="save_date_diwali">✨ Diwali Party - Save The Date</option>
                           <option value="invite_diwali">🎉 Diwali Party - Main Invite</option>
                         </optgroup>
+                        <optgroup label="📸 Instagram">
+                          <option value="insta">✨ @40andfestive Instagram Page</option>
+                        </optgroup>
                       </select>
                       <button onClick={() => {
-                        const previewUrl = messageTemplate === 'save_date_diwali'
+                        const previewUrl = messageTemplate === 'insta'
+                          ? `${BASE_URL}/i/${g.invite_code}?type=insta`
+                          : messageTemplate === 'save_date_diwali'
                           ? `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali`
                           : messageTemplate === 'save_date'
                           ? `${BASE_URL}/i/${g.invite_code}?type=save_date`
@@ -1853,7 +1944,7 @@ export default function AdminPage() {
                           ? `${BASE_URL}/i/${g.invite_code}?type=main_diwali`
                           : `${BASE_URL}/i/${g.invite_code}`
                         window.open(previewUrl, '_blank')
-                      }} title="Preview Active Video Card"
+                      }} title="Preview Active Card / Page"
                         className="px-2 py-1 border border-white/10 text-white/30 hover:text-white/60 rounded-sm text-[10px] transition-all">
                         👁
                       </button>

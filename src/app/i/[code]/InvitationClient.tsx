@@ -5,6 +5,7 @@ import { Guest, trackEvent, updateGuestStatus, submitRSVP, updateGuestInviteDeta
 import OpeningScreen from '@/components/OpeningScreen'
 import VideoScreen from '@/components/VideoScreen'
 import ConfirmationScreen from '@/components/ConfirmationScreen'
+import InstaScreen from '@/components/InstaScreen'
 
 type Screen = 'opening' | 'video' | 'confirmation'
 
@@ -15,6 +16,11 @@ interface Props {
 }
 
 export default function InvitationClient({ guest, inviteCode, inviteType }: Props) {
+  const isInsta = inviteType === 'insta' || inviteType === 'instagram' || inviteType === '40andfestive'
+  if (isInsta) {
+    return <InstaScreen guest={guest} inviteCode={inviteCode} />
+  }
+
   const [screen, setScreen] = useState<Screen>('video')
   const [rsvpStatus, setRsvpStatus] = useState<'attending' | 'declined' | null>(null)
 
