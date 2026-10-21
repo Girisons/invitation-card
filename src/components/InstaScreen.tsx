@@ -18,12 +18,19 @@ export default function InstaScreen({ guest, inviteCode }: Props) {
     ? guest.first_name.trim().split(' ')[0]
     : ''
 
-  // Track event and update insta_status = 'seen'
+  // Track event, update insta_status = 'seen', and auto-open Instagram directly
   useEffect(() => {
     if (guest?.id) {
       trackEvent(guest.id, inviteCode || '', 'insta_opened')
       updateGuestInviteDetails(guest.id, { insta_status: 'seen' })
     }
+
+    // Auto-launch Instagram directly when arriving from the preview card
+    const timer = setTimeout(() => {
+      handleOpenInstagram()
+    }, 250)
+
+    return () => clearTimeout(timer)
   }, [guest?.id, inviteCode])
 
   // Deep-link launch logic

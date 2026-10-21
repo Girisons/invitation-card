@@ -79,8 +79,8 @@ export async function generateMetadata({ params, searchParams }: Props) {
     title = individualName
       ? `40 & Festive ✨ • ${individualName}`
       : "40 & Festive ✨"
-    description = "Exclusive Celebration Reels"
-    ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg?v=9"
+    description = "📸 Open Instagram ➔ @40andfestive"
+    ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg?v=11"
   } else if (isSaveTheDate) {
     if (isDiwali) {
       title = "Grand Diwali Party Celebration"
@@ -125,8 +125,8 @@ export async function generateMetadata({ params, searchParams }: Props) {
         {
           url: ogImageUrl,
           secureUrl: ogImageUrl,
-          width: isInsta ? 571 : 1200,
-          height: isInsta ? 1024 : 630,
+          width: isInsta ? 800 : 1200,
+          height: isInsta ? 800 : 630,
           type: 'image/jpeg',
           alt: `${title} Video Invitation`,
         },
