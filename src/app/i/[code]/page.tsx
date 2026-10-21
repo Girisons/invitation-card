@@ -49,6 +49,18 @@ export async function generateMetadata({ params, searchParams }: Props) {
   const rawV = Array.isArray(sParams.v) ? sParams.v[0] : sParams.v
   const inviteType = (rawType || rawMode || '').toLowerCase()
 
+  let guest: Guest | null = null
+  if (code) {
+    try {
+      guest = await getGuestByCode(code)
+    } catch {}
+  }
+  const individualName = (guest?.nickname && guest.nickname.trim())
+    ? guest.nickname.trim()
+    : (guest?.first_name && guest.first_name.trim())
+    ? guest.first_name.trim().split(' ')[0]
+    : ''
+
   const isInsta = inviteType === 'insta' || inviteType === 'instagram' || inviteType === '40andfestive'
   const isDiwaliSaveDate = inviteType === 'save_date_diwali' || inviteType === 'std_diwali' || inviteType === 'diwali' || inviteType === 'save-date-diwali'
   const isDiwaliMain = inviteType === 'main_diwali' || inviteType === 'invite_diwali' || inviteType === 'diwali_main' || inviteType === 'diwali_invite'
@@ -60,9 +72,11 @@ export async function generateMetadata({ params, searchParams }: Props) {
   let ogImageUrl = "https://khandelwalinvite.vercel.app/og-main.jpg?v=5"
 
   if (isInsta) {
-    title = "@40andfestive — Official Instagram Page"
-    description = "Follow Arpit's 40th & Diwali Celebration on Instagram • Tap to open"
-    ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg"
+    title = individualName
+      ? `Dear ${individualName} • @40andfestive`
+      : "@40andfestive — 40 & Festive"
+    description = "Follow us on Instagram • Tap to open"
+    ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg?v=3"
   } else if (isSaveTheDate) {
     if (isDiwali) {
       title = "Grand Diwali Party Celebration"

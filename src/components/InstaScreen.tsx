@@ -63,19 +63,6 @@ export default function InstaScreen({ guest, inviteCode }: Props) {
     }
   }
 
-  // Attempt automatic launch on mobile after short delay
-  useEffect(() => {
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-    if (isMobile) {
-      const timer = setTimeout(() => {
-        // Soft deep-link attempt
-        const appUri = 'instagram://user?username=40andfestive'
-        window.location.href = appUri
-      }, 900)
-      return () => clearTimeout(timer)
-    }
-  }, [])
-
   return (
     <div
       onClick={handleOpenInstagram}

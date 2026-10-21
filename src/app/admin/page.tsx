@@ -1000,10 +1000,7 @@ export default function AdminPage() {
       const iUrl = (customLinks.instaUrl || 'https://instagram.com').trim()
       msg = `📸 *EVENT PHOTOS & INSTAGRAM LINK* 📸\n\nDear *${name}*, ${EMOJI.heart}\n\nThank you for making Arpit's 40th & Diwali Bash so special! Here are the event photos and Instagram link for ${youTarget}:\n\n🖼️ *Event Photo Gallery Link:*\n${pUrl}\n\n✨ *Instagram Reel / Story Link:*\n${iUrl}\n\n${EMOJI.gift} *Your Invitation Card:*\n${mainInviteLink}\n\nWith lots of love,\n*Tanvi Khandelwal & Family*`
     } else if (activeMode === 'insta') {
-      const individualName = (g.nickname && g.nickname.trim())
-        ? g.nickname.trim()
-        : (g.first_name || '').trim()
-      msg = `📸 *FOLLOW US ON INSTAGRAM!* 📸\n\nDear *${individualName}*, ${EMOJI.heart}\n\nWe’ve created an exclusive Instagram page to capture and share all the special moments, live stories, and memories from *Arpit’s 40th Birthday & Diwali Bash!* ✨\n\nTap below to connect directly with us on Instagram:\n\n✨ *Tap to Open @40andfestive:*\n${instaLink}\n\nLooking forward to celebrating together!\n*Tanvi Khandelwal & Family*`
+      msg = instaLink
     } else {
       // Default 'invite' (40 & Festive - Main Invite sent by Tanvi; adapts to RSVP status)
       if (isYes) {
