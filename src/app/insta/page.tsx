@@ -31,7 +31,7 @@ export async function generateMetadata({ searchParams }: Props) {
     ? `40 & Festive ✨ • ${individualName}`
     : "40 & Festive ✨"
   const description = "📸 Open Instagram ➔ @40andfestive"
-  const ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg?v=11"
+  const ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg?v=12"
 
   return {
     metadataBase: new URL('https://khandelwalinvite.vercel.app'),

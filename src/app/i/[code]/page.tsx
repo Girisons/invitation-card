@@ -80,7 +80,7 @@ export async function generateMetadata({ params, searchParams }: Props) {
       ? `40 & Festive ✨ • ${individualName}`
       : "40 & Festive ✨"
     description = "📸 Open Instagram ➔ @40andfestive"
-    ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg?v=11"
+    ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg?v=12"
   } else if (isSaveTheDate) {
     if (isDiwali) {
       title = "Grand Diwali Party Celebration"
