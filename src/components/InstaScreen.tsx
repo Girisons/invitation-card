@@ -42,7 +42,7 @@ export default function InstaScreen({ guest, inviteCode }: Props) {
 
     // 1. Direct App Scheme (Deep-Link)
     const appUri = 'instagram://user?username=40andfestive'
-    // 2. Universal Link (_u bypasses webview on iOS/Android)
+    // 2. Universal Link (_u directly triggers iOS/Android app handoff)
     const universalUri = 'https://www.instagram.com/_u/40andfestive'
     // 3. Fallback Web Profile
     const webUri = 'https://instagram.com/40andfestive'
@@ -51,18 +51,18 @@ export default function InstaScreen({ guest, inviteCode }: Props) {
     const isAndroid = /Android/i.test(navigator.userAgent)
 
     if (isAndroid) {
-      // Android Intent scheme directly invokes native Instagram app
+      // Android Intent scheme directly invokes native Instagram app without prompt
       const androidIntent = 'intent://instagram.com/_u/40andfestive/#Intent;package=com.instagram.android;scheme=https;end'
       window.location.href = androidIntent
       setTimeout(() => {
         window.location.href = universalUri
-      }, 600)
+      }, 500)
     } else if (isIOS) {
-      // iOS app protocol with universal link fallback
+      // iOS: Try app scheme and universal link handoff
       window.location.href = appUri
       setTimeout(() => {
         window.location.href = universalUri
-      }, 600)
+      }, 500)
     } else {
       // Desktop / Web
       window.open(webUri, '_blank')
@@ -135,8 +135,8 @@ export default function InstaScreen({ guest, inviteCode }: Props) {
             height: '8.1%',
           }}
         >
-          <button
-            type="button"
+          <a
+            href="https://www.instagram.com/_u/40andfestive"
             onClick={(e) => {
               e.stopPropagation()
               handleOpenInstagram()
@@ -152,7 +152,7 @@ export default function InstaScreen({ guest, inviteCode }: Props) {
               className="absolute -inset-1 rounded-2xl border border-amber-300/30 group-hover:border-amber-300/60 animate-pulse pointer-events-none"
               style={{ animationDuration: '2.5s' }}
             />
-          </button>
+          </a>
         </div>
 
         {/* Gentle hint at bottom */}
