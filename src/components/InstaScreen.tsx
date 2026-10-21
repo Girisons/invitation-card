@@ -10,6 +10,7 @@ interface Props {
 
 export default function InstaScreen({ guest, inviteCode }: Props) {
   const [tapped, setTapped] = useState(false)
+  const [countdown, setCountdown] = useState(5)
 
   // Resolve strictly individual first name or nickname (never couple!)
   const individualName = (guest?.nickname && guest.nickname.trim())
@@ -18,24 +19,39 @@ export default function InstaScreen({ guest, inviteCode }: Props) {
     ? guest.first_name.trim().split(' ')[0]
     : ''
 
-  // Track event, update insta_status = 'seen', and auto-open Instagram directly
+  // Track event, update insta_status = 'seen', and stay for 5 seconds before opening Instagram
   useEffect(() => {
     if (guest?.id) {
       trackEvent(guest.id, inviteCode || '', 'insta_opened')
       updateGuestInviteDetails(guest.id, { insta_status: 'seen' })
     }
 
-    // Auto-launch Instagram directly when arriving from the preview card
+    // 1-second interval to tick down from 5 to 0
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    // Auto-launch Instagram exactly after 5 seconds
     const timer = setTimeout(() => {
       handleOpenInstagram()
-    }, 250)
+    }, 5000)
 
-    return () => clearTimeout(timer)
+    return () => {
+      clearInterval(interval)
+      clearTimeout(timer)
+    }
   }, [guest?.id, inviteCode])
 
   // Deep-link launch logic
   const handleOpenInstagram = () => {
     setTapped(true)
+    setCountdown(0)
     if (guest?.id) {
       trackEvent(guest.id, inviteCode || '', 'insta_clicked')
     }
@@ -155,13 +171,15 @@ export default function InstaScreen({ guest, inviteCode }: Props) {
           </a>
         </div>
 
-        {/* Gentle hint at bottom */}
+        {/* Gentle hint & 5s countdown at bottom */}
         <div
           className="absolute left-0 right-0 text-center pointer-events-none"
           style={{ bottom: '2%' }}
         >
-          <span className="text-[9.5px] tracking-widest uppercase text-amber-200/50 font-mono">
-            {tapped ? 'Opening Instagram (@40andfestive)...' : 'Tap anywhere to open @40andfestive'}
+          <span className="text-[10px] tracking-widest uppercase text-amber-200/60 font-mono">
+            {tapped || countdown === 0
+              ? 'Opening Instagram (@40andfestive)...'
+              : `Opening Instagram in ${countdown}s · Tap to open now`}
           </span>
         </div>
 
