@@ -720,6 +720,7 @@ export default function AdminPage() {
       : 'pending'
 
     try {
+      // Sync rsvps table in background without blocking or refreshing the page
       for (const tId of targetIds) {
         const { data: existingRows } = await supabase
           .from('rsvps')
@@ -727,7 +728,6 @@ export default function AdminPage() {
           .eq('guest_id', tId)
 
         if (existingRows && existingRows.length > 0) {
-          // Update all rows for this guest in rsvps table (works within RLS)
           await supabase
             .from('rsvps')
             .update({
@@ -749,19 +749,18 @@ export default function AdminPage() {
     } catch (e) {
       console.warn('Syncing rsvps table error:', e)
     }
-
-    fetchGuests()
   }
 
   // ── QUICK CHANGE ANY FIELD (FOOD, DRINKS, HOST, GROUP - Strictly individual per guest) ──
   const handleFieldChange = async (g: Guest, field: string, value: string) => {
     const payload: Record<string, any> = { [field]: value || null }
+    // Optimistic UI update in-place without page refresh
+    setGuests(prev => prev.map(item => item.id === g.id ? { ...item, ...payload } : item))
     const { error } = await supabase.from('guests').update(payload).eq('id', g.id)
     if (error) {
       alert(`Error updating ${field}: ` + error.message)
-      return
+      fetchGuests()
     }
-    fetchGuests()
   }
 
   // ── QUICK CHANGE INVITE PHASE (SAVE THE DATE & MAIN INVITE - TYPE & STATUS) ──
@@ -884,9 +883,9 @@ export default function AdminPage() {
 
     const currentSt = (g.invitation_status || '').toLowerCase()
     if (!currentSt || currentSt === 'pending' || currentSt === 'not_sent') {
-      await supabase.from('guests').update({ invitation_status: 'sent' }).eq('id', g.id)
       g.invitation_status = 'sent'
-      fetchGuests()
+      setGuests(prev => prev.map(item => item.id === g.id ? { ...item, invitation_status: 'sent' } : item))
+      supabase.from('guests').update({ invitation_status: 'sent' }).eq('id', g.id).then(() => {})
     }
 
     // Track which specific invite was sent in notes
@@ -1117,8 +1116,8 @@ export default function AdminPage() {
 
   const toggleTogether = async (g: Guest) => {
     const nowTogether = !g.send_together
+    setGuests(prev => prev.map(item => item.id === g.id ? { ...item, send_together: nowTogether } : item))
     await supabase.from('guests').update({ send_together: nowTogether }).eq('id', g.id)
-    fetchGuests()
   }
 
   // ── DATA ISOLATION & FILTERING LOGIC ──
@@ -1582,7 +1581,7 @@ export default function AdminPage() {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
+            {loading && guests.length === 0 ? (
               <tr><td colSpan={15} className="px-4 py-16 text-center text-white/30">Loading...</td></tr>
             ) : visibleGuests.length === 0 ? (
               <tr><td colSpan={15} className="px-4 py-16 text-center text-white/30">
