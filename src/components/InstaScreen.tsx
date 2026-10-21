@@ -9,7 +9,6 @@ interface Props {
 }
 
 export default function InstaScreen({ guest, inviteCode }: Props) {
-  const [copied, setCopied] = useState(false)
   const [tapped, setTapped] = useState(false)
 
   // Resolve strictly individual first name or nickname (never couple!)
@@ -66,10 +65,10 @@ export default function InstaScreen({ guest, inviteCode }: Props) {
   return (
     <div
       onClick={handleOpenInstagram}
-      className="relative w-full h-[100dvh] bg-[#02050B] flex items-center justify-center overflow-hidden cursor-pointer select-none"
+      className="relative w-full h-[100dvh] bg-gradient-to-b from-[#020A15] to-[#081827] flex items-center justify-center overflow-hidden cursor-pointer select-none"
     >
-      {/* 9:16 Portrait Canvas */}
-      <div className="relative w-full max-w-[480px] h-full max-h-[920px] aspect-[9/16] shadow-2xl overflow-hidden flex flex-col justify-between">
+      {/* 571:1024 Portrait Canvas (Matches artwork aspect ratio perfectly) */}
+      <div className="relative w-full max-w-[480px] h-full max-h-[100dvh] aspect-[571/1024] shadow-2xl overflow-hidden flex flex-col justify-between">
         
         {/* Background Artwork */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -79,30 +78,54 @@ export default function InstaScreen({ guest, inviteCode }: Props) {
           className="absolute inset-0 w-full h-full object-cover pointer-events-none"
         />
 
-        {/* Dynamic Personalised Individual Name (Positioned above Share the celebration) */}
-        {individualName && (
-          <div
-            className="absolute left-0 right-0 text-center pointer-events-none"
-            style={{ top: '61.8%' }}
-          >
-            <p
-              className="text-[#FFF2C2] text-sm sm:text-base tracking-[0.22em] font-serif uppercase font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
-              style={{
-                textShadow: '0 0 12px rgba(229,190,114,0.6), 0 2px 4px #000000',
-                background: 'linear-gradient(180deg, #FFFFFF 0%, #FFE699 40%, #D4AF37 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              DEAR {individualName.toUpperCase()}
-            </p>
-          </div>
-        )}
-
-        {/* Interactive Pill Button Overlay (Positioned exactly over the button in background) */}
+        {/* Dynamic Personalised Golden Box Content (Matches central glowing box) */}
         <div
-          className="absolute left-0 right-0 flex justify-center items-center"
-          style={{ top: '74.2%', height: '7.5%' }}
+          className="absolute flex flex-col items-center justify-center text-center px-4 pointer-events-none"
+          style={{
+            top: '41.7%',
+            left: '14%',
+            width: '72%',
+            height: '16.8%',
+          }}
+        >
+          {/* Top Hook */}
+          <div
+            className="font-serif text-[12px] sm:text-[14px] font-extrabold tracking-[0.14em] uppercase mb-1 drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]"
+            style={{
+              background: 'linear-gradient(180deg, #FFFFFF 0%, #FFE89E 50%, #E5BE72 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            THE PARTY • THE PEOPLE • THE REELS
+          </div>
+
+          {/* Guest Personalization */}
+          <div className="font-sans text-[11px] sm:text-[12.5px] text-white/95 leading-snug mb-1 drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)] max-w-[340px]">
+            {individualName ? (
+              <>
+                Hey <strong className="text-[#FFE699] font-bold">{individualName}</strong>, your access to our celebration continues on Instagram.
+              </>
+            ) : (
+              <>Your access to our celebration continues on Instagram.</>
+            )}
+          </div>
+
+          {/* Subtitle */}
+          <div className="font-sans text-[9.5px] sm:text-[11px] text-[#E5D0A1]/85 leading-snug max-w-[320px]">
+            Watch the cameraman&apos;s reels &amp; catch the celebration moments.
+          </div>
+        </div>
+
+        {/* Interactive Hit-target Overlay directly over the bottom [ OPEN INSTAGRAM ➔ ] ribbon */}
+        <div
+          className="absolute flex justify-center items-center"
+          style={{
+            top: '81.8%',
+            left: '13.6%',
+            width: '72.8%',
+            height: '8.1%',
+          }}
         >
           <button
             type="button"
@@ -110,55 +133,27 @@ export default function InstaScreen({ guest, inviteCode }: Props) {
               e.stopPropagation()
               handleOpenInstagram()
             }}
-            className="relative w-[68%] h-[88%] rounded-full flex items-center justify-center gap-2.5 transition-all duration-200 transform active:scale-95 group focus:outline-none"
+            className="relative w-full h-full rounded-2xl flex items-center justify-center transition-all duration-200 transform active:scale-95 group focus:outline-none"
             style={{
-              background: 'linear-gradient(180deg, rgba(229,190,114,0.12) 0%, rgba(186,136,56,0.22) 100%)',
-              boxShadow: '0 0 20px rgba(212,175,55,0.35), inset 0 0 10px rgba(255,248,224,0.25)',
+              background: 'transparent',
             }}
             title="Tap to open @40andfestive in Instagram"
           >
-            {/* Shimmering pulse border ring */}
+            {/* Subtle shimmering gold glow around the button on hover/pulse */}
             <span
-              className="absolute -inset-1 rounded-full border border-amber-300/40 animate-pulse pointer-events-none"
-              style={{ animationDuration: '2s' }}
+              className="absolute -inset-1 rounded-2xl border border-amber-300/30 group-hover:border-amber-300/60 animate-pulse pointer-events-none"
+              style={{ animationDuration: '2.5s' }}
             />
-
-            {/* Official Instagram Camera SVG Icon */}
-            <svg
-              className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 text-[#FFE58F] filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" strokeWidth="2.8" />
-            </svg>
-
-            {/* Handle Text in Gold Calligraphic Serif */}
-            <span
-              className="font-serif text-xs sm:text-sm font-bold tracking-wider uppercase text-[#FFF3CC] drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
-              style={{
-                background: 'linear-gradient(180deg, #FFFFFF 0%, #FFE28A 45%, #D4A836 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              @40andfestive
-            </span>
           </button>
         </div>
 
         {/* Gentle hint at bottom */}
         <div
           className="absolute left-0 right-0 text-center pointer-events-none"
-          style={{ bottom: '4%' }}
+          style={{ bottom: '2%' }}
         >
-          <span className="text-[10px] tracking-widest uppercase text-amber-200/50 font-mono">
-            {tapped ? 'Opening Instagram...' : 'Tap anywhere to open Instagram'}
+          <span className="text-[9.5px] tracking-widest uppercase text-amber-200/50 font-mono">
+            {tapped ? 'Opening Instagram (@40andfestive)...' : 'Tap anywhere to open @40andfestive'}
           </span>
         </div>
 
