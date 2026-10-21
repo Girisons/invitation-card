@@ -28,10 +28,10 @@ export async function generateMetadata({ searchParams }: Props) {
     : ''
 
   const title = individualName
-    ? `Dear ${individualName} ✨ 40 & Festive`
-    : "40 & Festive ✨ @40andfestive"
-  const description = "The Party • The People • The Reels"
-  const ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg?v=7"
+    ? `40 & Festive ✨ • ${individualName}`
+    : "40 & Festive ✨"
+  const description = "Exclusive Celebration Reels"
+  const ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg?v=8"
 
   return {
     metadataBase: new URL('https://khandelwalinvite.vercel.app'),
