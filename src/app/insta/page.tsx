@@ -31,7 +31,7 @@ export async function generateMetadata({ searchParams }: Props) {
     ? `40 & Festive ✨ • ${individualName}`
     : "40 & Festive ✨"
   const description = "Exclusive Celebration Reels"
-  const ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg?v=8"
+  const ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg?v=9"
 
   return {
     metadataBase: new URL('https://khandelwalinvite.vercel.app'),
@@ -46,8 +46,8 @@ export async function generateMetadata({ searchParams }: Props) {
       images: [
         {
           url: ogImageUrl,
-          width: 1200,
-          height: 630,
+          width: 571,
+          height: 1024,
           type: 'image/jpeg',
           alt: "@40andfestive Instagram Invitation",
         },
