@@ -77,9 +77,11 @@ export async function generateMetadata({ params, searchParams }: Props) {
 
   if (isInsta) {
     title = individualName
-      ? `40 & Festive ✨ • ${individualName}`
-      : "40 & Festive ✨"
-    description = "📸 Open Instagram ➔ @40andfestive"
+      ? `40 & Festive ✨ • Dear ${individualName}, Follow Us on Instagram @40andfestive!`
+      : "40 & Festive ✨ • Follow Us on Instagram @40andfestive!"
+    description = individualName
+      ? `Hey ${individualName}! 📸✨ Please follow our official page @40andfestive to catch all the exclusive celebration reels, live party updates, behind-the-scenes fun & unforgettable memories from Arpit’s 40th & Diwali Bash! Tap here to open & follow ➔ @40andfestive`
+      : "📸✨ Please follow our official page @40andfestive to catch all the exclusive celebration reels, live party updates, behind-the-scenes fun & unforgettable memories from Arpit’s 40th & Diwali Bash! Tap here to open & follow ➔ @40andfestive"
     ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg?v=12"
   } else if (isSaveTheDate) {
     if (isDiwali) {

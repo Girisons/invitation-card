@@ -855,7 +855,7 @@ export default function AdminPage() {
       : messageTemplate === 'save_date'
       ? `${BASE_URL}/i/${code}?type=save_date`
       : messageTemplate === 'insta'
-      ? `${BASE_URL}/i/${code}?type=insta`
+      ? `${BASE_URL}/i/${code}?type=insta&v=2`
       : `${BASE_URL}/i/${code}?type=main`
     navigator.clipboard.writeText(linkUrl)
     setCopied(code); setTimeout(() => setCopied(null), 2000)
@@ -877,7 +877,7 @@ export default function AdminPage() {
       : `${BASE_URL}/i/${g.invite_code}?type=main_diwali`
     const saveDateLink = `${BASE_URL}/i/${g.invite_code}?type=save_date`
     const saveDateDiwaliLink = `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali`
-    const instaLink = `${BASE_URL}/i/${g.invite_code}?type=insta`
+    const instaLink = `${BASE_URL}/i/${g.invite_code}?type=insta&v=2`
 
     // Pre-warm the invite route & OG image on Vercel edge/lambda immediately (before DB calls)
     const warmLink = activeMode === 'save_date_diwali'
