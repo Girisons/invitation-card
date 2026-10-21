@@ -152,7 +152,8 @@ async function run() {
   // 2. Diwali Celebration Main Invite
   await renderCard({
     outputPath: 'public/og-diwali-main.jpg',
-    scriptTitle: 'The Night Awaits',
+    scriptTitle: 'The Festive Soirée',
+    scriptSize: 76,
     bottomLine1: "DIWALI CELEBRATION",
     bottomLine2: "23RD OCT · JAIPUR"
   });

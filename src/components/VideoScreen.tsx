@@ -858,7 +858,7 @@ export default function VideoScreen({
               {isSaveDate
                 ? 'SAVE THE DATE'
                 : isDiwaliEvent
-                ? 'THE FESTIVAL OF LIGHTS AWAITS'
+                ? 'THE FESTIVE SOIRÉE'
                 : 'THE NIGHT AWAITS'}
             </h1>
 
@@ -965,7 +965,7 @@ export default function VideoScreen({
                   }}
                 >
                   {isDiwaliEvent ? (
-                    <span>THE FESTIVAL OF LIGHTS AWAITS</span>
+                    <span>THE FESTIVE SOIRÉE</span>
                   ) : (
                     <>
                       <span className="block sm:inline">ONE NIGHT. </span>
