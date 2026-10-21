@@ -55,10 +55,14 @@ export async function generateMetadata({ params, searchParams }: Props) {
       guest = await getGuestByCode(code)
     } catch {}
   }
-  const individualName = (guest?.nickname && guest.nickname.trim())
+  const rawName = (guest?.nickname && guest.nickname.trim())
     ? guest.nickname.trim()
     : (guest?.first_name && guest.first_name.trim())
     ? guest.first_name.trim().split(' ')[0]
+    : ''
+  // Proper Title Case formatting (e.g. PALAK -> Palak)
+  const individualName = rawName
+    ? rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase()
     : ''
 
   const isInsta = inviteType === 'insta' || inviteType === 'instagram' || inviteType === '40andfestive'
@@ -73,10 +77,10 @@ export async function generateMetadata({ params, searchParams }: Props) {
 
   if (isInsta) {
     title = individualName
-      ? `Dear ${individualName} • @40andfestive`
-      : "@40andfestive — 40 & Festive"
-    description = "Follow us on Instagram • Tap to open"
-    ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg?v=6"
+      ? `Dear ${individualName} ✨ 40 & Festive`
+      : "40 & Festive ✨ @40andfestive"
+    description = "The Party • The People • The Reels"
+    ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg?v=7"
   } else if (isSaveTheDate) {
     if (isDiwali) {
       title = "Grand Diwali Party Celebration"

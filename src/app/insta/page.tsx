@@ -17,17 +17,21 @@ export async function generateMetadata({ searchParams }: Props) {
     } catch {}
   }
 
-  const individualName = (guest?.nickname && guest.nickname.trim())
+  const rawName = (guest?.nickname && guest.nickname.trim())
     ? guest.nickname.trim()
     : (guest?.first_name && guest.first_name.trim())
     ? guest.first_name.trim().split(' ')[0]
     : ''
+  // Proper Title Case formatting (e.g. PALAK -> Palak)
+  const individualName = rawName
+    ? rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase()
+    : ''
 
   const title = individualName
-    ? `${individualName}, Follow @40andfestive on Instagram`
-    : "@40andfestive — Official Instagram Celebration"
-  const description = "Arpit's 40th & Diwali Bash • Tap to connect directly with us on Instagram"
-  const ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg?v=6"
+    ? `Dear ${individualName} ✨ 40 & Festive`
+    : "40 & Festive ✨ @40andfestive"
+  const description = "The Party • The People • The Reels"
+  const ogImageUrl = "https://khandelwalinvite.vercel.app/og-insta.jpg?v=7"
 
   return {
     metadataBase: new URL('https://khandelwalinvite.vercel.app'),
