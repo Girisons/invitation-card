@@ -104,19 +104,40 @@ export async function generateMetadata({ params, searchParams }: Props) {
     const isAttendedTheme = tyVariant === 'attended' || tyVariant === 'attended_partner_missed'
     const resolvedCardName = guest ? resolveGuestDisplayName(guest, undefined, tyVariant) : ''
     const resolvedPartnerRef = guest ? resolveGuestAndPartnerNames(guest).partnerInlineRef : ''
-    title = isAttendedTheme
-      ? resolvedCardName
-        ? `40 & FESTIVE ✨ • Dear ${resolvedCardName} — The Night Was Better With You`
-        : `40 & FESTIVE ✨ • The Night Was Better With You`
-      : resolvedCardName
-      ? `40 & FESTIVE ✨ • Dear ${resolvedCardName} — You Were Missed`
-      : `40 & FESTIVE ✨ • You Were Missed`
-    description = isAttendedTheme
-      ? `A personal note of gratitude from Tanvi, Arpit & Family. Tap to open your personalised card ✨`
-      : `Remembered with warmth and affection — Tanvi, Arpit & Family. Tap to open your personalised card ✨`
-    const nameParam = resolvedCardName ? `&name=${encodeURIComponent(resolvedCardName)}` : ''
-    const partnerParam = resolvedPartnerRef ? `&partner=${encodeURIComponent(resolvedPartnerRef)}` : ''
-    ogImageUrl = `https://khandelwalinvite.vercel.app/api/thank-you-card?code=${encodeURIComponent(code.toUpperCase())}&type=${tyVariant}${nameParam}${partnerParam}`
+
+    if (tyVariant === 'attended_partner_missed') {
+      title = resolvedCardName
+        ? `40 & Festive ✨ • Dear ${resolvedCardName}, The Night Was Better With You!`
+        : '40 & Festive ✨ • The Night Was Better With You!'
+      description = resolvedCardName
+        ? `Dear ${resolvedCardName} ❤️ Thank you for being part of Arpit’s 40 & Festive — we truly missed having ${resolvedPartnerRef || 'your partner'} with us! Tap here to open & read your personal thank-you card ➔ Tanvi, Arpit & Family`
+        : '❤️ Thank you for being part of Arpit’s 40 & Festive! Tap here to open & read your personal thank-you card ➔ Tanvi, Arpit & Family'
+    } else if (tyVariant === 'missed_partner_attended') {
+      title = resolvedCardName
+        ? `40 & Festive ✨ • Dear ${resolvedCardName}, You Were Missed!`
+        : '40 & Festive ✨ • You Were Missed!'
+      description = resolvedCardName
+        ? `Dear ${resolvedCardName} ❤️ We missed having you at Arpit’s 40 & Festive, though it was wonderful having ${resolvedPartnerRef || 'your partner'} join us! Tap here to open & read your personal note ➔ Tanvi, Arpit & Family`
+        : '❤️ We missed having you with us at Arpit’s 40 & Festive! Tap here to open & read your personal note ➔ Tanvi, Arpit & Family'
+    } else if (tyVariant === 'missed') {
+      title = resolvedCardName
+        ? `40 & Festive ✨ • Dear ${resolvedCardName}, You Were Missed!`
+        : '40 & Festive ✨ • You Were Missed!'
+      description = resolvedCardName
+        ? `Dear ${resolvedCardName} ❤️ We missed having you with us at Arpit’s 40 & Festive — you were remembered with warmth & affection. Tap here to open & read your personal note ➔ Tanvi, Arpit & Family`
+        : '❤️ We missed having you with us at Arpit’s 40 & Festive — you were remembered with warmth & affection. Tap here to open & read your personal note ➔ Tanvi, Arpit & Family'
+    } else {
+      title = resolvedCardName
+        ? `40 & Festive ✨ • Dear ${resolvedCardName}, The Night Was Better With You!`
+        : '40 & Festive ✨ • The Night Was Better With You!'
+      description = resolvedCardName
+        ? `Dear ${resolvedCardName} ❤️ Thank you for being part of Arpit’s 40 & Festive and making our evening so special. Tap here to open & read your personal thank-you card ➔ Tanvi, Arpit & Family`
+        : '❤️ Thank you for being part of Arpit’s 40 & Festive and making our evening so special. Tap here to open & read your personal thank-you card ➔ Tanvi, Arpit & Family'
+    }
+
+    ogImageUrl = isAttendedTheme
+      ? 'https://khandelwalinvite.vercel.app/og-thankyou-attended.jpg?v=2'
+      : 'https://khandelwalinvite.vercel.app/og-thankyou-missed.jpg?v=2'
   } else if (isInstaSoiree) {
     title = individualName
       ? `The Festive Soirée ✨ • Dear ${individualName}, Follow Us on Instagram @40andfestive!`
@@ -177,9 +198,9 @@ export async function generateMetadata({ params, searchParams }: Props) {
         {
           url: ogImageUrl,
           secureUrl: ogImageUrl,
-          width: isThankYou ? 1080 : isInsta ? 800 : 1200,
-          height: isThankYou ? 1350 : isInsta ? 800 : 630,
-          type: isThankYou ? 'image/png' : 'image/jpeg',
+          width: isThankYou || isInsta ? 800 : 1200,
+          height: isThankYou || isInsta ? 800 : 630,
+          type: 'image/jpeg',
           alt: `${title}`,
         },
       ],

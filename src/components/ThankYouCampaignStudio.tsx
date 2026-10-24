@@ -51,7 +51,7 @@ export default function ThankYouCampaignStudio({
   const [splitCouplePreviewMode, setSplitCouplePreviewMode] = useState<boolean>(false)
   const [mobilePreviewMode, setMobilePreviewMode] = useState<boolean>(false)
   const [includeCardLinkInWA, setIncludeCardLinkInWA] = useState<boolean>(true)
-  const [autoCopyImageOnWA, setAutoCopyImageOnWA] = useState<boolean>(true)
+  const [autoCopyImageOnWA, setAutoCopyImageOnWA] = useState<boolean>(false)
   const [testPhoneNumber, setTestPhoneNumber] = useState<string>('')
   const [studioToast, setStudioToast] = useState<string>('')
 
@@ -410,12 +410,8 @@ export default function ThankYouCampaignStudio({
       await handleCopyCardImage(variant, resolvedName, d.partner_inline_ref)
     }
 
-    const cardLink = `${baseUrl}/i/${g.invite_code}?type=thankyou_${variant}`
-    const msg = buildThankYouWhatsAppMessage(variant, resolvedName, {
-      includeCardLink: includeCardLinkInWA,
-      cardUrl: cardLink,
-      partnerName: d.partner_inline_ref,
-    })
+    const cardLink = `${baseUrl}/i/${g.invite_code}?type=thankyou_${variant}&v=2`
+    const msg = cardLink
 
     // Record status & timestamp in DB
     const nowIso = new Date().toISOString()
@@ -456,12 +452,8 @@ export default function ThankYouCampaignStudio({
       await handleCopyCardImage(variant, activePreviewName, activePreviewPartnerRef)
     }
     const sampleCode = activePreviewGuest?.invite_code || 'TEST40'
-    const cardLink = `${baseUrl}/i/${sampleCode}?type=thankyou_${variant}`
-    const msg = buildThankYouWhatsAppMessage(variant, activePreviewName, {
-      includeCardLink: includeCardLinkInWA,
-      cardUrl: cardLink,
-      partnerName: activePreviewPartnerRef,
-    })
+    const cardLink = `${baseUrl}/i/${sampleCode}?type=thankyou_${variant}&v=2`
+    const msg = cardLink
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
       navigator.userAgent
     )

@@ -1059,13 +1059,13 @@ export default function AdminPage() {
       : messageTemplate === 'insta'
       ? `${BASE_URL}/i/${code}?type=insta&v=2`
       : messageTemplate === 'thankyou_attended'
-      ? `${BASE_URL}/i/${code}?type=thankyou_attended`
+      ? `${BASE_URL}/i/${code}?type=thankyou_attended&v=2`
       : messageTemplate === 'thankyou_missed'
-      ? `${BASE_URL}/i/${code}?type=thankyou_missed`
+      ? `${BASE_URL}/i/${code}?type=thankyou_missed&v=2`
       : messageTemplate === 'thankyou_attended_partner_missed'
-      ? `${BASE_URL}/i/${code}?type=thankyou_attended_partner_missed`
+      ? `${BASE_URL}/i/${code}?type=thankyou_attended_partner_missed&v=2`
       : messageTemplate === 'thankyou_missed_partner_attended'
-      ? `${BASE_URL}/i/${code}?type=thankyou_missed_partner_attended`
+      ? `${BASE_URL}/i/${code}?type=thankyou_missed_partner_attended&v=2`
       : `${BASE_URL}/i/${code}?type=main`
     navigator.clipboard.writeText(linkUrl)
     setCopied(code); setTimeout(() => setCopied(null), 2000)
@@ -1089,10 +1089,10 @@ export default function AdminPage() {
     const saveDateDiwaliLink = `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali`
     const instaLink = `${BASE_URL}/i/${g.invite_code}?type=insta&v=2`
     const instaSoireeLink = `${BASE_URL}/i/${g.invite_code}?type=insta_soiree&v=2`
-    const thankYouAttendedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_attended`
-    const thankYouMissedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_missed`
-    const thankYouAttendedPartnerMissedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_attended_partner_missed`
-    const thankYouMissedPartnerAttendedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_missed_partner_attended`
+    const thankYouAttendedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_attended&v=2`
+    const thankYouMissedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_missed&v=2`
+    const thankYouAttendedPartnerMissedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_attended_partner_missed&v=2`
+    const thankYouMissedPartnerAttendedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_missed_partner_attended&v=2`
 
     // Pre-warm the invite route & OG image on Vercel edge/lambda immediately (before DB calls)
     const warmLink = activeMode === 'save_date_diwali'
@@ -1253,37 +1253,13 @@ export default function AdminPage() {
     } else if (activeMode === 'insta') {
       msg = instaLink
     } else if (activeMode === 'thankyou_attended') {
-      const displayName = resolveGuestDisplayName(g, guests, 'attended')
-      await exportOrCopyThankYouCard(g, 'attended', 'copy')
-      msg = buildThankYouWhatsAppMessage('attended', displayName, {
-        includeCardLink: true,
-        cardUrl: thankYouAttendedLink,
-      })
+      msg = thankYouAttendedLink
     } else if (activeMode === 'thankyou_missed') {
-      const displayName = resolveGuestDisplayName(g, guests, 'missed')
-      await exportOrCopyThankYouCard(g, 'missed', 'copy')
-      msg = buildThankYouWhatsAppMessage('missed', displayName, {
-        includeCardLink: true,
-        cardUrl: thankYouMissedLink,
-      })
+      msg = thankYouMissedLink
     } else if (activeMode === 'thankyou_attended_partner_missed') {
-      const displayName = resolveGuestDisplayName(g, guests, 'attended_partner_missed')
-      const { partnerInlineRef } = resolveGuestAndPartnerNames(g, guests)
-      await exportOrCopyThankYouCard(g, 'attended_partner_missed', 'copy')
-      msg = buildThankYouWhatsAppMessage('attended_partner_missed', displayName, {
-        includeCardLink: true,
-        cardUrl: thankYouAttendedPartnerMissedLink,
-        partnerName: partnerInlineRef,
-      })
+      msg = thankYouAttendedPartnerMissedLink
     } else if (activeMode === 'thankyou_missed_partner_attended') {
-      const displayName = resolveGuestDisplayName(g, guests, 'missed_partner_attended')
-      const { partnerInlineRef } = resolveGuestAndPartnerNames(g, guests)
-      await exportOrCopyThankYouCard(g, 'missed_partner_attended', 'copy')
-      msg = buildThankYouWhatsAppMessage('missed_partner_attended', displayName, {
-        includeCardLink: true,
-        cardUrl: thankYouMissedPartnerAttendedLink,
-        partnerName: partnerInlineRef,
-      })
+      msg = thankYouMissedPartnerAttendedLink
     } else {
       // Default 'invite' (40 & Festive - Main Invite sent by Tanvi; adapts to RSVP status)
       if (isYes) {
