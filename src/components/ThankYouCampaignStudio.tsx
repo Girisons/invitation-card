@@ -50,7 +50,7 @@ export default function ThankYouCampaignStudio({
   const [useCustomName, setUseCustomName] = useState<boolean>(false)
   const [splitCouplePreviewMode, setSplitCouplePreviewMode] = useState<boolean>(false)
   const [mobilePreviewMode, setMobilePreviewMode] = useState<boolean>(false)
-  const [includeCardLinkInWA, setIncludeCardLinkInWA] = useState<boolean>(false)
+  const [includeCardLinkInWA, setIncludeCardLinkInWA] = useState<boolean>(true)
   const [autoCopyImageOnWA, setAutoCopyImageOnWA] = useState<boolean>(true)
   const [testPhoneNumber, setTestPhoneNumber] = useState<string>('')
   const [studioToast, setStudioToast] = useState<string>('')

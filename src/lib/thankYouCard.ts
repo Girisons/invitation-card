@@ -315,6 +315,7 @@ export function buildThankYouWhatsAppMessage(
   const cleanName = (guestDisplayName || 'Mansi & Roshan').trim()
   const heart = String.fromCodePoint(0x2764, 0xFE0F)
   const sparkles = String.fromCodePoint(0x2728)
+  const loveLetter = String.fromCodePoint(0x1F48C)
 
   let msg = ''
   if (variant === 'attended') {
@@ -337,8 +338,8 @@ export function buildThankYouWhatsAppMessage(
     msg = `Dear ${cleanName} ${heart}\n\nWe missed having you with us at Arpit's 40 & FESTIVE. You were remembered with lots of warmth, and we hope we get to share another special moment together soon.\n\nSending you all our love and warm wishes. ${sparkles}\n\nTanvi, Arpit & Family`
   }
 
-  if (options?.includeCardLink && options?.cardUrl) {
-    msg += `\n\n${sparkles} Your Personalised Note:\n${options.cardUrl}`
+  if (options?.cardUrl && options?.includeCardLink !== false) {
+    msg += `\n\n${loveLetter} *Your Personalised Thank-You Card:*\n${options.cardUrl}`
   }
 
   return msg

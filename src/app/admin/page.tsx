@@ -1255,16 +1255,24 @@ export default function AdminPage() {
     } else if (activeMode === 'thankyou_attended') {
       const displayName = resolveGuestDisplayName(g, guests, 'attended')
       await exportOrCopyThankYouCard(g, 'attended', 'copy')
-      msg = buildThankYouWhatsAppMessage('attended', displayName)
+      msg = buildThankYouWhatsAppMessage('attended', displayName, {
+        includeCardLink: true,
+        cardUrl: thankYouAttendedLink,
+      })
     } else if (activeMode === 'thankyou_missed') {
       const displayName = resolveGuestDisplayName(g, guests, 'missed')
       await exportOrCopyThankYouCard(g, 'missed', 'copy')
-      msg = buildThankYouWhatsAppMessage('missed', displayName)
+      msg = buildThankYouWhatsAppMessage('missed', displayName, {
+        includeCardLink: true,
+        cardUrl: thankYouMissedLink,
+      })
     } else if (activeMode === 'thankyou_attended_partner_missed') {
       const displayName = resolveGuestDisplayName(g, guests, 'attended_partner_missed')
       const { partnerInlineRef } = resolveGuestAndPartnerNames(g, guests)
       await exportOrCopyThankYouCard(g, 'attended_partner_missed', 'copy')
       msg = buildThankYouWhatsAppMessage('attended_partner_missed', displayName, {
+        includeCardLink: true,
+        cardUrl: thankYouAttendedPartnerMissedLink,
         partnerName: partnerInlineRef,
       })
     } else if (activeMode === 'thankyou_missed_partner_attended') {
@@ -1272,6 +1280,8 @@ export default function AdminPage() {
       const { partnerInlineRef } = resolveGuestAndPartnerNames(g, guests)
       await exportOrCopyThankYouCard(g, 'missed_partner_attended', 'copy')
       msg = buildThankYouWhatsAppMessage('missed_partner_attended', displayName, {
+        includeCardLink: true,
+        cardUrl: thankYouMissedPartnerAttendedLink,
         partnerName: partnerInlineRef,
       })
     } else {

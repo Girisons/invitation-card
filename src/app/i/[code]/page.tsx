@@ -1,6 +1,7 @@
 import { headers } from 'next/headers'
 import InvitationClient from './InvitationClient'
 import { getGuestByCode, Guest } from '@/lib/supabase'
+import { resolveGuestDisplayName, resolveGuestAndPartnerNames } from '@/lib/thankYouCard'
 
 interface Props {
   params: Promise<{ code: string }>
@@ -101,13 +102,21 @@ export async function generateMetadata({ params, searchParams }: Props) {
       ? 'missed'
       : 'attended'
     const isAttendedTheme = tyVariant === 'attended' || tyVariant === 'attended_partner_missed'
+    const resolvedCardName = guest ? resolveGuestDisplayName(guest, undefined, tyVariant) : ''
+    const resolvedPartnerRef = guest ? resolveGuestAndPartnerNames(guest).partnerInlineRef : ''
     title = isAttendedTheme
-      ? `40 & FESTIVE ✨ • The Night Was Better With You`
+      ? resolvedCardName
+        ? `40 & FESTIVE ✨ • Dear ${resolvedCardName} — The Night Was Better With You`
+        : `40 & FESTIVE ✨ • The Night Was Better With You`
+      : resolvedCardName
+      ? `40 & FESTIVE ✨ • Dear ${resolvedCardName} — You Were Missed`
       : `40 & FESTIVE ✨ • You Were Missed`
     description = isAttendedTheme
-      ? `A personal note of gratitude from Tanvi, Arpit & Family.`
-      : `Remembered with warmth and affection — Tanvi, Arpit & Family.`
-    ogImageUrl = `https://khandelwalinvite.vercel.app/api/thank-you-card?code=${encodeURIComponent(code.toUpperCase())}&type=${tyVariant}`
+      ? `A personal note of gratitude from Tanvi, Arpit & Family. Tap to open your personalised card ✨`
+      : `Remembered with warmth and affection — Tanvi, Arpit & Family. Tap to open your personalised card ✨`
+    const nameParam = resolvedCardName ? `&name=${encodeURIComponent(resolvedCardName)}` : ''
+    const partnerParam = resolvedPartnerRef ? `&partner=${encodeURIComponent(resolvedPartnerRef)}` : ''
+    ogImageUrl = `https://khandelwalinvite.vercel.app/api/thank-you-card?code=${encodeURIComponent(code.toUpperCase())}&type=${tyVariant}${nameParam}${partnerParam}`
   } else if (isInstaSoiree) {
     title = individualName
       ? `The Festive Soirée ✨ • Dear ${individualName}, Follow Us on Instagram @40andfestive!`
@@ -168,10 +177,10 @@ export async function generateMetadata({ params, searchParams }: Props) {
         {
           url: ogImageUrl,
           secureUrl: ogImageUrl,
-          width: isInsta ? 800 : 1200,
-          height: isInsta ? 800 : 630,
-          type: 'image/jpeg',
-          alt: `${title} Video Invitation`,
+          width: isThankYou ? 1080 : isInsta ? 800 : 1200,
+          height: isThankYou ? 1350 : isInsta ? 800 : 630,
+          type: isThankYou ? 'image/png' : 'image/jpeg',
+          alt: `${title}`,
         },
       ],
     },
