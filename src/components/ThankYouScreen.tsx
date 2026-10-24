@@ -15,6 +15,38 @@ interface Props {
   variant: ThankYouVariant
 }
 
+function renderFormattedParagraph(
+  text: string,
+  highlight?: string,
+  isAttended: boolean = true
+) {
+  if (!highlight || !text.toLowerCase().includes(highlight.toLowerCase())) {
+    return text
+  }
+
+  const escaped = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`(${escaped})`, 'gi')
+  const parts = text.split(regex)
+
+  return parts.map((part, idx) => {
+    if (part.toLowerCase() === highlight.toLowerCase()) {
+      return (
+        <strong
+          key={idx}
+          className="font-bold tracking-wide"
+          style={{
+            fontWeight: 700,
+            color: isAttended ? '#FFF5E0' : '#1A0E05',
+          }}
+        >
+          {part}
+        </strong>
+      )
+    }
+    return part
+  })
+}
+
 export default function ThankYouScreen({ guest, inviteCode, variant }: Props) {
   const [visible, setVisible] = useState(false)
 
@@ -191,7 +223,7 @@ export default function ThankYouScreen({ guest, inviteCode, variant }: Props) {
                 className="font-sans text-xs sm:text-[13px] leading-relaxed"
                 style={{ color: isAttended ? 'rgba(245, 236, 215, 0.88)' : '#4E3620' }}
               >
-                {paragraph}
+                {renderFormattedParagraph(paragraph, copy.partnerHighlight, isAttended)}
               </p>
             ))}
           </div>

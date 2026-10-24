@@ -19,6 +19,7 @@ export interface ThankYouCardCopy {
   guestDisplayName: string
   headline: string
   bodyParagraphs: string[]
+  partnerHighlight?: string
   signOffLabel: string
   signature: string
 }
@@ -259,6 +260,7 @@ export function getThankYouCardCopy(
         'Thank you for being part of our special evening and making it so memorable with your presence.',
         `We truly missed having ${partnerRef} with us, and look forward to celebrating with you both soon.`,
       ],
+      partnerHighlight: partnerRef,
       signOffLabel: 'WITH LOVE,',
       signature: 'TANVI, ARPIT & FAMILY',
     }
@@ -282,6 +284,7 @@ export function getThankYouCardCopy(
         `We missed having you with us this evening, though it was so wonderful having ${partnerRef} celebrate with us.`,
         "Here's to making more beautiful memories together with you both soon.",
       ],
+      partnerHighlight: partnerRef,
       signOffLabel: 'WITH LOVE,',
       signature: 'TANVI, ARPIT & FAMILY',
     }
@@ -326,14 +329,14 @@ export function buildThankYouWhatsAppMessage(
       variant,
       options?.partnerName
     )
-    msg = `Dear ${addresseeName} ${heart}\n\nThank you for being part of Arpit's 40 & FESTIVE. Your presence made the evening so special, though we truly missed having ${partnerRef} with us!\n\nSending our warmest love to you both, and hoping we celebrate together very soon. ${sparkles}\n\nTanvi, Arpit & Family`
+    msg = `Dear ${addresseeName} ${heart}\n\nThank you for being part of Arpit's 40 & FESTIVE. Your presence made the evening so special, though we truly missed having *${partnerRef}* with us!\n\nSending our warmest love to you both, and hoping we celebrate together very soon. ${sparkles}\n\nTanvi, Arpit & Family`
   } else if (variant === 'missed_partner_attended') {
     const { addresseeName, partnerRef } = resolveSplitNamesFromDisplay(
       cleanName,
       variant,
       options?.partnerName
     )
-    msg = `Dear ${addresseeName} ${heart}\n\nWe missed having you with us at Arpit's 40 & FESTIVE, though we're so glad ${partnerRef} could join us and be part of the celebration!\n\nYou were remembered with lots of warmth, and we hope we get to share another special moment with the two of you soon. ${sparkles}\n\nTanvi, Arpit & Family`
+    msg = `Dear ${addresseeName} ${heart}\n\nWe missed having you with us at Arpit's 40 & FESTIVE, though we're so glad *${partnerRef}* could join us and be part of the celebration!\n\nYou were remembered with lots of warmth, and we hope we get to share another special moment with the two of you soon. ${sparkles}\n\nTanvi, Arpit & Family`
   } else {
     msg = `Dear ${cleanName} ${heart}\n\nWe missed having you with us at Arpit's 40 & FESTIVE. You were remembered with lots of warmth, and we hope we get to share another special moment together soon.\n\nSending you all our love and warm wishes. ${sparkles}\n\nTanvi, Arpit & Family`
   }
@@ -386,6 +389,60 @@ function wrapCanvasText(
   }
   if (currentLine) lines.push(currentLine)
   return lines
+}
+
+/**
+ * Draws a line of text centered at (cx, y), bolding any occurrences of highlight word.
+ */
+function drawCanvasLineWithHighlight(
+  ctx: CanvasRenderingContext2D,
+  line: string,
+  highlight: string | undefined,
+  cx: number,
+  y: number,
+  regularFont: string,
+  boldFont: string,
+  regularColor: string,
+  boldColor: string
+): void {
+  if (!highlight || !line.toLowerCase().includes(highlight.toLowerCase())) {
+    ctx.font = regularFont
+    ctx.fillStyle = regularColor
+    ctx.textAlign = 'center'
+    ctx.fillText(line, cx, y)
+    return
+  }
+
+  const escaped = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`(${escaped})`, 'gi')
+  const parts = line.split(regex)
+
+  let totalWidth = 0
+  const measuredParts: { text: string; isBold: boolean; width: number }[] = []
+
+  for (const part of parts) {
+    if (!part) continue
+    const isBold = part.toLowerCase() === highlight.toLowerCase()
+    ctx.font = isBold ? boldFont : regularFont
+    const w = ctx.measureText(part).width
+    measuredParts.push({ text: part, isBold, width: w })
+    totalWidth += w
+  }
+
+  const prevAlign = ctx.textAlign
+  ctx.textAlign = 'left'
+  let currentX = cx - totalWidth / 2
+
+  for (const p of measuredParts) {
+    ctx.font = p.isBold ? boldFont : regularFont
+    ctx.fillStyle = p.isBold ? boldColor : regularColor
+    ctx.fillText(p.text, currentX, y)
+    currentX += p.width
+  }
+
+  ctx.textAlign = prevAlign
+  ctx.font = regularFont
+  ctx.fillStyle = regularColor
 }
 
 /**
@@ -720,7 +777,12 @@ export async function renderThankYouCardToCanvas(
 
   // ── 7. SHORT, READABLE THANK-YOU MESSAGE ──
   const isTwoParagraphs = copy.bodyParagraphs.length > 1
-  ctx.font = `400 ${isTwoParagraphs ? 24 : 26}px Inter, system-ui, sans-serif`
+  const fontSize = isTwoParagraphs ? 24 : 26
+  const regularFont = `400 ${fontSize}px Inter, system-ui, sans-serif`
+  const boldFont = `700 ${fontSize}px Inter, system-ui, sans-serif`
+  const boldColor = isAttended ? '#FFF8E7' : '#1A0E05'
+
+  ctx.font = regularFont
   ctx.fillStyle = bodyColor
   const bodyMaxWidth = 740
   const bodyLineHeight = isTwoParagraphs ? 38 : 42
@@ -729,7 +791,17 @@ export async function renderThankYouCardToCanvas(
   for (let p = 0; p < copy.bodyParagraphs.length; p++) {
     const lines = wrapCanvasText(ctx, copy.bodyParagraphs[p], bodyMaxWidth)
     for (const line of lines) {
-      ctx.fillText(line, cx, currentBodyY)
+      drawCanvasLineWithHighlight(
+        ctx,
+        line,
+        copy.partnerHighlight,
+        cx,
+        currentBodyY,
+        regularFont,
+        boldFont,
+        bodyColor,
+        boldColor
+      )
       currentBodyY += bodyLineHeight
     }
     if (p < copy.bodyParagraphs.length - 1) {

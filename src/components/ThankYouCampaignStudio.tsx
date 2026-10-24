@@ -19,6 +19,38 @@ import {
   getThankYouCardCopy,
 } from '@/lib/thankYouCard'
 
+function renderFormattedParagraph(
+  text: string,
+  highlight?: string,
+  isAttended: boolean = true
+) {
+  if (!highlight || !text.toLowerCase().includes(highlight.toLowerCase())) {
+    return text
+  }
+
+  const escaped = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`(${escaped})`, 'gi')
+  const parts = text.split(regex)
+
+  return parts.map((part, idx) => {
+    if (part.toLowerCase() === highlight.toLowerCase()) {
+      return (
+        <strong
+          key={idx}
+          className="font-bold tracking-wide"
+          style={{
+            fontWeight: 700,
+            color: isAttended ? '#FFE699' : '#1A0E05',
+          }}
+        >
+          {part}
+        </strong>
+      )
+    }
+    return part
+  })
+}
+
 interface Props {
   guests: Guest[]
   allGuests: Guest[]
@@ -1509,7 +1541,7 @@ export default function ThankYouCampaignStudio({
                           <p className="italic">{copy.headline}</p>
                           {copy.bodyParagraphs.map((p, idx) => (
                             <p key={idx} className="text-white/60">
-                              {p}
+                              {renderFormattedParagraph(p, copy.partnerHighlight, true)}
                             </p>
                           ))}
                         </div>
