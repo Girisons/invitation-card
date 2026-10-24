@@ -1,7 +1,23 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { supabase, Guest, parseGuestNotes, updateGuestInviteDetails, GuestInviteDetails } from '@/lib/supabase'
+import {
+  supabase,
+  Guest,
+  parseGuestNotes,
+  updateGuestInviteDetails,
+  GuestInviteDetails,
+  ActualAttendanceStatus,
+  ThankYouDeliveryStatus,
+} from '@/lib/supabase'
+import ThankYouCampaignStudio from '@/components/ThankYouCampaignStudio'
+import {
+  buildThankYouWhatsAppMessage,
+  resolveGuestDisplayName,
+  renderThankYouCardToCanvas,
+  getThankYouCardFilename,
+  ThankYouVariant,
+} from '@/lib/thankYouCard'
 
 export function getEffectiveInviteDetails(g: Guest, allGuests: Guest[]): GuestInviteDetails {
   const own = parseGuestNotes(g.notes)
@@ -37,7 +53,33 @@ export function getEffectiveInviteDetails(g: Guest, allGuests: Guest[]): GuestIn
     }
   }
 
-  return { std_status, std_type, main_status, main_type, insta_status, insta_type }
+  // Post-Event Thank-You Campaign fields
+  const attendance_status: ActualAttendanceStatus =
+    own.attendance_status ||
+    (g.send_together ? partnerDetails.attendance_status : undefined) ||
+    'unknown'
+  const thank_you_type =
+    own.thank_you_type ||
+    (attendance_status === 'attended'
+      ? 'attended'
+      : attendance_status === 'did_not_attend'
+      ? 'missed'
+      : '')
+  const thank_you_status: ThankYouDeliveryStatus = own.thank_you_status || 'pending'
+  const thank_you_sent_at = own.thank_you_sent_at || ''
+
+  return {
+    std_status,
+    std_type,
+    main_status,
+    main_type,
+    insta_status,
+    insta_type,
+    attendance_status,
+    thank_you_type,
+    thank_you_status,
+    thank_you_sent_at,
+  }
 }
 
 const ADMIN_PASS = process.env.NEXT_PUBLIC_ADMIN_PASS || 'arpit40'
@@ -51,7 +93,17 @@ export interface PortalUser {
   created_at?: string
 }
 
-export type MessageTemplateMode = 'invite' | 'save_date' | 'invite_diwali' | 'save_date_diwali' | 'location' | 'photos' | 'insta' | 'insta_soiree'
+export type MessageTemplateMode =
+  | 'invite'
+  | 'save_date'
+  | 'invite_diwali'
+  | 'save_date_diwali'
+  | 'location'
+  | 'photos'
+  | 'insta'
+  | 'insta_soiree'
+  | 'thankyou_attended'
+  | 'thankyou_missed'
 
 const DEFAULT_USERS: PortalUser[] = [
   { id: 'user-admin', username: 'admin', password: 'arpit40', name: 'Super Admin', role: 'super_admin', created_at: new Date().toISOString() },
@@ -384,6 +436,7 @@ export default function AdminPage() {
   const [userMsg, setUserMsg] = useState('')
 
   // Message Template & Custom Link States
+  const [dashboardView, setDashboardView] = useState<'guests' | 'thank_you'>('guests')
   const [messageTemplate, setMessageTemplate] = useState<MessageTemplateMode>('invite')
   const [customLinks, setCustomLinks] = useState<{ locationUrl: string; photoUrl: string; instaUrl: string }>({
     locationUrl: 'https://maps.google.com/?q=Jaipur',
@@ -810,6 +863,90 @@ export default function AdminPage() {
     }
   }
 
+  // ── UPDATE THANK-YOU CAMPAIGN DETAILS (ATTENDANCE, CARD TYPE, STATUS, SENT AT) ──
+  const handleUpdateThankYouDetails = async (
+    g: Guest,
+    updates: Partial<GuestInviteDetails>,
+    syncCouple = false
+  ) => {
+    const targetIds =
+      syncCouple && g.linked_guest_id && g.send_together
+        ? [g.id, g.linked_guest_id]
+        : [g.id]
+
+    setGuests(prev =>
+      prev.map(item => {
+        if (!targetIds.includes(item.id)) return item
+        const curr = parseGuestNotes(item.notes)
+        const merged = { ...curr, ...updates }
+        return { ...item, notes: JSON.stringify(merged) }
+      })
+    )
+
+    for (const tId of targetIds) {
+      const targetGuest = guests.find(x => x.id === tId)
+      const curr = parseGuestNotes(targetGuest?.notes)
+      const merged = { ...curr, ...updates }
+      await supabase.from('guests').update({ notes: JSON.stringify(merged) }).eq('id', tId)
+    }
+  }
+
+  const handleBulkUpdateThankYouDetails = async (
+    updatesList: Array<{ guest: Guest; updates: Partial<GuestInviteDetails> }>
+  ) => {
+    const idMap = new Map<string, Partial<GuestInviteDetails>>()
+    updatesList.forEach(({ guest, updates }) => {
+      idMap.set(guest.id, updates)
+      if (guest.linked_guest_id && guest.send_together) {
+        idMap.set(guest.linked_guest_id, updates)
+      }
+    })
+
+    setGuests(prev =>
+      prev.map(item => {
+        const up = idMap.get(item.id)
+        if (!up) return item
+        const curr = parseGuestNotes(item.notes)
+        return { ...item, notes: JSON.stringify({ ...curr, ...up }) }
+      })
+    )
+
+    for (const [tId, up] of idMap.entries()) {
+      const targetGuest = guests.find(x => x.id === tId)
+      const curr = parseGuestNotes(targetGuest?.notes)
+      await supabase.from('guests').update({ notes: JSON.stringify({ ...curr, ...up }) }).eq('id', tId)
+    }
+  }
+
+  // ── GENERATE / COPY / DOWNLOAD 1080x1350 THANK YOU CARD DIRECTLY FROM MAIN TABLE ──
+  const exportOrCopyThankYouCard = async (
+    g: Guest,
+    variant: ThankYouVariant,
+    action: 'copy' | 'download'
+  ) => {
+    try {
+      const displayName = resolveGuestDisplayName(g, guests)
+      const canvas = document.createElement('canvas')
+      await renderThankYouCardToCanvas(canvas, variant, displayName)
+      const blob: Blob | null = await new Promise(resolve =>
+        canvas.toBlob(b => resolve(b), 'image/png', 1.0)
+      )
+      if (!blob) return
+      if (action === 'download') {
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = getThankYouCardFilename(variant, g.invite_code || g.id)
+        a.click()
+        URL.revokeObjectURL(url)
+      } else if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+      }
+    } catch {
+      // ignore clipboard errors
+    }
+  }
+
   // ── EDIT GUEST ──
   const startEdit = (g: Guest) => {
     setEditingGuest(g)
@@ -860,6 +997,10 @@ export default function AdminPage() {
       ? `${BASE_URL}/i/${code}?type=insta_soiree&v=2`
       : messageTemplate === 'insta'
       ? `${BASE_URL}/i/${code}?type=insta&v=2`
+      : messageTemplate === 'thankyou_attended'
+      ? `${BASE_URL}/i/${code}?type=thankyou_attended`
+      : messageTemplate === 'thankyou_missed'
+      ? `${BASE_URL}/i/${code}?type=thankyou_missed`
       : `${BASE_URL}/i/${code}?type=main`
     navigator.clipboard.writeText(linkUrl)
     setCopied(code); setTimeout(() => setCopied(null), 2000)
@@ -883,6 +1024,8 @@ export default function AdminPage() {
     const saveDateDiwaliLink = `${BASE_URL}/i/${g.invite_code}?type=save_date_diwali`
     const instaLink = `${BASE_URL}/i/${g.invite_code}?type=insta&v=2`
     const instaSoireeLink = `${BASE_URL}/i/${g.invite_code}?type=insta_soiree&v=2`
+    const thankYouAttendedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_attended`
+    const thankYouMissedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_missed`
 
     // Pre-warm the invite route & OG image on Vercel edge/lambda immediately (before DB calls)
     const warmLink = activeMode === 'save_date_diwali'
@@ -895,6 +1038,10 @@ export default function AdminPage() {
       ? instaSoireeLink
       : activeMode === 'insta'
       ? instaLink
+      : activeMode === 'thankyou_attended'
+      ? thankYouAttendedLink
+      : activeMode === 'thankyou_missed'
+      ? thankYouMissedLink
       : mainInviteLink
     fetch(warmLink, { mode: 'no-cors' }).catch(() => {})
 
@@ -925,6 +1072,16 @@ export default function AdminPage() {
     } else if (activeMode === 'insta') {
       inviteUpdates.insta_type = '40_festive'
       inviteUpdates.insta_status = 'sent'
+    } else if (activeMode === 'thankyou_attended') {
+      inviteUpdates.attendance_status = 'attended'
+      inviteUpdates.thank_you_type = 'attended'
+      inviteUpdates.thank_you_status = 'sent'
+      inviteUpdates.thank_you_sent_at = new Date().toISOString()
+    } else if (activeMode === 'thankyou_missed') {
+      inviteUpdates.attendance_status = 'did_not_attend'
+      inviteUpdates.thank_you_type = 'missed'
+      inviteUpdates.thank_you_status = 'sent'
+      inviteUpdates.thank_you_sent_at = new Date().toISOString()
     }
 
     if (Object.keys(inviteUpdates).length > 0) {
@@ -1014,6 +1171,14 @@ export default function AdminPage() {
       msg = instaSoireeLink
     } else if (activeMode === 'insta') {
       msg = instaLink
+    } else if (activeMode === 'thankyou_attended') {
+      const displayName = resolveGuestDisplayName(g, guests)
+      await exportOrCopyThankYouCard(g, 'attended', 'copy')
+      msg = buildThankYouWhatsAppMessage('attended', displayName)
+    } else if (activeMode === 'thankyou_missed') {
+      const displayName = resolveGuestDisplayName(g, guests)
+      await exportOrCopyThankYouCard(g, 'missed', 'copy')
+      msg = buildThankYouWhatsAppMessage('missed', displayName)
     } else {
       // Default 'invite' (40 & Festive - Main Invite sent by Tanvi; adapts to RSVP status)
       if (isYes) {
@@ -1055,16 +1220,22 @@ export default function AdminPage() {
   const exportCSV = () => {
     const headers = [
       'Name', 'Nickname', 'Mobile', 'Partner', 'Partner Mobile',
-      'Attendance', 'Food', 'Drinks', 'Invited By', 'Group',
+      'RSVP Status', 'Actual Attendance', 'Thank You Card Type', 'Thank You Status', 'Thank You Sent At',
+      'Food', 'Drinks', 'Invited By', 'Group',
       'Save The Date Type', 'Save The Date Status',
       'Main Invite Type', 'Main Invite Status',
       'Instagram Type', 'Instagram Status',
-      'Invite Code', 'Save The Date Link', 'Main Invite Link', 'Instagram Link'
+      'Invite Code', 'Save The Date Link', 'Main Invite Link', 'Instagram Link', 'Thank You Card Asset URL'
     ]
     const rows = visibleGuests.map(g => {
       const st = (g.invitation_status || '').toLowerCase()
       const attendance = (st === 'rsvp_yes' || st === 'attending' || st === 'yes') ? 'Attending' : (st === 'rsvp_no' || st === 'declined' || st === 'no') ? 'Declined' : 'Pending'
       const d = getEffectiveInviteDetails(g, guests)
+      const actualAtt = d.attendance_status || 'unknown'
+      const tyType = d.thank_you_type || ''
+      const tyStatus = (d.thank_you_status || 'pending').toUpperCase()
+      const tySentAt = d.thank_you_sent_at || ''
+      const tyAssetUrl = tyType ? `${BASE_URL}/api/thank-you-card?code=${g.invite_code}&type=${tyType}` : ''
       const stdType = d.std_type === 'diwali' ? 'Diwali Party' : d.std_type === '40_festive' ? '40 & Festive' : 'None'
       const stdStatus = (d.std_status || 'pending').toUpperCase()
       const mainType = d.main_type === 'diwali' ? 'Diwali Party' : d.main_type === '40_festive' ? '40 & Festive' : 'None'
@@ -1082,6 +1253,10 @@ export default function AdminPage() {
         g.partner_name || (g.linked_guest_id && guestMap[g.linked_guest_id]?.name) || '',
         g.partner_mobile || (g.linked_guest_id && guestMap[g.linked_guest_id]?.mobile) || '',
         attendance,
+        actualAtt,
+        tyType,
+        tyStatus,
+        tySentAt,
         g.food_preference || '',
         g.liquor_preference || '',
         g.guest_of || '',
@@ -1095,7 +1270,8 @@ export default function AdminPage() {
         g.invite_code,
         stdLink,
         mainLink,
-        instaLink
+        instaLink,
+        tyAssetUrl
       ]
     })
     const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -1203,6 +1379,14 @@ export default function AdminPage() {
   const instaSentCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).insta_status === 'sent').length
   const instaSeenCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).insta_status === 'seen').length
 
+  // Post-Event Thank-You Campaign stats
+  const tyAttendedCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).attendance_status === 'attended').length
+  const tyMissedCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).attendance_status === 'did_not_attend').length
+  const tySentCount = visibleGuests.filter(g => {
+    const st = getEffectiveInviteDetails(g, guests).thank_you_status
+    return st === 'sent' || st === 'delivered' || st === 'seen'
+  }).length
+
   // Canonical list of distinct hosts with case-insensitive grouping & counts
   const hostStats = useMemo(() => {
     const map = new Map<string, { key: string; displayName: string; count: number }>()
@@ -1281,7 +1465,36 @@ export default function AdminPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center bg-[#0A1931] border border-[#C9A84C]/40 rounded-sm p-1 gap-1">
+            <button
+              type="button"
+              onClick={() => setDashboardView('guests')}
+              className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-all cursor-pointer ${
+                dashboardView === 'guests'
+                  ? 'bg-[#C9A84C] text-[#050D1A] font-bold shadow'
+                  : 'text-[#F5ECD7]/70 hover:text-white'
+              }`}
+            >
+              📋 Guest &amp; Invite Management
+            </button>
+            <button
+              type="button"
+              onClick={() => setDashboardView('thank_you')}
+              className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                dashboardView === 'thank_you'
+                  ? 'bg-gradient-to-r from-[#2C1B11] via-[#C9A84C] to-[#E8D5A3] text-[#050D1A] font-bold shadow ring-1 ring-[#FFF8E1]'
+                  : 'text-[#E8D5A3] hover:bg-white/5'
+              }`}
+            >
+              <span>✨</span>
+              <span>Post-Event Thank-You Campaign</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/40 text-[#E8D5A3] font-mono">
+                {tyAttendedCount + tyMissedCount} verified · {tySentCount} sent
+              </span>
+            </button>
+          </div>
+
           {currentUser.role === 'super_admin' && (
             <button
               onClick={() => setShowUsersModal(true)}
@@ -1300,7 +1513,7 @@ export default function AdminPage() {
       </div>
 
       {/* Stats Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 border-b border-[#C9A84C]/10 bg-[#050D1A]/50">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 border-b border-[#C9A84C]/10 bg-[#050D1A]/50">
         <div className="px-4 py-3 text-center border-r border-b lg:border-b-0 border-[#C9A84C]/10">
           <p className="text-xl font-serif text-[#C9A84C]">{visibleGuests.length}</p>
           <p className="text-[9px] text-white/40 tracking-widest uppercase">Total Guests</p>
@@ -1348,6 +1561,18 @@ export default function AdminPage() {
           <p className="text-[9px] text-pink-400/80 tracking-widest uppercase font-semibold">📸 Instagram</p>
           <p className="text-[10px] text-white/50 mt-0.5">
             <span className="text-yellow-400 font-semibold">{instaSeenCount} Seen</span> · <span className="text-blue-400">{instaSentCount} Sent</span>
+          </p>
+        </div>
+
+        <div
+          onClick={() => setDashboardView('thank_you')}
+          className="px-4 py-3 text-center border-r border-b md:border-b-0 border-[#C9A84C]/20 bg-[#C9A84C]/10 cursor-pointer hover:bg-[#C9A84C]/15 transition-colors"
+          title="Click to open Post-Event Thank-You Campaign Studio"
+        >
+          <p className="text-xl font-serif text-[#E8D5A3] font-bold">{tySentCount}</p>
+          <p className="text-[9px] text-[#C9A84C] tracking-widest uppercase font-semibold">✨ Thank You</p>
+          <p className="text-[10px] text-white/60 mt-0.5">
+            <span className="text-emerald-400 font-semibold">🟫 {tyAttendedCount}</span> · <span className="text-amber-300 font-semibold">🥂 {tyMissedCount}</span>
           </p>
         </div>
 
@@ -1542,6 +1767,8 @@ export default function AdminPage() {
             {messageTemplate === 'invite_diwali' && '🎉 Diwali Party — Main Invite (Sender: Khandelwal Family • Auto RSVP)'}
             {messageTemplate === 'insta' && '🎂 Instagram — 40 & Festive (@40andfestive)'}
             {messageTemplate === 'insta_soiree' && '🪔 Instagram — The Festive Soirée (@40andfestive)'}
+            {messageTemplate === 'thankyou_attended' && '🟫 Post-Event Thank You — Card A (Attended · Dark Walnut)'}
+            {messageTemplate === 'thankyou_missed' && '🥂 Post-Event Thank You — Card B (Missed · Champagne)'}
           </span>
         </div>
 
@@ -1632,10 +1859,57 @@ export default function AdminPage() {
               🪔 The Festive Soirée
             </button>
           </div>
+
+          {/* Post-Event Thank-You Campaign */}
+          <div className="flex items-center bg-[#050D1A] rounded p-1 border border-[#C9A84C]/45 gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#E8D5A3] px-1.5">
+              ✨ Thank You:
+            </span>
+            <button
+              onClick={() => setMessageTemplate('thankyou_attended')}
+              className={`px-2.5 py-1 text-xs font-semibold rounded transition-all ${
+                messageTemplate === 'thankyou_attended'
+                  ? 'bg-[#2C1B11] text-[#FFF5E0] font-bold shadow-md ring-1 ring-[#C9A84C]'
+                  : 'text-[#E8D5A3]/75 hover:text-white hover:bg-white/5'
+              }`}
+              title="Card A — Attended (Dark Walnut Edition)"
+            >
+              🟫 Attended
+            </button>
+            <button
+              onClick={() => setMessageTemplate('thankyou_missed')}
+              className={`px-2.5 py-1 text-xs font-semibold rounded transition-all ${
+                messageTemplate === 'thankyou_missed'
+                  ? 'bg-[#F4E8D1] text-[#2E1C0E] font-bold shadow-md ring-1 ring-[#FFF8E1]'
+                  : 'text-[#F4E8D1]/75 hover:text-white hover:bg-white/5'
+              }`}
+              title="Card B — Could Not Attend (Champagne Edition)"
+            >
+              🥂 Missed
+            </button>
+            <button
+              onClick={() => setDashboardView(dashboardView === 'thank_you' ? 'guests' : 'thank_you')}
+              className="px-2.5 py-1 text-xs font-bold rounded bg-[#C9A84C]/20 text-[#E8D5A3] border border-[#C9A84C]/40 hover:bg-[#C9A84C]/30 transition-all cursor-pointer"
+              title="Open the full 40 & FESTIVE Thank-You Campaign Studio"
+            >
+              {dashboardView === 'thank_you' ? '← Back to Table' : '🎨 Open Studio'}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* ── TABLE ── */}
+      {dashboardView === 'thank_you' ? (
+        <ThankYouCampaignStudio
+          guests={visibleGuests}
+          allGuests={guests}
+          guestMap={guestMap}
+          baseUrl={BASE_URL}
+          formatWhatsAppPhone={formatWhatsAppPhone}
+          onUpdateGuestDetails={handleUpdateThankYouDetails}
+          onBulkUpdateGuestDetails={handleBulkUpdateThankYouDetails}
+        />
+      ) : (
+      /* ── TABLE ── */
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -1653,6 +1927,7 @@ export default function AdminPage() {
               <th className="px-3 py-3 text-left text-amber-300 font-semibold bg-amber-500/5 border-l border-amber-500/20">🗓️ Save The Date</th>
               <th className="px-3 py-3 text-left text-yellow-300 font-semibold bg-yellow-500/5 border-l border-yellow-500/20">💌 Main Invite</th>
               <th className="px-3 py-3 text-left text-pink-300 font-semibold bg-pink-500/5 border-l border-pink-500/20">📸 Instagram</th>
+              <th className="px-3 py-3 text-left text-[#E8D5A3] font-semibold bg-[#C9A84C]/10 border-l border-[#C9A84C]/30">✨ Thank You</th>
               <th className="px-2 py-3 text-left border-l border-white/5">Send As</th>
               <th className="px-2 py-3 text-left">Code</th>
               <th className="px-3 py-3 text-left">Actions</th>
@@ -1660,9 +1935,9 @@ export default function AdminPage() {
           </thead>
           <tbody>
             {loading && guests.length === 0 ? (
-              <tr><td colSpan={16} className="px-4 py-16 text-center text-white/30">Loading...</td></tr>
+              <tr><td colSpan={17} className="px-4 py-16 text-center text-white/30">Loading...</td></tr>
             ) : visibleGuests.length === 0 ? (
-              <tr><td colSpan={16} className="px-4 py-16 text-center text-white/30">
+              <tr><td colSpan={17} className="px-4 py-16 text-center text-white/30">
                 <p className="font-serif text-lg mb-1">No guests found</p>
                 <p className="text-xs">Click "+ Add Guest" to add your guests</p>
               </td></tr>
@@ -1922,6 +2197,91 @@ export default function AdminPage() {
                     </div>
                   </td>
 
+                  {/* ── THANK YOU COLUMN (ATTENDED / MISSED + WA + PNG + STATUS) ── */}
+                  <td className="px-3 py-2 whitespace-nowrap bg-[#C9A84C]/5 border-l border-[#C9A84C]/30">
+                    <div className="flex flex-col gap-1 min-w-[168px]">
+                      {/* Row 1: Attended/Missed selector + Quick WA + Download PNG */}
+                      <div className="flex items-center gap-1">
+                        <select
+                          value={inviteDetails.attendance_status || 'unknown'}
+                          onChange={(e) => {
+                            const val = e.target.value as 'attended' | 'did_not_attend' | 'unknown'
+                            handleUpdateThankYouDetails(g, {
+                              attendance_status: val,
+                              thank_you_type: val === 'attended' ? 'attended' : val === 'did_not_attend' ? 'missed' : undefined,
+                              thank_you_status: val === 'unknown' ? 'pending' : (inviteDetails.thank_you_status === 'sent' || inviteDetails.thank_you_status === 'seen' ? inviteDetails.thank_you_status : 'ready'),
+                            })
+                          }}
+                          className={`flex-1 bg-[#0A1931] border text-[10px] font-semibold px-1.5 py-0.5 rounded outline-none cursor-pointer ${
+                            inviteDetails.attendance_status === 'attended'
+                              ? 'border-emerald-500/50 text-emerald-300'
+                              : inviteDetails.attendance_status === 'did_not_attend'
+                              ? 'border-amber-400/50 text-[#F4ECE1]'
+                              : 'border-[#C9A84C]/40 text-white/60'
+                          }`}
+                          title="Select Post-Event Attendance / Card Variant (Attended = Card A Dark Walnut, Missed = Card B Champagne)"
+                        >
+                          <option value="unknown" className="bg-[#0A1931] text-white/50">❓ Select Card</option>
+                          <option value="attended" className="bg-[#0A1931] text-emerald-300 font-semibold">🟫 Attended</option>
+                          <option value="did_not_attend" className="bg-[#0A1931] text-amber-200 font-semibold">🥂 Missed</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            sendWhatsApp(
+                              g,
+                              inviteDetails.attendance_status === 'did_not_attend'
+                                ? 'thankyou_missed'
+                                : 'thankyou_attended'
+                            )
+                          }
+                          title={`Send ${inviteDetails.attendance_status === 'did_not_attend' ? 'Card B (You Were Missed)' : 'Card A (The Night Was Better With You)'} Thank-You Note via WhatsApp`}
+                          className="px-1.5 py-0.5 border border-green-500/40 text-green-400 hover:bg-green-500/20 rounded text-[9px] font-bold transition-all whitespace-nowrap cursor-pointer"
+                        >
+                          💬 WA
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            exportOrCopyThankYouCard(
+                              g,
+                              inviteDetails.attendance_status === 'did_not_attend' ? 'missed' : 'attended',
+                              'download'
+                            )
+                          }
+                          title="Download 1080×1350 Thank-You Card PNG"
+                          className="px-1.5 py-0.5 border border-[#C9A84C]/40 text-[#E8D5A3] hover:bg-[#C9A84C]/20 rounded text-[9px] font-bold transition-all whitespace-nowrap cursor-pointer"
+                        >
+                          ⬇️
+                        </button>
+                      </div>
+
+                      {/* Row 2: Thank-You Delivery Status dropdown */}
+                      <select
+                        value={inviteDetails.thank_you_status || 'pending'}
+                        onChange={(e) =>
+                          handleUpdateThankYouDetails(g, {
+                            thank_you_status: e.target.value as 'pending' | 'ready' | 'sent' | 'delivered' | 'seen' | 'failed',
+                          })
+                        }
+                        className={`text-[9px] font-semibold px-2 py-0.5 border rounded outline-none cursor-pointer tracking-wider ${
+                          inviteDetails.thank_you_status === 'seen' || inviteDetails.thank_you_status === 'delivered'
+                            ? 'text-yellow-400 bg-yellow-500/10 border-yellow-500/40'
+                            : inviteDetails.thank_you_status === 'sent'
+                            ? 'text-blue-400 bg-blue-500/10 border-blue-500/40'
+                            : inviteDetails.thank_you_status === 'ready'
+                            ? 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30'
+                            : 'text-white/40 bg-white/5 border-white/10'
+                        }`}
+                      >
+                        <option value="pending" className="bg-[#0A1931] text-white/50">⏳ PENDING</option>
+                        <option value="ready" className="bg-[#0A1931] text-emerald-300 font-semibold">✅ READY</option>
+                        <option value="sent" className="bg-[#0A1931] text-blue-400 font-semibold">📨 SENT</option>
+                        <option value="seen" className="bg-[#0A1931] text-yellow-400 font-semibold">👁️ SEEN</option>
+                      </select>
+                    </div>
+                  </td>
+
                   {/* TOGETHER / SEPARATE */}
                   <td className="px-3 py-3 border-l border-white/5 whitespace-nowrap">
                     {g.linked_guest_id ? (
@@ -1968,6 +2328,10 @@ export default function AdminPage() {
                           <option value="insta">🎂 40 &amp; Festive Instagram</option>
                           <option value="insta_soiree">🪔 The Festive Soirée Instagram</option>
                         </optgroup>
+                        <optgroup label="✨ Post-Event Thank You">
+                          <option value="thankyou_attended">🟫 Card A — Attended (Dark Walnut)</option>
+                          <option value="thankyou_missed">🥂 Card B — Missed (Champagne)</option>
+                        </optgroup>
                       </select>
                       <button onClick={() => {
                         const previewUrl = messageTemplate === 'insta_soiree'
@@ -1980,6 +2344,10 @@ export default function AdminPage() {
                           ? `${BASE_URL}/i/${g.invite_code}?type=save_date`
                           : messageTemplate === 'invite_diwali'
                           ? `${BASE_URL}/i/${g.invite_code}?type=main_diwali`
+                          : messageTemplate === 'thankyou_attended'
+                          ? `${BASE_URL}/i/${g.invite_code}?type=thankyou_attended`
+                          : messageTemplate === 'thankyou_missed'
+                          ? `${BASE_URL}/i/${g.invite_code}?type=thankyou_missed`
                           : `${BASE_URL}/i/${g.invite_code}`
                         window.open(previewUrl, '_blank')
                       }} title="Preview Active Card / Page"
@@ -2002,6 +2370,7 @@ export default function AdminPage() {
           </tbody>
         </table>
       </div>
+      )}
 
       {/* ══ ADD GUEST MODAL ══ */}
       {showForm && (

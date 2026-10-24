@@ -6,6 +6,7 @@ import OpeningScreen from '@/components/OpeningScreen'
 import VideoScreen from '@/components/VideoScreen'
 import ConfirmationScreen from '@/components/ConfirmationScreen'
 import InstaScreen from '@/components/InstaScreen'
+import ThankYouScreen from '@/components/ThankYouScreen'
 
 type Screen = 'opening' | 'video' | 'confirmation'
 
@@ -16,6 +17,21 @@ interface Props {
 }
 
 export default function InvitationClient({ guest, inviteCode, inviteType }: Props) {
+  const isThankYouAttended = inviteType === 'thankyou_attended' || inviteType === 'thank_you_attended' || inviteType === 'attended'
+  const isThankYouMissed = inviteType === 'thankyou_missed' || inviteType === 'thank_you_missed' || inviteType === 'missed'
+  const isThankYouAuto = inviteType === 'thankyou' || inviteType === 'thank_you' || inviteType === 'thank-you'
+  if (isThankYouAttended || isThankYouMissed || isThankYouAuto) {
+    const notes = parseGuestNotes(guest.notes)
+    const variant = isThankYouMissed
+      ? 'missed'
+      : isThankYouAttended
+      ? 'attended'
+      : (notes.thank_you_type === 'missed' || notes.attendance_status === 'did_not_attend')
+      ? 'missed'
+      : 'attended'
+    return <ThankYouScreen guest={guest} inviteCode={inviteCode} variant={variant} />
+  }
+
   const isInstaSoiree = inviteType === 'insta_soiree' || inviteType === 'soiree_insta' || inviteType === 'insta_diwali'
   const isInsta40 = inviteType === 'insta' || inviteType === 'instagram' || inviteType === '40andfestive'
   const isInsta = isInstaSoiree || isInsta40

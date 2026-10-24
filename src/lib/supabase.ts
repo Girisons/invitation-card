@@ -40,6 +40,10 @@ export interface Guest {
   notes?: string
 }
 
+export type ActualAttendanceStatus = 'attended' | 'did_not_attend' | 'unknown'
+export type ThankYouCardType = 'attended' | 'missed' | ''
+export type ThankYouDeliveryStatus = 'pending' | 'ready' | 'sent' | 'delivered' | 'seen' | 'failed'
+
 export interface GuestInviteDetails {
   std_type?: 'diwali' | '40_festive' | ''
   std_status?: 'pending' | 'sent' | 'seen'
@@ -47,6 +51,54 @@ export interface GuestInviteDetails {
   main_status?: 'pending' | 'sent' | 'seen'
   insta_type?: '40_festive' | 'soiree' | ''
   insta_status?: 'pending' | 'sent' | 'seen'
+  // Post-Event Thank-You Campaign fields (kept separate from rsvp_status / invitation_status)
+  attendance_status?: ActualAttendanceStatus
+  thank_you_type?: ThankYouCardType
+  thank_you_status?: ThankYouDeliveryStatus
+  thank_you_sent_at?: string
+  card_asset_url?: string
+  whatsapp_message_id?: string
+  custom_card_name?: string
+}
+
+export interface ThankYouRoutingDecision {
+  action: 'send' | 'skip' | 'review'
+  type?: 'attended' | 'missed'
+  cardTemplate?: 'thankyou_attended' | 'thankyou_missed'
+  messageTemplate?: 'thankyou_attended_whatsapp' | 'thankyou_missed_whatsapp'
+  reason?: string
+}
+
+export function chooseThankYou(guest: {
+  whatsapp_number?: string
+  attendance_status?: ActualAttendanceStatus
+}): ThankYouRoutingDecision {
+  if (!guest.whatsapp_number || !guest.whatsapp_number.trim()) {
+    return { action: 'skip', reason: 'Missing WhatsApp number' }
+  }
+
+  if (guest.attendance_status === 'attended') {
+    return {
+      action: 'send',
+      type: 'attended',
+      cardTemplate: 'thankyou_attended',
+      messageTemplate: 'thankyou_attended_whatsapp',
+    }
+  }
+
+  if (guest.attendance_status === 'did_not_attend') {
+    return {
+      action: 'send',
+      type: 'missed',
+      cardTemplate: 'thankyou_missed',
+      messageTemplate: 'thankyou_missed_whatsapp',
+    }
+  }
+
+  return {
+    action: 'review',
+    reason: 'Attendance not verified',
+  }
 }
 
 export function parseGuestNotes(notes?: string | null): GuestInviteDetails {
