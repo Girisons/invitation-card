@@ -5,6 +5,7 @@ import { Guest, trackEvent, updateGuestInviteDetails } from '@/lib/supabase'
 import {
   ThankYouVariant,
   resolveGuestDisplayName,
+  resolveGuestAndPartnerNames,
   renderThankYouCardToCanvas,
   getThankYouCardFilename,
   getThankYouCardCopy,
@@ -21,9 +22,10 @@ export default function ThankYouScreen({ guest, inviteCode, variant }: Props) {
   const [downloading, setDownloading] = useState(false)
   const [visible, setVisible] = useState(false)
 
-  const displayName = resolveGuestDisplayName(guest)
-  const copy = getThankYouCardCopy(variant, displayName)
-  const isAttended = variant === 'attended'
+  const displayName = resolveGuestDisplayName(guest, undefined, variant)
+  const { partnerInlineRef } = resolveGuestAndPartnerNames(guest)
+  const copy = getThankYouCardCopy(variant, displayName, partnerInlineRef)
+  const isAttended = variant === 'attended' || variant === 'attended_partner_missed'
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80)
@@ -39,15 +41,15 @@ export default function ThankYouScreen({ guest, inviteCode, variant }: Props) {
 
   useEffect(() => {
     if (canvasRef.current) {
-      renderThankYouCardToCanvas(canvasRef.current, variant, displayName)
+      renderThankYouCardToCanvas(canvasRef.current, variant, displayName, partnerInlineRef)
     }
-  }, [variant, displayName])
+  }, [variant, displayName, partnerInlineRef])
 
   const handleDownloadCard = async () => {
     if (!canvasRef.current) return
     setDownloading(true)
     try {
-      await renderThankYouCardToCanvas(canvasRef.current, variant, displayName)
+      await renderThankYouCardToCanvas(canvasRef.current, variant, displayName, partnerInlineRef)
       const dataUrl = canvasRef.current.toDataURL('image/png', 1.0)
       const a = document.createElement('a')
       a.href = dataUrl

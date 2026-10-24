@@ -19,14 +19,36 @@ interface Props {
 export default function InvitationClient({ guest, inviteCode, inviteType }: Props) {
   const isThankYouAttended = inviteType === 'thankyou_attended' || inviteType === 'thank_you_attended' || inviteType === 'attended'
   const isThankYouMissed = inviteType === 'thankyou_missed' || inviteType === 'thank_you_missed' || inviteType === 'missed'
+  const isThankYouAttendedPartnerMissed =
+    inviteType === 'thankyou_attended_partner_missed' ||
+    inviteType === 'attended_partner_missed'
+  const isThankYouMissedPartnerAttended =
+    inviteType === 'thankyou_missed_partner_attended' ||
+    inviteType === 'missed_partner_attended'
   const isThankYouAuto = inviteType === 'thankyou' || inviteType === 'thank_you' || inviteType === 'thank-you'
-  if (isThankYouAttended || isThankYouMissed || isThankYouAuto) {
+  if (
+    isThankYouAttended ||
+    isThankYouMissed ||
+    isThankYouAttendedPartnerMissed ||
+    isThankYouMissedPartnerAttended ||
+    isThankYouAuto
+  ) {
     const notes = parseGuestNotes(guest.notes)
-    const variant = isThankYouMissed
+    const variant = isThankYouAttendedPartnerMissed
+      ? 'attended_partner_missed'
+      : isThankYouMissedPartnerAttended
+      ? 'missed_partner_attended'
+      : isThankYouMissed
       ? 'missed'
       : isThankYouAttended
       ? 'attended'
-      : (notes.thank_you_type === 'missed' || notes.attendance_status === 'did_not_attend')
+      : notes.thank_you_type === 'attended_partner_missed' ||
+        notes.attendance_status === 'attended_partner_missed'
+      ? 'attended_partner_missed'
+      : notes.thank_you_type === 'missed_partner_attended' ||
+        notes.attendance_status === 'missed_partner_attended'
+      ? 'missed_partner_attended'
+      : notes.thank_you_type === 'missed' || notes.attendance_status === 'did_not_attend'
       ? 'missed'
       : 'attended'
     return <ThankYouScreen guest={guest} inviteCode={inviteCode} variant={variant} />

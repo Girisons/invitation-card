@@ -40,8 +40,18 @@ export interface Guest {
   notes?: string
 }
 
-export type ActualAttendanceStatus = 'attended' | 'did_not_attend' | 'unknown'
-export type ThankYouCardType = 'attended' | 'missed' | ''
+export type ActualAttendanceStatus =
+  | 'attended'
+  | 'did_not_attend'
+  | 'attended_partner_missed'
+  | 'missed_partner_attended'
+  | 'unknown'
+export type ThankYouCardType =
+  | 'attended'
+  | 'missed'
+  | 'attended_partner_missed'
+  | 'missed_partner_attended'
+  | ''
 export type ThankYouDeliveryStatus = 'pending' | 'ready' | 'sent' | 'delivered' | 'seen' | 'failed'
 
 export interface GuestInviteDetails {
@@ -63,9 +73,17 @@ export interface GuestInviteDetails {
 
 export interface ThankYouRoutingDecision {
   action: 'send' | 'skip' | 'review'
-  type?: 'attended' | 'missed'
-  cardTemplate?: 'thankyou_attended' | 'thankyou_missed'
-  messageTemplate?: 'thankyou_attended_whatsapp' | 'thankyou_missed_whatsapp'
+  type?: 'attended' | 'missed' | 'attended_partner_missed' | 'missed_partner_attended'
+  cardTemplate?:
+    | 'thankyou_attended'
+    | 'thankyou_missed'
+    | 'thankyou_attended_partner_missed'
+    | 'thankyou_missed_partner_attended'
+  messageTemplate?:
+    | 'thankyou_attended_whatsapp'
+    | 'thankyou_missed_whatsapp'
+    | 'thankyou_attended_partner_missed_whatsapp'
+    | 'thankyou_missed_partner_attended_whatsapp'
   reason?: string
 }
 
@@ -92,6 +110,24 @@ export function chooseThankYou(guest: {
       type: 'missed',
       cardTemplate: 'thankyou_missed',
       messageTemplate: 'thankyou_missed_whatsapp',
+    }
+  }
+
+  if (guest.attendance_status === 'attended_partner_missed') {
+    return {
+      action: 'send',
+      type: 'attended_partner_missed',
+      cardTemplate: 'thankyou_attended_partner_missed',
+      messageTemplate: 'thankyou_attended_partner_missed_whatsapp',
+    }
+  }
+
+  if (guest.attendance_status === 'missed_partner_attended') {
+    return {
+      action: 'send',
+      type: 'missed_partner_attended',
+      cardTemplate: 'thankyou_missed_partner_attended',
+      messageTemplate: 'thankyou_missed_partner_attended_whatsapp',
     }
   }
 

@@ -1,29 +1,59 @@
 import { ImageResponse } from 'next/og'
 import type { NextRequest } from 'next/server'
 import { getGuestByCode, parseGuestNotes } from '@/lib/supabase'
-import { getThankYouCardCopy, resolveGuestDisplayName, ThankYouVariant } from '@/lib/thankYouCard'
+import {
+  getThankYouCardCopy,
+  resolveGuestDisplayName,
+  resolveGuestAndPartnerNames,
+  ThankYouVariant,
+} from '@/lib/thankYouCard'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const rawCode = (searchParams.get('code') || '').trim().toUpperCase()
   const rawName = (searchParams.get('name') || '').trim()
+  const rawPartner = (searchParams.get('partner') || '').trim()
   const rawType = (searchParams.get('type') || '').trim().toLowerCase()
 
   let displayName = rawName
-  let resolvedVariant: ThankYouVariant = rawType === 'missed' || rawType === 'did_not_attend' ? 'missed' : 'attended'
+  let partnerInlineRef = rawPartner
+  let resolvedVariant: ThankYouVariant =
+    rawType === 'attended_partner_missed' || rawType === 'thankyou_attended_partner_missed'
+      ? 'attended_partner_missed'
+      : rawType === 'missed_partner_attended' || rawType === 'thankyou_missed_partner_attended'
+      ? 'missed_partner_attended'
+      : rawType === 'missed' || rawType === 'did_not_attend' || rawType === 'thankyou_missed'
+      ? 'missed'
+      : 'attended'
 
   if (rawCode && !displayName) {
     try {
       const guest = await getGuestByCode(rawCode)
       if (guest) {
-        displayName = resolveGuestDisplayName(guest)
         const notes = parseGuestNotes(guest.notes)
         if (!rawType) {
-          if (notes.thank_you_type === 'missed' || notes.attendance_status === 'did_not_attend') {
+          if (
+            notes.thank_you_type === 'attended_partner_missed' ||
+            notes.attendance_status === 'attended_partner_missed'
+          ) {
+            resolvedVariant = 'attended_partner_missed'
+          } else if (
+            notes.thank_you_type === 'missed_partner_attended' ||
+            notes.attendance_status === 'missed_partner_attended'
+          ) {
+            resolvedVariant = 'missed_partner_attended'
+          } else if (
+            notes.thank_you_type === 'missed' ||
+            notes.attendance_status === 'did_not_attend'
+          ) {
             resolvedVariant = 'missed'
           } else {
             resolvedVariant = 'attended'
           }
+        }
+        displayName = resolveGuestDisplayName(guest, undefined, resolvedVariant)
+        if (!partnerInlineRef) {
+          partnerInlineRef = resolveGuestAndPartnerNames(guest).partnerInlineRef
         }
       }
     } catch {
@@ -35,8 +65,9 @@ export async function GET(req: NextRequest) {
     displayName = 'Mansi & Roshan'
   }
 
-  const copy = getThankYouCardCopy(resolvedVariant, displayName)
-  const isAttended = resolvedVariant === 'attended'
+  const copy = getThankYouCardCopy(resolvedVariant, displayName, partnerInlineRef || undefined)
+  const isAttended =
+    resolvedVariant === 'attended' || resolvedVariant === 'attended_partner_missed'
 
   const bgGradient = isAttended
     ? 'linear-gradient(155deg, #1C110B 0%, #281810 48%, #120A06 100%)'

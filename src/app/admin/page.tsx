@@ -14,6 +14,7 @@ import ThankYouCampaignStudio from '@/components/ThankYouCampaignStudio'
 import {
   buildThankYouWhatsAppMessage,
   resolveGuestDisplayName,
+  resolveGuestAndPartnerNames,
   renderThankYouCardToCanvas,
   getThankYouCardFilename,
   ThankYouVariant,
@@ -22,7 +23,7 @@ import {
 export function getEffectiveInviteDetails(g: Guest, allGuests: Guest[]): GuestInviteDetails {
   const own = parseGuestNotes(g.notes)
   let partnerDetails: GuestInviteDetails = {}
-  if (g.linked_guest_id && g.send_together) {
+  if (g.linked_guest_id) {
     const partner = allGuests.find(p => p.id === g.linked_guest_id)
     if (partner) {
       partnerDetails = parseGuestNotes(partner.notes)
@@ -54,16 +55,28 @@ export function getEffectiveInviteDetails(g: Guest, allGuests: Guest[]): GuestIn
   }
 
   // Post-Event Thank-You Campaign fields
+  let derivedFromPartner: ActualAttendanceStatus | undefined
+  if (partnerDetails.attendance_status === 'attended_partner_missed') {
+    derivedFromPartner = 'missed_partner_attended'
+  } else if (partnerDetails.attendance_status === 'missed_partner_attended') {
+    derivedFromPartner = 'attended_partner_missed'
+  } else if (g.send_together) {
+    derivedFromPartner = partnerDetails.attendance_status
+  }
+
   const attendance_status: ActualAttendanceStatus =
-    own.attendance_status ||
-    (g.send_together ? partnerDetails.attendance_status : undefined) ||
-    'unknown'
+    own.attendance_status || derivedFromPartner || 'unknown'
+
   const thank_you_type =
     own.thank_you_type ||
     (attendance_status === 'attended'
       ? 'attended'
       : attendance_status === 'did_not_attend'
       ? 'missed'
+      : attendance_status === 'attended_partner_missed'
+      ? 'attended_partner_missed'
+      : attendance_status === 'missed_partner_attended'
+      ? 'missed_partner_attended'
       : '')
   const thank_you_status: ThankYouDeliveryStatus = own.thank_you_status || 'pending'
   const thank_you_sent_at = own.thank_you_sent_at || ''
@@ -104,6 +117,8 @@ export type MessageTemplateMode =
   | 'insta_soiree'
   | 'thankyou_attended'
   | 'thankyou_missed'
+  | 'thankyou_attended_partner_missed'
+  | 'thankyou_missed_partner_attended'
 
 const DEFAULT_USERS: PortalUser[] = [
   { id: 'user-admin', username: 'admin', password: 'arpit40', name: 'Super Admin', role: 'super_admin', created_at: new Date().toISOString() },
@@ -869,17 +884,48 @@ export default function AdminPage() {
     updates: Partial<GuestInviteDetails>,
     syncCouple = false
   ) => {
+    const isSplitPartnerStatus =
+      updates.attendance_status === 'attended_partner_missed' ||
+      updates.attendance_status === 'missed_partner_attended'
+
+    const mirrorPartnerUpdates: Partial<GuestInviteDetails> | null =
+      isSplitPartnerStatus && g.linked_guest_id
+        ? {
+            attendance_status:
+              updates.attendance_status === 'attended_partner_missed'
+                ? 'missed_partner_attended'
+                : 'attended_partner_missed',
+            thank_you_type:
+              updates.attendance_status === 'attended_partner_missed'
+                ? 'missed_partner_attended'
+                : 'attended_partner_missed',
+            thank_you_status: 'ready',
+          }
+        : null
+
     const targetIds =
-      syncCouple && g.linked_guest_id && g.send_together
+      !isSplitPartnerStatus && syncCouple && g.linked_guest_id && g.send_together
         ? [g.id, g.linked_guest_id]
         : [g.id]
 
     setGuests(prev =>
       prev.map(item => {
-        if (!targetIds.includes(item.id)) return item
-        const curr = parseGuestNotes(item.notes)
-        const merged = { ...curr, ...updates }
-        return { ...item, notes: JSON.stringify(merged) }
+        if (targetIds.includes(item.id)) {
+          const curr = parseGuestNotes(item.notes)
+          const merged = { ...curr, ...updates }
+          return { ...item, notes: JSON.stringify(merged) }
+        }
+        if (mirrorPartnerUpdates && g.linked_guest_id && item.id === g.linked_guest_id) {
+          const curr = parseGuestNotes(item.notes)
+          // Preserve partner's 'sent'/'seen' status if already sent
+          const keepStatus =
+            curr.thank_you_status === 'sent' || curr.thank_you_status === 'seen'
+              ? curr.thank_you_status
+              : 'ready'
+          const merged = { ...curr, ...mirrorPartnerUpdates, thank_you_status: keepStatus }
+          return { ...item, notes: JSON.stringify(merged) }
+        }
+        return item
       })
     )
 
@@ -888,6 +934,20 @@ export default function AdminPage() {
       const curr = parseGuestNotes(targetGuest?.notes)
       const merged = { ...curr, ...updates }
       await supabase.from('guests').update({ notes: JSON.stringify(merged) }).eq('id', tId)
+    }
+
+    if (mirrorPartnerUpdates && g.linked_guest_id) {
+      const partnerGuest = guests.find(x => x.id === g.linked_guest_id)
+      const curr = parseGuestNotes(partnerGuest?.notes)
+      const keepStatus =
+        curr.thank_you_status === 'sent' || curr.thank_you_status === 'seen'
+          ? curr.thank_you_status
+          : 'ready'
+      const merged = { ...curr, ...mirrorPartnerUpdates, thank_you_status: keepStatus }
+      await supabase
+        .from('guests')
+        .update({ notes: JSON.stringify(merged) })
+        .eq('id', g.linked_guest_id)
     }
   }
 
@@ -925,9 +985,10 @@ export default function AdminPage() {
     action: 'copy' | 'download'
   ) => {
     try {
-      const displayName = resolveGuestDisplayName(g, guests)
+      const displayName = resolveGuestDisplayName(g, guests, variant)
+      const { partnerInlineRef } = resolveGuestAndPartnerNames(g, guests)
       const canvas = document.createElement('canvas')
-      await renderThankYouCardToCanvas(canvas, variant, displayName)
+      await renderThankYouCardToCanvas(canvas, variant, displayName, partnerInlineRef)
       const blob: Blob | null = await new Promise(resolve =>
         canvas.toBlob(b => resolve(b), 'image/png', 1.0)
       )
@@ -1001,6 +1062,10 @@ export default function AdminPage() {
       ? `${BASE_URL}/i/${code}?type=thankyou_attended`
       : messageTemplate === 'thankyou_missed'
       ? `${BASE_URL}/i/${code}?type=thankyou_missed`
+      : messageTemplate === 'thankyou_attended_partner_missed'
+      ? `${BASE_URL}/i/${code}?type=thankyou_attended_partner_missed`
+      : messageTemplate === 'thankyou_missed_partner_attended'
+      ? `${BASE_URL}/i/${code}?type=thankyou_missed_partner_attended`
       : `${BASE_URL}/i/${code}?type=main`
     navigator.clipboard.writeText(linkUrl)
     setCopied(code); setTimeout(() => setCopied(null), 2000)
@@ -1026,6 +1091,8 @@ export default function AdminPage() {
     const instaSoireeLink = `${BASE_URL}/i/${g.invite_code}?type=insta_soiree&v=2`
     const thankYouAttendedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_attended`
     const thankYouMissedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_missed`
+    const thankYouAttendedPartnerMissedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_attended_partner_missed`
+    const thankYouMissedPartnerAttendedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_missed_partner_attended`
 
     // Pre-warm the invite route & OG image on Vercel edge/lambda immediately (before DB calls)
     const warmLink = activeMode === 'save_date_diwali'
@@ -1042,6 +1109,10 @@ export default function AdminPage() {
       ? thankYouAttendedLink
       : activeMode === 'thankyou_missed'
       ? thankYouMissedLink
+      : activeMode === 'thankyou_attended_partner_missed'
+      ? thankYouAttendedPartnerMissedLink
+      : activeMode === 'thankyou_missed_partner_attended'
+      ? thankYouMissedPartnerAttendedLink
       : mainInviteLink
     fetch(warmLink, { mode: 'no-cors' }).catch(() => {})
 
@@ -1080,6 +1151,16 @@ export default function AdminPage() {
     } else if (activeMode === 'thankyou_missed') {
       inviteUpdates.attendance_status = 'did_not_attend'
       inviteUpdates.thank_you_type = 'missed'
+      inviteUpdates.thank_you_status = 'sent'
+      inviteUpdates.thank_you_sent_at = new Date().toISOString()
+    } else if (activeMode === 'thankyou_attended_partner_missed') {
+      inviteUpdates.attendance_status = 'attended_partner_missed'
+      inviteUpdates.thank_you_type = 'attended_partner_missed'
+      inviteUpdates.thank_you_status = 'sent'
+      inviteUpdates.thank_you_sent_at = new Date().toISOString()
+    } else if (activeMode === 'thankyou_missed_partner_attended') {
+      inviteUpdates.attendance_status = 'missed_partner_attended'
+      inviteUpdates.thank_you_type = 'missed_partner_attended'
       inviteUpdates.thank_you_status = 'sent'
       inviteUpdates.thank_you_sent_at = new Date().toISOString()
     }
@@ -1172,13 +1253,27 @@ export default function AdminPage() {
     } else if (activeMode === 'insta') {
       msg = instaLink
     } else if (activeMode === 'thankyou_attended') {
-      const displayName = resolveGuestDisplayName(g, guests)
+      const displayName = resolveGuestDisplayName(g, guests, 'attended')
       await exportOrCopyThankYouCard(g, 'attended', 'copy')
       msg = buildThankYouWhatsAppMessage('attended', displayName)
     } else if (activeMode === 'thankyou_missed') {
-      const displayName = resolveGuestDisplayName(g, guests)
+      const displayName = resolveGuestDisplayName(g, guests, 'missed')
       await exportOrCopyThankYouCard(g, 'missed', 'copy')
       msg = buildThankYouWhatsAppMessage('missed', displayName)
+    } else if (activeMode === 'thankyou_attended_partner_missed') {
+      const displayName = resolveGuestDisplayName(g, guests, 'attended_partner_missed')
+      const { partnerInlineRef } = resolveGuestAndPartnerNames(g, guests)
+      await exportOrCopyThankYouCard(g, 'attended_partner_missed', 'copy')
+      msg = buildThankYouWhatsAppMessage('attended_partner_missed', displayName, {
+        partnerName: partnerInlineRef,
+      })
+    } else if (activeMode === 'thankyou_missed_partner_attended') {
+      const displayName = resolveGuestDisplayName(g, guests, 'missed_partner_attended')
+      const { partnerInlineRef } = resolveGuestAndPartnerNames(g, guests)
+      await exportOrCopyThankYouCard(g, 'missed_partner_attended', 'copy')
+      msg = buildThankYouWhatsAppMessage('missed_partner_attended', displayName, {
+        partnerName: partnerInlineRef,
+      })
     } else {
       // Default 'invite' (40 & Festive - Main Invite sent by Tanvi; adapts to RSVP status)
       if (isYes) {
@@ -1380,8 +1475,14 @@ export default function AdminPage() {
   const instaSeenCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).insta_status === 'seen').length
 
   // Post-Event Thank-You Campaign stats
-  const tyAttendedCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).attendance_status === 'attended').length
-  const tyMissedCount = visibleGuests.filter(g => getEffectiveInviteDetails(g, guests).attendance_status === 'did_not_attend').length
+  const tyAttendedCount = visibleGuests.filter(g => {
+    const st = getEffectiveInviteDetails(g, guests).attendance_status
+    return st === 'attended' || st === 'attended_partner_missed'
+  }).length
+  const tyMissedCount = visibleGuests.filter(g => {
+    const st = getEffectiveInviteDetails(g, guests).attendance_status
+    return st === 'did_not_attend' || st === 'missed_partner_attended'
+  }).length
   const tySentCount = visibleGuests.filter(g => {
     const st = getEffectiveInviteDetails(g, guests).thank_you_status
     return st === 'sent' || st === 'delivered' || st === 'seen'
@@ -1769,6 +1870,8 @@ export default function AdminPage() {
             {messageTemplate === 'insta_soiree' && '🪔 Instagram — The Festive Soirée (@40andfestive)'}
             {messageTemplate === 'thankyou_attended' && '🟫 Post-Event Thank You — Card A (Attended · Dark Walnut)'}
             {messageTemplate === 'thankyou_missed' && '🥂 Post-Event Thank You — Card B (Missed · Champagne)'}
+            {messageTemplate === 'thankyou_attended_partner_missed' && '🟫🥂 Post-Event Thank You — Card C (Guest Came, Partner Missed)'}
+            {messageTemplate === 'thankyou_missed_partner_attended' && '🥂🟫 Post-Event Thank You — Card D (Guest Missed, Partner Came)'}
           </span>
         </div>
 
@@ -1861,24 +1964,24 @@ export default function AdminPage() {
           </div>
 
           {/* Post-Event Thank-You Campaign */}
-          <div className="flex items-center bg-[#050D1A] rounded p-1 border border-[#C9A84C]/45 gap-1">
+          <div className="flex items-center bg-[#050D1A] rounded p-1 border border-[#C9A84C]/45 gap-1 flex-wrap">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#E8D5A3] px-1.5">
               ✨ Thank You:
             </span>
             <button
               onClick={() => setMessageTemplate('thankyou_attended')}
-              className={`px-2.5 py-1 text-xs font-semibold rounded transition-all ${
+              className={`px-2 py-1 text-xs font-semibold rounded transition-all ${
                 messageTemplate === 'thankyou_attended'
                   ? 'bg-[#2C1B11] text-[#FFF5E0] font-bold shadow-md ring-1 ring-[#C9A84C]'
                   : 'text-[#E8D5A3]/75 hover:text-white hover:bg-white/5'
               }`}
-              title="Card A — Attended (Dark Walnut Edition)"
+              title="Card A — Both/Guest Attended (Dark Walnut Edition)"
             >
               🟫 Attended
             </button>
             <button
               onClick={() => setMessageTemplate('thankyou_missed')}
-              className={`px-2.5 py-1 text-xs font-semibold rounded transition-all ${
+              className={`px-2 py-1 text-xs font-semibold rounded transition-all ${
                 messageTemplate === 'thankyou_missed'
                   ? 'bg-[#F4E8D1] text-[#2E1C0E] font-bold shadow-md ring-1 ring-[#FFF8E1]'
                   : 'text-[#F4E8D1]/75 hover:text-white hover:bg-white/5'
@@ -1886,6 +1989,28 @@ export default function AdminPage() {
               title="Card B — Could Not Attend (Champagne Edition)"
             >
               🥂 Missed
+            </button>
+            <button
+              onClick={() => setMessageTemplate('thankyou_attended_partner_missed')}
+              className={`px-2 py-1 text-xs font-semibold rounded transition-all ${
+                messageTemplate === 'thankyou_attended_partner_missed'
+                  ? 'bg-[#2C1B11] text-[#FFF5E0] font-bold shadow-md ring-1 ring-emerald-400'
+                  : 'text-emerald-200/80 hover:text-white hover:bg-white/5'
+              }`}
+              title="Card C — Guest Attended, Partner Missed ('Thank you for coming, we missed your partner')"
+            >
+              🟫🥂 Came (Partner Missed)
+            </button>
+            <button
+              onClick={() => setMessageTemplate('thankyou_missed_partner_attended')}
+              className={`px-2 py-1 text-xs font-semibold rounded transition-all ${
+                messageTemplate === 'thankyou_missed_partner_attended'
+                  ? 'bg-[#F4E8D1] text-[#2E1C0E] font-bold shadow-md ring-1 ring-amber-400'
+                  : 'text-amber-200/80 hover:text-white hover:bg-white/5'
+              }`}
+              title="Card D — Guest Missed, Partner Attended ('We missed you, so glad your partner could join')"
+            >
+              🥂🟫 Missed (Partner Came)
             </button>
             <button
               onClick={() => setDashboardView(dashboardView === 'thank_you' ? 'guests' : 'thank_you')}
@@ -2197,45 +2322,68 @@ export default function AdminPage() {
                     </div>
                   </td>
 
-                  {/* ── THANK YOU COLUMN (ATTENDED / MISSED + WA + PNG + STATUS) ── */}
+                  {/* ── THANK YOU COLUMN (ATTENDED / MISSED / SPLIT PARTNER + WA + PNG + STATUS) ── */}
                   <td className="px-3 py-2 whitespace-nowrap bg-[#C9A84C]/5 border-l border-[#C9A84C]/30">
-                    <div className="flex flex-col gap-1 min-w-[168px]">
-                      {/* Row 1: Attended/Missed selector + Quick WA + Download PNG */}
+                    <div className="flex flex-col gap-1 min-w-[185px]">
+                      {/* Row 1: Attended/Missed/Split-Partner selector + Quick WA + Download PNG */}
                       <div className="flex items-center gap-1">
                         <select
                           value={inviteDetails.attendance_status || 'unknown'}
                           onChange={(e) => {
-                            const val = e.target.value as 'attended' | 'did_not_attend' | 'unknown'
+                            const val = e.target.value as ActualAttendanceStatus
                             handleUpdateThankYouDetails(g, {
                               attendance_status: val,
-                              thank_you_type: val === 'attended' ? 'attended' : val === 'did_not_attend' ? 'missed' : undefined,
-                              thank_you_status: val === 'unknown' ? 'pending' : (inviteDetails.thank_you_status === 'sent' || inviteDetails.thank_you_status === 'seen' ? inviteDetails.thank_you_status : 'ready'),
+                              thank_you_type:
+                                val === 'attended'
+                                  ? 'attended'
+                                  : val === 'did_not_attend'
+                                  ? 'missed'
+                                  : val === 'attended_partner_missed'
+                                  ? 'attended_partner_missed'
+                                  : val === 'missed_partner_attended'
+                                  ? 'missed_partner_attended'
+                                  : undefined,
+                              thank_you_status:
+                                val === 'unknown'
+                                  ? 'pending'
+                                  : inviteDetails.thank_you_status === 'sent' ||
+                                    inviteDetails.thank_you_status === 'seen'
+                                  ? inviteDetails.thank_you_status
+                                  : 'ready',
                             })
                           }}
                           className={`flex-1 bg-[#0A1931] border text-[10px] font-semibold px-1.5 py-0.5 rounded outline-none cursor-pointer ${
-                            inviteDetails.attendance_status === 'attended'
+                            inviteDetails.attendance_status === 'attended' ||
+                            inviteDetails.attendance_status === 'attended_partner_missed'
                               ? 'border-emerald-500/50 text-emerald-300'
-                              : inviteDetails.attendance_status === 'did_not_attend'
+                              : inviteDetails.attendance_status === 'did_not_attend' ||
+                                inviteDetails.attendance_status === 'missed_partner_attended'
                               ? 'border-amber-400/50 text-[#F4ECE1]'
                               : 'border-[#C9A84C]/40 text-white/60'
                           }`}
-                          title="Select Post-Event Attendance / Card Variant (Attended = Card A Dark Walnut, Missed = Card B Champagne)"
+                          title="Select Post-Event Attendance / Card Variant"
                         >
                           <option value="unknown" className="bg-[#0A1931] text-white/50">❓ Select Card</option>
-                          <option value="attended" className="bg-[#0A1931] text-emerald-300 font-semibold">🟫 Attended</option>
-                          <option value="did_not_attend" className="bg-[#0A1931] text-amber-200 font-semibold">🥂 Missed</option>
+                          <option value="attended" className="bg-[#0A1931] text-emerald-300 font-semibold">🟫 Attended (Both/Solo)</option>
+                          <option value="did_not_attend" className="bg-[#0A1931] text-amber-200 font-semibold">🥂 Missed (Both/Solo)</option>
+                          <option value="attended_partner_missed" className="bg-[#0A1931] text-emerald-200 font-semibold">🟫🥂 Came · Partner Missed</option>
+                          <option value="missed_partner_attended" className="bg-[#0A1931] text-amber-300 font-semibold">🥂🟫 Missed · Partner Came</option>
                         </select>
                         <button
                           type="button"
                           onClick={() =>
                             sendWhatsApp(
                               g,
-                              inviteDetails.attendance_status === 'did_not_attend'
+                              inviteDetails.attendance_status === 'attended_partner_missed'
+                                ? 'thankyou_attended_partner_missed'
+                                : inviteDetails.attendance_status === 'missed_partner_attended'
+                                ? 'thankyou_missed_partner_attended'
+                                : inviteDetails.attendance_status === 'did_not_attend'
                                 ? 'thankyou_missed'
                                 : 'thankyou_attended'
                             )
                           }
-                          title={`Send ${inviteDetails.attendance_status === 'did_not_attend' ? 'Card B (You Were Missed)' : 'Card A (The Night Was Better With You)'} Thank-You Note via WhatsApp`}
+                          title="Send selected Thank-You Note via WhatsApp (auto-copies 1080×1350 card PNG to clipboard)"
                           className="px-1.5 py-0.5 border border-green-500/40 text-green-400 hover:bg-green-500/20 rounded text-[9px] font-bold transition-all whitespace-nowrap cursor-pointer"
                         >
                           💬 WA
@@ -2245,7 +2393,13 @@ export default function AdminPage() {
                           onClick={() =>
                             exportOrCopyThankYouCard(
                               g,
-                              inviteDetails.attendance_status === 'did_not_attend' ? 'missed' : 'attended',
+                              inviteDetails.attendance_status === 'attended_partner_missed'
+                                ? 'attended_partner_missed'
+                                : inviteDetails.attendance_status === 'missed_partner_attended'
+                                ? 'missed_partner_attended'
+                                : inviteDetails.attendance_status === 'did_not_attend'
+                                ? 'missed'
+                                : 'attended',
                               'download'
                             )
                           }
@@ -2329,8 +2483,10 @@ export default function AdminPage() {
                           <option value="insta_soiree">🪔 The Festive Soirée Instagram</option>
                         </optgroup>
                         <optgroup label="✨ Post-Event Thank You">
-                          <option value="thankyou_attended">🟫 Card A — Attended (Dark Walnut)</option>
-                          <option value="thankyou_missed">🥂 Card B — Missed (Champagne)</option>
+                          <option value="thankyou_attended">🟫 Card A — Attended (Both/Solo)</option>
+                          <option value="thankyou_missed">🥂 Card B — Missed (Both/Solo)</option>
+                          <option value="thankyou_attended_partner_missed">🟫🥂 Card C — Came, Partner Missed</option>
+                          <option value="thankyou_missed_partner_attended">🥂🟫 Card D — Missed, Partner Came</option>
                         </optgroup>
                       </select>
                       <button onClick={() => {
@@ -2348,6 +2504,10 @@ export default function AdminPage() {
                           ? `${BASE_URL}/i/${g.invite_code}?type=thankyou_attended`
                           : messageTemplate === 'thankyou_missed'
                           ? `${BASE_URL}/i/${g.invite_code}?type=thankyou_missed`
+                          : messageTemplate === 'thankyou_attended_partner_missed'
+                          ? `${BASE_URL}/i/${g.invite_code}?type=thankyou_attended_partner_missed`
+                          : messageTemplate === 'thankyou_missed_partner_attended'
+                          ? `${BASE_URL}/i/${g.invite_code}?type=thankyou_missed_partner_attended`
                           : `${BASE_URL}/i/${g.invite_code}`
                         window.open(previewUrl, '_blank')
                       }} title="Preview Active Card / Page"

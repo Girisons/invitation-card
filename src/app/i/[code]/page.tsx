@@ -67,8 +67,19 @@ export async function generateMetadata({ params, searchParams }: Props) {
 
   const isThankYouAttended = inviteType === 'thankyou_attended' || inviteType === 'thank_you_attended' || inviteType === 'attended'
   const isThankYouMissed = inviteType === 'thankyou_missed' || inviteType === 'thank_you_missed' || inviteType === 'missed'
+  const isThankYouAttendedPartnerMissed =
+    inviteType === 'thankyou_attended_partner_missed' ||
+    inviteType === 'attended_partner_missed'
+  const isThankYouMissedPartnerAttended =
+    inviteType === 'thankyou_missed_partner_attended' ||
+    inviteType === 'missed_partner_attended'
   const isThankYouAuto = inviteType === 'thankyou' || inviteType === 'thank_you' || inviteType === 'thank-you'
-  const isThankYou = isThankYouAttended || isThankYouMissed || isThankYouAuto
+  const isThankYou =
+    isThankYouAttended ||
+    isThankYouMissed ||
+    isThankYouAttendedPartnerMissed ||
+    isThankYouMissedPartnerAttended ||
+    isThankYouAuto
   const isInstaSoiree = inviteType === 'insta_soiree' || inviteType === 'soiree_insta' || inviteType === 'insta_diwali'
   const isInsta40 = inviteType === 'insta' || inviteType === 'instagram' || inviteType === '40andfestive'
   const isInsta = isInstaSoiree || isInsta40
@@ -82,11 +93,18 @@ export async function generateMetadata({ params, searchParams }: Props) {
   let ogImageUrl = "https://khandelwalinvite.vercel.app/og-main.jpg?v=5"
 
   if (isThankYou) {
-    const tyVariant = isThankYouMissed ? 'missed' : 'attended'
-    title = tyVariant === 'attended'
+    const tyVariant = isThankYouAttendedPartnerMissed
+      ? 'attended_partner_missed'
+      : isThankYouMissedPartnerAttended
+      ? 'missed_partner_attended'
+      : isThankYouMissed
+      ? 'missed'
+      : 'attended'
+    const isAttendedTheme = tyVariant === 'attended' || tyVariant === 'attended_partner_missed'
+    title = isAttendedTheme
       ? `40 & FESTIVE ✨ • The Night Was Better With You`
       : `40 & FESTIVE ✨ • You Were Missed`
-    description = tyVariant === 'attended'
+    description = isAttendedTheme
       ? `A personal note of gratitude from Tanvi, Arpit & Family.`
       : `Remembered with warmth and affection — Tanvi, Arpit & Family.`
     ogImageUrl = `https://khandelwalinvite.vercel.app/api/thank-you-card?code=${encodeURIComponent(code.toUpperCase())}&type=${tyVariant}`

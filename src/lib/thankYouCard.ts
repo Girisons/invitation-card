@@ -1,6 +1,10 @@
 import { Guest, parseGuestNotes } from './supabase'
 
-export type ThankYouVariant = 'attended' | 'missed'
+export type ThankYouVariant =
+  | 'attended'
+  | 'missed'
+  | 'attended_partner_missed'
+  | 'missed_partner_attended'
 
 export const CARD_WIDTH = 1080
 export const CARD_HEIGHT = 1350
@@ -19,80 +23,204 @@ export interface ThankYouCardCopy {
   signature: string
 }
 
+function formatProperName(raw?: string): string {
+  const cleaned = (raw || '').trim()
+  if (!cleaned) return ''
+  return cleaned
+    .split(/\s+/)
+    .map(word => {
+      if (word === '&' || word.toLowerCase() === 'and') return '&'
+      if (word.length <= 2 && word === word.toUpperCase()) return word
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    })
+    .join(' ')
+}
+
+function isPlaceholderPartnerLabel(raw?: string): boolean {
+  const upper = (raw || '').trim().toUpperCase()
+  return (
+    upper === 'YOUR WIFE' ||
+    upper === 'WIFE' ||
+    upper === 'YOUR HUSBAND' ||
+    upper === 'HUSBAND' ||
+    upper === 'YOUR PARTNER' ||
+    upper === 'PARTNER' ||
+    upper === 'SPOUSE'
+  )
+}
+
 /**
- * Resolves the exact personalised display name for a guest or couple/household
- * from the existing guest database records.
+ * Resolves individual guest name, partner name, inline partner reference for mid-sentence copy,
+ * and combined couple display name.
+ * Gracefully handles DB rows where `first_name` or `partner_name` is "YOUR WIFE".
  */
-export function resolveGuestDisplayName(guest: Guest, allGuests?: Guest[]): string {
-  const notes = parseGuestNotes(guest.notes)
-  if (notes.custom_card_name && notes.custom_card_name.trim()) {
-    return notes.custom_card_name.trim()
-  }
-
-  const formatProper = (raw?: string) => {
-    const cleaned = (raw || '').trim()
-    if (!cleaned) return ''
-    // Preserve multi-word names nicely while fixing ALL CAPS if needed
-    return cleaned
-      .split(/\s+/)
-      .map(word => {
-        if (word === '&' || word.toLowerCase() === 'and') return '&'
-        if (word.length <= 2 && word === word.toUpperCase()) return word
-        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-      })
-      .join(' ')
-  }
-
-  const primaryRaw = (guest.nickname && guest.nickname.trim())
-    ? guest.nickname.trim()
-    : (guest.first_name || '').trim()
-  const primaryDisplay = formatProper(primaryRaw) || 'Honored Guest'
+export function resolveGuestAndPartnerNames(
+  guest: Guest,
+  allGuests?: Guest[]
+): {
+  individualName: string
+  partnerName: string
+  partnerInlineRef: string
+  coupleName: string
+} {
+  const primaryRaw =
+    guest.nickname && guest.nickname.trim()
+      ? guest.nickname.trim()
+      : (guest.first_name || '').trim()
 
   let partnerRaw = ''
   if (guest.linked_guest_id && allGuests && allGuests.length > 0) {
     const linked = allGuests.find(other => other.id === guest.linked_guest_id)
     if (linked) {
-      partnerRaw = (linked.nickname && linked.nickname.trim())
-        ? linked.nickname.trim()
-        : (linked.first_name || '').trim()
+      partnerRaw =
+        linked.nickname && linked.nickname.trim()
+          ? linked.nickname.trim()
+          : (linked.first_name || '').trim()
     }
   }
 
   if (!partnerRaw && guest.partner_name) {
     if (allGuests && allGuests.length > 0) {
-      const matched = allGuests.find(other =>
-        `${other.first_name}${other.last_name ? ' ' + other.last_name : ''}`.toLowerCase() === guest.partner_name?.toLowerCase() ||
-        other.first_name.toLowerCase() === guest.partner_name?.toLowerCase() ||
-        (other.nickname && other.nickname.toLowerCase() === guest.partner_name?.toLowerCase())
+      const matched = allGuests.find(
+        other =>
+          `${other.first_name}${other.last_name ? ' ' + other.last_name : ''}`.toLowerCase() ===
+            guest.partner_name?.toLowerCase() ||
+          other.first_name.toLowerCase() === guest.partner_name?.toLowerCase() ||
+          (other.nickname && other.nickname.toLowerCase() === guest.partner_name?.toLowerCase())
       )
       if (matched) {
-        partnerRaw = (matched.nickname && matched.nickname.trim())
-          ? matched.nickname.trim()
-          : (matched.first_name || '').trim()
+        partnerRaw =
+          matched.nickname && matched.nickname.trim()
+            ? matched.nickname.trim()
+            : (matched.first_name || '').trim()
       } else {
-        // Strip last name if partner_name has primary's surname
-        partnerRaw = guest.partner_name.trim().split(' ')[0]
+        partnerRaw = isPlaceholderPartnerLabel(guest.partner_name)
+          ? guest.partner_name.trim()
+          : guest.partner_name.trim().split(' ')[0]
       }
     } else {
-      partnerRaw = guest.partner_name.trim().split(' ')[0]
+      partnerRaw = isPlaceholderPartnerLabel(guest.partner_name)
+        ? guest.partner_name.trim()
+        : guest.partner_name.trim().split(' ')[0]
     }
   }
 
-  const partnerDisplay = formatProper(partnerRaw)
+  const formattedPartner = formatProperName(partnerRaw)
+  let individualName = formatProperName(primaryRaw) || 'Honored Guest'
 
-  if (guest.send_together && partnerDisplay && !primaryDisplay.includes('&')) {
-    return `${primaryDisplay} & ${partnerDisplay}`
+  // If this guest row is literally named "YOUR WIFE" and partner is e.g. "Anirudh",
+  // address her gracefully as "Mrs. Anirudh" on individual cards.
+  if (isPlaceholderPartnerLabel(primaryRaw) && formattedPartner && !isPlaceholderPartnerLabel(partnerRaw)) {
+    const upperPrimary = primaryRaw.trim().toUpperCase()
+    if (upperPrimary.includes('WIFE')) {
+      individualName = `Mrs. ${formattedPartner}`
+    } else {
+      individualName = formattedPartner
+    }
   }
 
-  return primaryDisplay
+  // Inline partner reference for sentences like "We missed having [partnerInlineRef] with us"
+  let partnerInlineRef = 'your partner'
+  if (partnerRaw.trim()) {
+    const upperPart = partnerRaw.trim().toUpperCase()
+    if (upperPart === 'YOUR WIFE' || upperPart === 'WIFE') {
+      partnerInlineRef = 'your wife'
+    } else if (upperPart === 'YOUR HUSBAND' || upperPart === 'HUSBAND') {
+      partnerInlineRef = 'your husband'
+    } else if (isPlaceholderPartnerLabel(partnerRaw)) {
+      partnerInlineRef = 'your partner'
+    } else {
+      partnerInlineRef = formattedPartner
+    }
+  }
+
+  const coupleName =
+    guest.send_together &&
+    formattedPartner &&
+    !isPlaceholderPartnerLabel(partnerRaw) &&
+    !individualName.includes('&')
+      ? `${individualName} & ${formattedPartner}`
+      : guest.send_together && isPlaceholderPartnerLabel(partnerRaw) && !individualName.includes('&')
+      ? `${individualName} & Family`
+      : individualName
+
+  return {
+    individualName,
+    partnerName: formattedPartner,
+    partnerInlineRef,
+    coupleName,
+  }
 }
 
 /**
- * Returns the exact locked copy for Card A (Attended) or Card B (Missed).
+ * Resolves the exact personalised display name for a guest or couple/household
+ * from the existing guest database records.
+ * For split couple attendance (`attended_partner_missed` or `missed_partner_attended`),
+ * addresses the specific individual rather than both names together.
+ */
+export function resolveGuestDisplayName(
+  guest: Guest,
+  allGuests?: Guest[],
+  variant?: ThankYouVariant
+): string {
+  const notes = parseGuestNotes(guest.notes)
+  if (notes.custom_card_name && notes.custom_card_name.trim()) {
+    return notes.custom_card_name.trim()
+  }
+
+  const { individualName, coupleName } = resolveGuestAndPartnerNames(guest, allGuests)
+
+  if (variant === 'attended_partner_missed' || variant === 'missed_partner_attended') {
+    return individualName
+  }
+
+  return coupleName
+}
+
+/**
+ * Helper to split a combined name like "Mansi & Roshan" into primary + partner
+ * when previewing split-partner cards in the Studio without a separate partner prop.
+ */
+function resolveSplitNamesFromDisplay(
+  guestDisplayName: string,
+  variant: ThankYouVariant,
+  explicitPartnerRef?: string
+): { addresseeName: string; partnerRef: string } {
+  const raw = (guestDisplayName || 'Mansi & Roshan').trim()
+  if (explicitPartnerRef && explicitPartnerRef.trim()) {
+    const addr = raw.includes('&') ? raw.split('&')[0].trim() : raw
+    return { addresseeName: addr, partnerRef: explicitPartnerRef.trim() }
+  }
+
+  if (raw.includes('&')) {
+    const parts = raw.split('&').map(s => s.trim()).filter(Boolean)
+    if (parts.length >= 2) {
+      if (variant === 'attended_partner_missed') {
+        return { addresseeName: parts[0], partnerRef: formatProperName(parts[1]) }
+      }
+      if (variant === 'missed_partner_attended') {
+        return { addresseeName: parts[1], partnerRef: formatProperName(parts[0]) }
+      }
+    }
+  }
+
+  return {
+    addresseeName: raw,
+    partnerRef: 'your partner',
+  }
+}
+
+/**
+ * Returns the exact locked copy for:
+ * - Card A (`attended`): Both / Guest Attended
+ * - Card B (`missed`): Both / Guest Could Not Attend
+ * - Card C (`attended_partner_missed`): Guest Attended, Partner Could Not Attend
+ * - Card D (`missed_partner_attended`): Guest Could Not Attend, Partner Attended
  */
 export function getThankYouCardCopy(
   variant: ThankYouVariant,
-  guestDisplayName: string
+  guestDisplayName: string,
+  partnerInlineRef?: string
 ): ThankYouCardCopy {
   const cleanName = (guestDisplayName || 'Mansi & Roshan').trim().toUpperCase()
 
@@ -107,6 +235,52 @@ export function getThankYouCardCopy(
       headline: 'The night was better with you.',
       bodyParagraphs: [
         'Thank you for being part of our special evening and making it even more memorable with your presence.',
+      ],
+      signOffLabel: 'WITH LOVE,',
+      signature: 'TANVI, ARPIT & FAMILY',
+    }
+  }
+
+  if (variant === 'attended_partner_missed') {
+    const { addresseeName, partnerRef } = resolveSplitNamesFromDisplay(
+      guestDisplayName,
+      variant,
+      partnerInlineRef
+    )
+    return {
+      variant: 'attended_partner_missed',
+      topIntro: 'A NIGHT TO REMEMBER',
+      eventTitle: '40 & FESTIVE',
+      eventSubtitle: "ARPIT'S 40TH BIRTHDAY & DIWALI BASH",
+      salutation: 'DEAR',
+      guestDisplayName: addresseeName.toUpperCase(),
+      headline: 'The night was better with you.',
+      bodyParagraphs: [
+        'Thank you for being part of our special evening and making it so memorable with your presence.',
+        `We truly missed having ${partnerRef} with us, and look forward to celebrating with you both soon.`,
+      ],
+      signOffLabel: 'WITH LOVE,',
+      signature: 'TANVI, ARPIT & FAMILY',
+    }
+  }
+
+  if (variant === 'missed_partner_attended') {
+    const { addresseeName, partnerRef } = resolveSplitNamesFromDisplay(
+      guestDisplayName,
+      variant,
+      partnerInlineRef
+    )
+    return {
+      variant: 'missed_partner_attended',
+      topIntro: 'WITH WARMTH & AFFECTION',
+      eventTitle: '40 & FESTIVE',
+      eventSubtitle: "ARPIT'S 40TH BIRTHDAY & DIWALI BASH",
+      salutation: 'DEAR',
+      guestDisplayName: addresseeName.toUpperCase(),
+      headline: 'YOU WERE MISSED.',
+      bodyParagraphs: [
+        `We missed having you with us this evening, though it was so wonderful having ${partnerRef} celebrate with us.`,
+        "Here's to making more beautiful memories together with you both soon.",
       ],
       signOffLabel: 'WITH LOVE,',
       signature: 'TANVI, ARPIT & FAMILY',
@@ -131,12 +305,12 @@ export function getThankYouCardCopy(
 }
 
 /**
- * Returns the exact WhatsApp message from Section 3 of the campaign brief.
+ * Returns the exact WhatsApp message for all 4 thank-you scenarios.
  */
 export function buildThankYouWhatsAppMessage(
   variant: ThankYouVariant,
   guestDisplayName: string,
-  options?: { includeCardLink?: boolean; cardUrl?: string }
+  options?: { includeCardLink?: boolean; cardUrl?: string; partnerName?: string }
 ): string {
   const cleanName = (guestDisplayName || 'Mansi & Roshan').trim()
   const heart = String.fromCodePoint(0x2764, 0xFE0F)
@@ -145,6 +319,20 @@ export function buildThankYouWhatsAppMessage(
   let msg = ''
   if (variant === 'attended') {
     msg = `Dear ${cleanName} ${heart}\n\nThank you for being part of Arpit's 40 & FESTIVE. Your presence made the evening even more special, and we're so glad we could share these wonderful moments with you.\n\nA little note of gratitude, sent with lots of love. ${sparkles}\n\nTanvi, Arpit & Family`
+  } else if (variant === 'attended_partner_missed') {
+    const { addresseeName, partnerRef } = resolveSplitNamesFromDisplay(
+      cleanName,
+      variant,
+      options?.partnerName
+    )
+    msg = `Dear ${addresseeName} ${heart}\n\nThank you for being part of Arpit's 40 & FESTIVE. Your presence made the evening so special, though we truly missed having ${partnerRef} with us!\n\nSending our warmest love to you both, and hoping we celebrate together very soon. ${sparkles}\n\nTanvi, Arpit & Family`
+  } else if (variant === 'missed_partner_attended') {
+    const { addresseeName, partnerRef } = resolveSplitNamesFromDisplay(
+      cleanName,
+      variant,
+      options?.partnerName
+    )
+    msg = `Dear ${addresseeName} ${heart}\n\nWe missed having you with us at Arpit's 40 & FESTIVE, though we're so glad ${partnerRef} could join us and be part of the celebration!\n\nYou were remembered with lots of warmth, and we hope we get to share another special moment with the two of you soon. ${sparkles}\n\nTanvi, Arpit & Family`
   } else {
     msg = `Dear ${cleanName} ${heart}\n\nWe missed having you with us at Arpit's 40 & FESTIVE. You were remembered with lots of warmth, and we hope we get to share another special moment together soon.\n\nSending you all our love and warm wishes. ${sparkles}\n\nTanvi, Arpit & Family`
   }
@@ -158,11 +346,18 @@ export function buildThankYouWhatsAppMessage(
 
 /**
  * Standardised file naming convention per production specs:
- * `thankyou_ATTENDED_guestid.png` and `thankyou_MISSED_guestid.png`
+ * `thankyou_ATTENDED_guestid.png`, `thankyou_MISSED_guestid.png`, etc.
  */
 export function getThankYouCardFilename(variant: ThankYouVariant, guestIdOrCode: string): string {
   const safeId = (guestIdOrCode || 'guest').replace(/[^a-zA-Z0-9_-]/g, '')
-  const prefix = variant === 'attended' ? 'thankyou_ATTENDED' : 'thankyou_MISSED'
+  const prefix =
+    variant === 'attended'
+      ? 'thankyou_ATTENDED'
+      : variant === 'attended_partner_missed'
+      ? 'thankyou_ATTENDED_PARTNER_MISSED'
+      : variant === 'missed_partner_attended'
+      ? 'thankyou_MISSED_PARTNER_ATTENDED'
+      : 'thankyou_MISSED'
   return `${prefix}_${safeId}.png`
 }
 
@@ -324,7 +519,8 @@ function drawMetallicDivider(
 export async function renderThankYouCardToCanvas(
   canvas: HTMLCanvasElement,
   variant: ThankYouVariant,
-  guestDisplayName: string
+  guestDisplayName: string,
+  partnerInlineRef?: string
 ): Promise<void> {
   if (typeof document !== 'undefined' && 'fonts' in document) {
     try {
@@ -337,13 +533,13 @@ export async function renderThankYouCardToCanvas(
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
-  const copy = getThankYouCardCopy(variant, guestDisplayName)
+  const copy = getThankYouCardCopy(variant, guestDisplayName, partnerInlineRef)
   const cx = CARD_WIDTH / 2
   const maxContentWidth = CARD_WIDTH - SAFE_MARGIN * 2 // 888px safe width
 
   ctx.clearRect(0, 0, CARD_WIDTH, CARD_HEIGHT)
 
-  const isAttended = variant === 'attended'
+  const isAttended = variant === 'attended' || variant === 'attended_partner_missed'
 
   // ── 1. LUXURY BACKGROUND & ATMOSPHERIC GLOW ──
   if (isAttended) {
@@ -522,11 +718,12 @@ export async function renderThankYouCardToCanvas(
   }
 
   // ── 7. SHORT, READABLE THANK-YOU MESSAGE ──
-  ctx.font = '400 26px Inter, system-ui, sans-serif'
+  const isTwoParagraphs = copy.bodyParagraphs.length > 1
+  ctx.font = `400 ${isTwoParagraphs ? 24 : 26}px Inter, system-ui, sans-serif`
   ctx.fillStyle = bodyColor
   const bodyMaxWidth = 740
-  const bodyLineHeight = 42
-  let currentBodyY = headlineY + 82
+  const bodyLineHeight = isTwoParagraphs ? 38 : 42
+  let currentBodyY = headlineY + (isTwoParagraphs ? 72 : 82)
 
   for (let p = 0; p < copy.bodyParagraphs.length; p++) {
     const lines = wrapCanvasText(ctx, copy.bodyParagraphs[p], bodyMaxWidth)
@@ -535,7 +732,7 @@ export async function renderThankYouCardToCanvas(
       currentBodyY += bodyLineHeight
     }
     if (p < copy.bodyParagraphs.length - 1) {
-      currentBodyY += 22 // Paragraph spacing
+      currentBodyY += 18 // Paragraph spacing
     }
   }
 

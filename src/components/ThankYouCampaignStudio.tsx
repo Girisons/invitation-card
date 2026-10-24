@@ -12,6 +12,7 @@ import {
 import {
   ThankYouVariant,
   resolveGuestDisplayName,
+  resolveGuestAndPartnerNames,
   renderThankYouCardToCanvas,
   buildThankYouWhatsAppMessage,
   getThankYouCardFilename,
@@ -47,6 +48,7 @@ export default function ThankYouCampaignStudio({
   const [selectedGuestId, setSelectedGuestId] = useState<string>('')
   const [customPreviewName, setCustomPreviewName] = useState<string>('Mansi & Roshan')
   const [useCustomName, setUseCustomName] = useState<boolean>(false)
+  const [splitCouplePreviewMode, setSplitCouplePreviewMode] = useState<boolean>(false)
   const [mobilePreviewMode, setMobilePreviewMode] = useState<boolean>(false)
   const [includeCardLinkInWA, setIncludeCardLinkInWA] = useState<boolean>(false)
   const [autoCopyImageOnWA, setAutoCopyImageOnWA] = useState<boolean>(true)
@@ -61,11 +63,18 @@ export default function ThankYouCampaignStudio({
   const [modalGuest, setModalGuest] = useState<{ guest: Guest; variant: ThankYouVariant } | null>(null)
   const [batchExporting, setBatchExporting] = useState<boolean>(false)
 
-  // Canvases for side-by-side Card A (Attended) & Card B (Missed) + Modal
+  // Canvases for side-by-side Card A/C (Attended) & Card B/D (Missed) + Modal
   const canvasAttendedRef = useRef<HTMLCanvasElement>(null)
   const canvasMissedRef = useRef<HTMLCanvasElement>(null)
   const canvasModalRef = useRef<HTMLCanvasElement>(null)
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  const leftPreviewVariant: ThankYouVariant = splitCouplePreviewMode
+    ? 'attended_partner_missed'
+    : 'attended'
+  const rightPreviewVariant: ThankYouVariant = splitCouplePreviewMode
+    ? 'missed_partner_attended'
+    : 'missed'
 
   const showToast = (msg: string) => {
     setStudioToast(msg)
@@ -76,21 +85,32 @@ export default function ThankYouCampaignStudio({
   const getGuestThankYouDetails = (g: Guest) => {
     const own = parseGuestNotes(g.notes)
     let partnerNotes: GuestInviteDetails = {}
-    if (g.linked_guest_id && g.send_together) {
+    if (g.linked_guest_id) {
       const p = allGuests.find(x => x.id === g.linked_guest_id)
       if (p) partnerNotes = parseGuestNotes(p.notes)
     }
 
+    let derivedFromPartner: ActualAttendanceStatus | undefined
+    if (partnerNotes.attendance_status === 'attended_partner_missed') {
+      derivedFromPartner = 'missed_partner_attended'
+    } else if (partnerNotes.attendance_status === 'missed_partner_attended') {
+      derivedFromPartner = 'attended_partner_missed'
+    } else if (g.send_together) {
+      derivedFromPartner = partnerNotes.attendance_status
+    }
+
     const attendance_status: ActualAttendanceStatus =
-      own.attendance_status ||
-      (g.send_together ? partnerNotes.attendance_status : undefined) ||
-      'unknown'
+      own.attendance_status || derivedFromPartner || 'unknown'
 
     const derivedType: ThankYouVariant | '' =
       attendance_status === 'attended'
         ? 'attended'
         : attendance_status === 'did_not_attend'
         ? 'missed'
+        : attendance_status === 'attended_partner_missed'
+        ? 'attended_partner_missed'
+        : attendance_status === 'missed_partner_attended'
+        ? 'missed_partner_attended'
         : ''
 
     const thank_you_type = own.thank_you_type || derivedType
@@ -114,7 +134,10 @@ export default function ThankYouCampaignStudio({
         ? 'declined'
         : 'pending'
 
-    const guest_display_name = resolveGuestDisplayName(g, allGuests)
+    const activeVariantForName =
+      derivedType || undefined
+    const guest_display_name = resolveGuestDisplayName(g, allGuests, activeVariantForName)
+    const { partnerInlineRef } = resolveGuestAndPartnerNames(g, allGuests)
     const routing = chooseThankYou({ whatsapp_number, attendance_status })
     const card_asset_url =
       thank_you_type
@@ -125,6 +148,7 @@ export default function ThankYouCampaignStudio({
       guest_id: g.id,
       invite_code: g.invite_code,
       guest_display_name,
+      partner_inline_ref: partnerInlineRef,
       whatsapp_number,
       raw_phone: rawPhone,
       rsvp_status,
@@ -158,21 +182,45 @@ export default function ThankYouCampaignStudio({
     return customPreviewName.trim() || 'Mansi & Roshan'
   }, [useCustomName, customPreviewName, activePreviewGuest, allGuests])
 
-  // Render both Card A (Attended) & Card B (Missed) whenever preview name changes
+  const activePreviewPartnerRef = useMemo(() => {
+    if (useCustomName) return undefined
+    if (activePreviewGuest) {
+      return resolveGuestAndPartnerNames(activePreviewGuest, allGuests).partnerInlineRef
+    }
+    return undefined
+  }, [useCustomName, activePreviewGuest, allGuests])
+
+  // Render both Left (Card A / C) & Right (Card B / D) whenever preview name or mode changes
   useEffect(() => {
     if (canvasAttendedRef.current) {
-      renderThankYouCardToCanvas(canvasAttendedRef.current, 'attended', activePreviewName)
+      renderThankYouCardToCanvas(
+        canvasAttendedRef.current,
+        leftPreviewVariant,
+        activePreviewName,
+        activePreviewPartnerRef
+      )
     }
     if (canvasMissedRef.current) {
-      renderThankYouCardToCanvas(canvasMissedRef.current, 'missed', activePreviewName)
+      renderThankYouCardToCanvas(
+        canvasMissedRef.current,
+        rightPreviewVariant,
+        activePreviewName,
+        activePreviewPartnerRef
+      )
     }
-  }, [activePreviewName])
+  }, [activePreviewName, activePreviewPartnerRef, leftPreviewVariant, rightPreviewVariant])
 
   // Render modal canvas when modal opens
   useEffect(() => {
     if (modalGuest && canvasModalRef.current) {
-      const name = resolveGuestDisplayName(modalGuest.guest, allGuests)
-      renderThankYouCardToCanvas(canvasModalRef.current, modalGuest.variant, name)
+      const name = resolveGuestDisplayName(modalGuest.guest, allGuests, modalGuest.variant)
+      const { partnerInlineRef } = resolveGuestAndPartnerNames(modalGuest.guest, allGuests)
+      renderThankYouCardToCanvas(
+        canvasModalRef.current,
+        modalGuest.variant,
+        name,
+        partnerInlineRef
+      )
     }
   }, [modalGuest, allGuests])
 
@@ -188,14 +236,24 @@ export default function ThankYouCampaignStudio({
 
     guests.forEach(g => {
       const d = getGuestThankYouDetails(g)
-      if (d.attendance_status === 'attended') attended++
-      else if (d.attendance_status === 'did_not_attend') missed++
-      else unknown++
+      if (
+        d.attendance_status === 'attended' ||
+        d.attendance_status === 'attended_partner_missed'
+      ) {
+        attended++
+      } else if (
+        d.attendance_status === 'did_not_attend' ||
+        d.attendance_status === 'missed_partner_attended'
+      ) {
+        missed++
+      } else {
+        unknown++
+      }
 
       if (d.thank_you_status === 'sent' || d.thank_you_status === 'delivered') sent++
       if (d.thank_you_status === 'seen') seen++
       if (
-        (d.attendance_status === 'attended' || d.attendance_status === 'did_not_attend') &&
+        d.attendance_status !== 'unknown' &&
         d.thank_you_status !== 'sent' &&
         d.thank_you_status !== 'delivered' &&
         d.thank_you_status !== 'seen' &&
@@ -222,13 +280,25 @@ export default function ThankYouCampaignStudio({
   const filteredRows = useMemo(() => {
     return guests.filter(g => {
       const d = getGuestThankYouDetails(g)
-      if (statusFilter === 'attended' && d.attendance_status !== 'attended') return false
-      if (statusFilter === 'missed' && d.attendance_status !== 'did_not_attend') return false
+      if (
+        statusFilter === 'attended' &&
+        d.attendance_status !== 'attended' &&
+        d.attendance_status !== 'attended_partner_missed'
+      ) {
+        return false
+      }
+      if (
+        statusFilter === 'missed' &&
+        d.attendance_status !== 'did_not_attend' &&
+        d.attendance_status !== 'missed_partner_attended'
+      ) {
+        return false
+      }
       if (statusFilter === 'unknown' && d.attendance_status !== 'unknown') return false
       if (
         statusFilter === 'ready_unsent' &&
         !(
-          (d.attendance_status === 'attended' || d.attendance_status === 'did_not_attend') &&
+          d.attendance_status !== 'unknown' &&
           d.thank_you_status !== 'sent' &&
           d.thank_you_status !== 'delivered' &&
           d.thank_you_status !== 'seen'
@@ -257,13 +327,14 @@ export default function ThankYouCampaignStudio({
   // ── HELPER: GENERATE PNG BLOB FOR ANY GUEST & VARIANT ──
   const generateCardBlob = async (
     variant: ThankYouVariant,
-    displayName: string
+    displayName: string,
+    partnerInlineRef?: string
   ): Promise<Blob | null> => {
     if (!offscreenCanvasRef.current) {
       offscreenCanvasRef.current = document.createElement('canvas')
     }
     const canvas = offscreenCanvasRef.current
-    await renderThankYouCardToCanvas(canvas, variant, displayName)
+    await renderThankYouCardToCanvas(canvas, variant, displayName, partnerInlineRef)
     return new Promise(resolve => {
       canvas.toBlob(blob => resolve(blob), 'image/png', 1.0)
     })
@@ -273,9 +344,10 @@ export default function ThankYouCampaignStudio({
   const handleDownloadCard = async (
     variant: ThankYouVariant,
     displayName: string,
-    guestIdOrCode: string
+    guestIdOrCode: string,
+    partnerInlineRef?: string
   ) => {
-    const blob = await generateCardBlob(variant, displayName)
+    const blob = await generateCardBlob(variant, displayName, partnerInlineRef)
     if (!blob) return
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -289,16 +361,17 @@ export default function ThankYouCampaignStudio({
   // ── COPY CARD IMAGE TO CLIPBOARD ──
   const handleCopyCardImage = async (
     variant: ThankYouVariant,
-    displayName: string
+    displayName: string,
+    partnerInlineRef?: string
   ): Promise<boolean> => {
     try {
-      const blob = await generateCardBlob(variant, displayName)
+      const blob = await generateCardBlob(variant, displayName, partnerInlineRef)
       if (!blob || !navigator.clipboard || typeof ClipboardItem === 'undefined') {
         showToast('⚠️ Clipboard image copy not supported in this browser; use Download PNG.')
         return false
       }
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-      showToast(`📋 Copied ${variant === 'attended' ? 'Card A (Attended)' : 'Card B (Missed)'} image to clipboard! Paste (Ctrl+V) in WhatsApp.`)
+      showToast(`📋 Copied Thank-You Card image to clipboard! Paste (Ctrl+V) in WhatsApp.`)
       return true
     } catch {
       showToast('⚠️ Could not copy image automatically — click Download PNG instead.')
@@ -318,6 +391,10 @@ export default function ThankYouCampaignStudio({
         ? 'attended'
         : d.attendance_status === 'did_not_attend'
         ? 'missed'
+        : d.attendance_status === 'attended_partner_missed'
+        ? 'attended_partner_missed'
+        : d.attendance_status === 'missed_partner_attended'
+        ? 'missed_partner_attended'
         : '')
 
     if (!variant) {
@@ -327,14 +404,17 @@ export default function ThankYouCampaignStudio({
       return
     }
 
+    const resolvedName = resolveGuestDisplayName(g, allGuests, variant)
+
     if (autoCopyImageOnWA) {
-      await handleCopyCardImage(variant, d.guest_display_name)
+      await handleCopyCardImage(variant, resolvedName, d.partner_inline_ref)
     }
 
     const cardLink = `${baseUrl}/i/${g.invite_code}?type=thankyou_${variant}`
-    const msg = buildThankYouWhatsAppMessage(variant, d.guest_display_name, {
+    const msg = buildThankYouWhatsAppMessage(variant, resolvedName, {
       includeCardLink: includeCardLinkInWA,
       cardUrl: cardLink,
+      partnerName: d.partner_inline_ref,
     })
 
     // Record status & timestamp in DB
@@ -373,13 +453,14 @@ export default function ThankYouCampaignStudio({
       return
     }
     if (autoCopyImageOnWA) {
-      await handleCopyCardImage(variant, activePreviewName)
+      await handleCopyCardImage(variant, activePreviewName, activePreviewPartnerRef)
     }
     const sampleCode = activePreviewGuest?.invite_code || 'TEST40'
     const cardLink = `${baseUrl}/i/${sampleCode}?type=thankyou_${variant}`
     const msg = buildThankYouWhatsAppMessage(variant, activePreviewName, {
       includeCardLink: includeCardLinkInWA,
       cardUrl: cardLink,
+      partnerName: activePreviewPartnerRef,
     })
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
       navigator.userAgent
@@ -430,11 +511,11 @@ export default function ThankYouCampaignStudio({
   const handleBatchDownloadVerified = async () => {
     const verified = filteredRows.filter(g => {
       const d = getGuestThankYouDetails(g)
-      return d.attendance_status === 'attended' || d.attendance_status === 'did_not_attend'
+      return d.attendance_status !== 'unknown'
     })
 
     if (verified.length === 0) {
-      alert('No guests in the current view have verified attendance (Attended or Did Not Attend).')
+      alert('No guests in the current view have verified attendance.')
       return
     }
 
@@ -452,8 +533,19 @@ export default function ThankYouCampaignStudio({
         const g = verified[i]
         const d = getGuestThankYouDetails(g)
         const variant: ThankYouVariant =
-          d.attendance_status === 'attended' ? 'attended' : 'missed'
-        await handleDownloadCard(variant, d.guest_display_name, g.invite_code || g.id)
+          d.attendance_status === 'attended_partner_missed'
+            ? 'attended_partner_missed'
+            : d.attendance_status === 'missed_partner_attended'
+            ? 'missed_partner_attended'
+            : d.attendance_status === 'did_not_attend'
+            ? 'missed'
+            : 'attended'
+        await handleDownloadCard(
+          variant,
+          d.guest_display_name,
+          g.invite_code || g.id,
+          d.partner_inline_ref
+        )
         await new Promise(r => setTimeout(r, 280))
       }
       showToast(`✅ Batch exported ${verified.length} personalised cards!`)
@@ -462,14 +554,16 @@ export default function ThankYouCampaignStudio({
     }
   }
 
-  const copyAttendedMsg = buildThankYouWhatsAppMessage('attended', activePreviewName, {
+  const copyAttendedMsg = buildThankYouWhatsAppMessage(leftPreviewVariant, activePreviewName, {
     includeCardLink: includeCardLinkInWA,
-    cardUrl: `${baseUrl}/i/${activePreviewGuest?.invite_code || 'CODE'}?type=thankyou_attended`,
+    cardUrl: `${baseUrl}/i/${activePreviewGuest?.invite_code || 'CODE'}?type=thankyou_${leftPreviewVariant}`,
+    partnerName: activePreviewPartnerRef,
   })
 
-  const copyMissedMsg = buildThankYouWhatsAppMessage('missed', activePreviewName, {
+  const copyMissedMsg = buildThankYouWhatsAppMessage(rightPreviewVariant, activePreviewName, {
     includeCardLink: includeCardLinkInWA,
-    cardUrl: `${baseUrl}/i/${activePreviewGuest?.invite_code || 'CODE'}?type=thankyou_missed`,
+    cardUrl: `${baseUrl}/i/${activePreviewGuest?.invite_code || 'CODE'}?type=thankyou_${rightPreviewVariant}`,
+    partnerName: activePreviewPartnerRef,
   })
 
   return (
@@ -575,6 +669,31 @@ export default function ThankYouCampaignStudio({
 
           {/* Quality Check & Name Controls */}
           <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center bg-[#050D1A] border border-[#C9A84C]/35 rounded-sm p-0.5 gap-1">
+              <button
+                type="button"
+                onClick={() => setSplitCouplePreviewMode(false)}
+                className={`px-2.5 py-1 rounded-sm text-xs font-semibold transition-all cursor-pointer ${
+                  !splitCouplePreviewMode
+                    ? 'bg-[#C9A84C] text-[#050D1A] font-bold'
+                    : 'text-[#E8D5A3]/70 hover:text-white'
+                }`}
+              >
+                👥 Standard (Card A &amp; Card B)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSplitCouplePreviewMode(true)}
+                className={`px-2.5 py-1 rounded-sm text-xs font-semibold transition-all cursor-pointer ${
+                  splitCouplePreviewMode
+                    ? 'bg-[#C9A84C] text-[#050D1A] font-bold'
+                    : 'text-[#E8D5A3]/70 hover:text-white'
+                }`}
+              >
+                💔 Split Couple (Partner Missed / Partner Came)
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={() => setMobilePreviewMode(prev => !prev)}
@@ -612,7 +731,7 @@ export default function ThankYouCampaignStudio({
                 const d = getGuestThankYouDetails(g)
                 return (
                   <option key={g.id} value={g.id}>
-                    {d.guest_display_name} ({d.attendance_status === 'attended' ? '✨ Attended' : d.attendance_status === 'did_not_attend' ? '🤍 Missed' : '❓ Unverified'})
+                    {d.guest_display_name} ({d.attendance_status === 'attended' ? '✨ Attended' : d.attendance_status === 'did_not_attend' ? '🤍 Missed' : d.attendance_status === 'attended_partner_missed' ? '🟫🥂 Came, Partner Missed' : d.attendance_status === 'missed_partner_attended' ? '🥂🟫 Missed, Partner Came' : '❓ Unverified'})
                   </option>
                 )
               })}
@@ -697,16 +816,20 @@ export default function ThankYouCampaignStudio({
 
         {/* ── SIDE-BY-SIDE CARDS + EXACT WHATSAPP MESSAGES ── */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* ── CARD A: ATTENDED (DARK WALNUT EDITION) ── */}
+          {/* ── LEFT CARD: ATTENDED / CAME (PARTNER MISSED) ── */}
           <div className="rounded-sm border border-[#C9A84C]/35 bg-[#120B07]/90 p-4 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-[#C9A84C]/20">
                 <div>
                   <span className="text-[10px] uppercase tracking-[0.2em] px-2 py-0.5 rounded bg-[#C9A84C]/20 text-[#E8D5A3] font-semibold">
-                    Card A · Attended (`thankyou_attended`)
+                    {splitCouplePreviewMode
+                      ? 'Card C · Guest Came, Partner Missed (`thankyou_attended_partner_missed`)'
+                      : 'Card A · Attended (`thankyou_attended`)'}
                   </span>
                   <h4 className="font-serif text-lg text-[#F5ECD7] mt-1">
-                    Dark Walnut Edition — &ldquo;The night was better with you.&rdquo;
+                    {splitCouplePreviewMode
+                      ? 'Dark Walnut — "Thank you for coming · We missed your partner"'
+                      : 'Dark Walnut Edition — "The night was better with you."'}
                   </h4>
                 </div>
                 <span className="text-[10px] font-mono text-white/40">1080 × 1350 · 4:5</span>
@@ -730,49 +853,58 @@ export default function ThankYouCampaignStudio({
                 </div>
               </div>
 
-              {/* Action Bar for Card A */}
+              {/* Action Bar for Left Card */}
               <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
                 <button
                   type="button"
                   onClick={() =>
                     handleDownloadCard(
-                      'attended',
+                      leftPreviewVariant,
                       activePreviewName,
-                      activePreviewGuest?.invite_code || 'sample'
+                      activePreviewGuest?.invite_code || 'sample',
+                      activePreviewPartnerRef
                     )
                   }
                   className="px-3 py-1.5 rounded-sm bg-[#C9A84C] text-[#050D1A] font-bold text-xs hover:brightness-110 transition-all cursor-pointer"
                 >
-                  ⬇️ Download `thankyou_ATTENDED_{(activePreviewGuest?.invite_code || 'guestid')}.png`
+                  ⬇️ Download PNG
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleCopyCardImage('attended', activePreviewName)}
+                  onClick={() =>
+                    handleCopyCardImage(
+                      leftPreviewVariant,
+                      activePreviewName,
+                      activePreviewPartnerRef
+                    )
+                  }
                   className="px-3 py-1.5 rounded-sm border border-[#C9A84C]/50 text-[#E8D5A3] hover:bg-[#C9A84C]/15 text-xs transition-all cursor-pointer"
                 >
                   📋 Copy Card Image
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleTestSendToSelf('attended')}
+                  onClick={() => handleTestSendToSelf(leftPreviewVariant)}
                   className="px-3 py-1.5 rounded-sm border border-green-500/40 text-green-400 hover:bg-green-500/15 text-xs transition-all cursor-pointer"
                 >
-                  💬 Test Send Card A
+                  💬 Test Send {splitCouplePreviewMode ? 'Card C' : 'Card A'}
                 </button>
               </div>
             </div>
 
-            {/* Exact WhatsApp Message Box A */}
+            {/* Exact WhatsApp Message Box A / C */}
             <div className="mt-4 pt-3 border-t border-white/10">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[10px] uppercase tracking-widest text-[#C9A84C]">
-                  A. Attended — Exact WhatsApp Message (`thankyou_attended_whatsapp`)
+                  {splitCouplePreviewMode
+                    ? 'C. Guest Came, Partner Missed — WhatsApp Message'
+                    : 'A. Attended — Exact WhatsApp Message (`thankyou_attended_whatsapp`)'}
                 </span>
                 <button
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(copyAttendedMsg)
-                    showToast('📋 Copied Attended WhatsApp message!')
+                    showToast('📋 Copied WhatsApp message!')
                   }}
                   className="text-[10px] text-[#E8D5A3] hover:underline"
                 >
@@ -785,16 +917,20 @@ export default function ThankYouCampaignStudio({
             </div>
           </div>
 
-          {/* ── CARD B: COULD NOT ATTEND (CHAMPAGNE EDITION) ── */}
+          {/* ── RIGHT CARD: COULD NOT ATTEND / MISSED (PARTNER CAME) ── */}
           <div className="rounded-sm border border-[#E8D5A3]/35 bg-[#1B150E]/90 p-4 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-[#E8D5A3]/20">
                 <div>
                   <span className="text-[10px] uppercase tracking-[0.2em] px-2 py-0.5 rounded bg-[#F4E8D1]/20 text-[#F4E8D1] font-semibold">
-                    Card B · Could Not Attend (`thankyou_missed`)
+                    {splitCouplePreviewMode
+                      ? 'Card D · Guest Missed, Partner Came (`thankyou_missed_partner_attended`)'
+                      : 'Card B · Could Not Attend (`thankyou_missed`)'}
                   </span>
                   <h4 className="font-serif text-lg text-[#F4E8D1] mt-1">
-                    Champagne Edition — &ldquo;YOU WERE MISSED.&rdquo;
+                    {splitCouplePreviewMode
+                      ? 'Champagne — "We missed you · Wonderful having your partner join"'
+                      : 'Champagne Edition — "YOU WERE MISSED."'}
                   </h4>
                 </div>
                 <span className="text-[10px] font-mono text-white/40">1080 × 1350 · 4:5</span>
@@ -818,49 +954,58 @@ export default function ThankYouCampaignStudio({
                 </div>
               </div>
 
-              {/* Action Bar for Card B */}
+              {/* Action Bar for Right Card */}
               <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
                 <button
                   type="button"
                   onClick={() =>
                     handleDownloadCard(
-                      'missed',
+                      rightPreviewVariant,
                       activePreviewName,
-                      activePreviewGuest?.invite_code || 'sample'
+                      activePreviewGuest?.invite_code || 'sample',
+                      activePreviewPartnerRef
                     )
                   }
                   className="px-3 py-1.5 rounded-sm bg-[#F4E8D1] text-[#2E1C0E] font-bold text-xs hover:brightness-105 transition-all cursor-pointer"
                 >
-                  ⬇️ Download `thankyou_MISSED_{(activePreviewGuest?.invite_code || 'guestid')}.png`
+                  ⬇️ Download PNG
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleCopyCardImage('missed', activePreviewName)}
+                  onClick={() =>
+                    handleCopyCardImage(
+                      rightPreviewVariant,
+                      activePreviewName,
+                      activePreviewPartnerRef
+                    )
+                  }
                   className="px-3 py-1.5 rounded-sm border border-[#F4E8D1]/50 text-[#F4E8D1] hover:bg-[#F4E8D1]/15 text-xs transition-all cursor-pointer"
                 >
                   📋 Copy Card Image
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleTestSendToSelf('missed')}
+                  onClick={() => handleTestSendToSelf(rightPreviewVariant)}
                   className="px-3 py-1.5 rounded-sm border border-green-500/40 text-green-400 hover:bg-green-500/15 text-xs transition-all cursor-pointer"
                 >
-                  💬 Test Send Card B
+                  💬 Test Send {splitCouplePreviewMode ? 'Card D' : 'Card B'}
                 </button>
               </div>
             </div>
 
-            {/* Exact WhatsApp Message Box B */}
+            {/* Exact WhatsApp Message Box B / D */}
             <div className="mt-4 pt-3 border-t border-white/10">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[10px] uppercase tracking-widest text-[#F4E8D1]">
-                  B. Couldn&apos;t Attend — Exact WhatsApp Message (`thankyou_missed_whatsapp`)
+                  {splitCouplePreviewMode
+                    ? 'D. Guest Missed, Partner Came — WhatsApp Message'
+                    : "B. Couldn't Attend — Exact WhatsApp Message (`thankyou_missed_whatsapp`)"}
                 </span>
                 <button
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(copyMissedMsg)
-                    showToast('📋 Copied Missed WhatsApp message!')
+                    showToast('📋 Copied WhatsApp message!')
                   }}
                   className="text-[10px] text-[#F4E8D1] hover:underline"
                 >
@@ -914,8 +1059,8 @@ export default function ThankYouCampaignStudio({
           <div className="flex flex-wrap items-center gap-1.5">
             {[
               { id: 'all', label: `All (${stats.total})` },
-              { id: 'attended', label: `✨ Attended · Card A (${stats.attended})` },
-              { id: 'missed', label: `🤍 Missed · Card B (${stats.missed})` },
+              { id: 'attended', label: `✨ Attended · Card A/C (${stats.attended})` },
+              { id: 'missed', label: `🤍 Missed · Card B/D (${stats.missed})` },
               { id: 'unknown', label: `⚠️ Unverified / Review (${stats.unknown})` },
               { id: 'ready_unsent', label: `⏳ Verified & Unsent (${stats.readyUnsent})` },
               { id: 'sent', label: `📨 Sent / Seen (${stats.sent + stats.seen})` },
@@ -970,7 +1115,13 @@ export default function ThankYouCampaignStudio({
                 filteredRows.map(g => {
                   const d = getGuestThankYouDetails(g)
                   const activeVariant: ThankYouVariant =
-                    d.attendance_status === 'did_not_attend' ? 'missed' : 'attended'
+                    d.attendance_status === 'attended_partner_missed'
+                      ? 'attended_partner_missed'
+                      : d.attendance_status === 'missed_partner_attended'
+                      ? 'missed_partner_attended'
+                      : d.attendance_status === 'did_not_attend'
+                      ? 'missed'
+                      : 'attended'
 
                   return (
                     <tr
@@ -1026,6 +1177,10 @@ export default function ThankYouCampaignStudio({
                                 ? 'attended'
                                 : val === 'did_not_attend'
                                 ? 'missed'
+                                : val === 'attended_partner_missed'
+                                ? 'attended_partner_missed'
+                                : val === 'missed_partner_attended'
+                                ? 'missed_partner_attended'
                                 : ''
                             const nextStatus: ThankYouDeliveryStatus =
                               val === 'unknown'
@@ -1044,9 +1199,11 @@ export default function ThankYouCampaignStudio({
                             )
                           }}
                           className={`text-[11px] font-semibold px-2.5 py-1 rounded-full outline-none cursor-pointer border transition-all ${
-                            d.attendance_status === 'attended'
+                            d.attendance_status === 'attended' ||
+                            d.attendance_status === 'attended_partner_missed'
                               ? 'bg-[#2C1B11] text-[#E8D5A3] border-[#C9A84C]/60'
-                              : d.attendance_status === 'did_not_attend'
+                              : d.attendance_status === 'did_not_attend' ||
+                                d.attendance_status === 'missed_partner_attended'
                               ? 'bg-[#F4E8D1]/15 text-[#F4E8D1] border-[#F4E8D1]/50'
                               : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
                           }`}
@@ -1055,10 +1212,16 @@ export default function ThankYouCampaignStudio({
                             ❓ Unknown (Review)
                           </option>
                           <option value="attended" className="bg-[#0A1931] text-[#E8D5A3]">
-                            ✨ Attended
+                            ✨ Attended (Both/Solo)
                           </option>
                           <option value="did_not_attend" className="bg-[#0A1931] text-[#F4E8D1]">
-                            🤍 Did Not Attend
+                            🤍 Did Not Attend (Both/Solo)
+                          </option>
+                          <option value="attended_partner_missed" className="bg-[#0A1931] text-emerald-300">
+                            🟫🥂 Came · Partner Missed
+                          </option>
+                          <option value="missed_partner_attended" className="bg-[#0A1931] text-amber-200">
+                            🥂🟫 Missed · Partner Came
                           </option>
                         </select>
                       </td>
@@ -1076,6 +1239,14 @@ export default function ThankYouCampaignStudio({
                         ) : d.routing.type === 'attended' ? (
                           <span className="px-2 py-0.5 rounded text-[10px] bg-[#2C1B11] text-[#E8D5A3] border border-[#C9A84C]/50 font-medium">
                             🟫 Card A · Attended (Walnut)
+                          </span>
+                        ) : d.routing.type === 'attended_partner_missed' ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] bg-[#2C1B11] text-emerald-300 border border-emerald-500/50 font-medium">
+                            🟫🥂 Card C · Came, Partner Missed
+                          </span>
+                        ) : d.routing.type === 'missed_partner_attended' ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] bg-[#F4E8D1]/15 text-amber-200 border border-amber-400/50 font-medium">
+                            🥂🟫 Card D · Missed, Partner Came
                           </span>
                         ) : (
                           <span className="px-2 py-0.5 rounded text-[10px] bg-[#F4E8D1]/15 text-[#F4E8D1] border border-[#F4E8D1]/40 font-medium">
@@ -1162,7 +1333,8 @@ export default function ThankYouCampaignStudio({
                               handleDownloadCard(
                                 activeVariant,
                                 d.guest_display_name,
-                                g.invite_code || g.id
+                                g.invite_code || g.id,
+                                d.partner_inline_ref
                               )
                             }
                             className="px-2 py-1 rounded-sm border border-white/20 text-white/80 hover:bg-white/10 text-[10px] cursor-pointer"
@@ -1182,8 +1354,8 @@ export default function ThankYouCampaignStudio({
                             }`}
                             title={
                               d.attendance_status === 'unknown'
-                                ? 'Verify attendance (Attended or Did Not Attend) before sending'
-                                : `Copy ${activeVariant === 'attended' ? 'Card A' : 'Card B'} & Send WhatsApp to ${d.guest_display_name}`
+                                ? 'Verify attendance before sending'
+                                : `Copy Card & Send WhatsApp to ${d.guest_display_name}`
                             }
                           >
                             💬 Send WA
@@ -1268,40 +1440,53 @@ export default function ThankYouCampaignStudio({
           >
             {(() => {
               const d = getGuestThankYouDetails(modalGuest.guest)
-              const copy = getThankYouCardCopy(modalGuest.variant, d.guest_display_name)
+              const resolvedModalName = resolveGuestDisplayName(
+                modalGuest.guest,
+                allGuests,
+                modalGuest.variant
+              )
+              const copy = getThankYouCardCopy(
+                modalGuest.variant,
+                resolvedModalName,
+                d.partner_inline_ref
+              )
               const waMsg = buildThankYouWhatsAppMessage(
                 modalGuest.variant,
-                d.guest_display_name,
+                resolvedModalName,
                 {
                   includeCardLink: includeCardLinkInWA,
                   cardUrl: `${baseUrl}/i/${modalGuest.guest.invite_code}?type=thankyou_${modalGuest.variant}`,
+                  partnerName: d.partner_inline_ref,
                 }
               )
 
               return (
                 <>
-                  <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4 flex-wrap gap-2">
                     <div>
                       <h3 className="font-serif text-xl text-[#F5ECD7]">
-                        Preview — {d.guest_display_name}
+                        Preview — {resolvedModalName}
                       </h3>
                       <p className="text-xs text-white/50">
                         File: `{getThankYouCardFilename(modalGuest.variant, modalGuest.guest.invite_code)}` · 1080 × 1350 px (Portrait 4:5)
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
+                      <select
+                        value={modalGuest.variant}
+                        onChange={e =>
                           setModalGuest({
                             guest: modalGuest.guest,
-                            variant: modalGuest.variant === 'attended' ? 'missed' : 'attended',
+                            variant: e.target.value as ThankYouVariant,
                           })
                         }
-                        className="px-3 py-1 rounded border border-[#C9A84C]/40 text-xs text-[#E8D5A3]"
+                        className="bg-[#0A1931] px-3 py-1 rounded border border-[#C9A84C]/40 text-xs text-[#E8D5A3] outline-none cursor-pointer"
                       >
-                        Switch to {modalGuest.variant === 'attended' ? 'Card B (Missed)' : 'Card A (Attended)'}
-                      </button>
+                        <option value="attended">🟫 Card A — Attended (Both/Solo)</option>
+                        <option value="missed">🥂 Card B — Missed (Both/Solo)</option>
+                        <option value="attended_partner_missed">🟫🥂 Card C — Came, Partner Missed</option>
+                        <option value="missed_partner_attended">🥂🟫 Card D — Missed, Partner Came</option>
+                      </select>
                       <button
                         type="button"
                         onClick={() => setModalGuest(null)}
@@ -1353,8 +1538,9 @@ export default function ThankYouCampaignStudio({
                           onClick={() =>
                             handleDownloadCard(
                               modalGuest.variant,
-                              d.guest_display_name,
-                              modalGuest.guest.invite_code
+                              resolvedModalName,
+                              modalGuest.guest.invite_code,
+                              d.partner_inline_ref
                             )
                           }
                           className="btn-primary py-2.5 px-4 text-xs uppercase tracking-widest"
@@ -1363,7 +1549,13 @@ export default function ThankYouCampaignStudio({
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleCopyCardImage(modalGuest.variant, d.guest_display_name)}
+                          onClick={() =>
+                            handleCopyCardImage(
+                              modalGuest.variant,
+                              resolvedModalName,
+                              d.partner_inline_ref
+                            )
+                          }
                           className="btn-outline py-2 px-4 text-xs uppercase tracking-widest"
                         >
                           📋 Copy Card Image to Clipboard
