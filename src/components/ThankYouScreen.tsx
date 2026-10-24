@@ -1,13 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Guest, trackEvent, updateGuestInviteDetails } from '@/lib/supabase'
 import {
   ThankYouVariant,
   resolveGuestDisplayName,
   resolveGuestAndPartnerNames,
-  renderThankYouCardToCanvas,
-  getThankYouCardFilename,
   getThankYouCardCopy,
 } from '@/lib/thankYouCard'
 
@@ -18,8 +16,6 @@ interface Props {
 }
 
 export default function ThankYouScreen({ guest, inviteCode, variant }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [downloading, setDownloading] = useState(false)
   const [visible, setVisible] = useState(false)
 
   const displayName = resolveGuestDisplayName(guest, undefined, variant)
@@ -39,30 +35,6 @@ export default function ThankYouScreen({ guest, inviteCode, variant }: Props) {
     return () => clearTimeout(t)
   }, [guest?.id, inviteCode, variant])
 
-  useEffect(() => {
-    if (canvasRef.current) {
-      renderThankYouCardToCanvas(canvasRef.current, variant, displayName, partnerInlineRef)
-    }
-  }, [variant, displayName, partnerInlineRef])
-
-  const handleDownloadCard = async () => {
-    if (!canvasRef.current) return
-    setDownloading(true)
-    try {
-      await renderThankYouCardToCanvas(canvasRef.current, variant, displayName, partnerInlineRef)
-      const dataUrl = canvasRef.current.toDataURL('image/png', 1.0)
-      const a = document.createElement('a')
-      a.href = dataUrl
-      a.download = getThankYouCardFilename(variant, guest.invite_code || guest.id)
-      a.click()
-      if (guest?.id && !guest.id.startsWith('guest-')) {
-        trackEvent(guest.id, inviteCode, `thankyou_${variant}_downloaded`)
-      }
-    } finally {
-      setDownloading(false)
-    }
-  }
-
   return (
     <div
       className={`min-h-screen w-full flex flex-col items-center justify-center px-4 py-8 safe-top safe-bottom select-none transition-opacity duration-700 ${
@@ -74,9 +46,6 @@ export default function ThankYouScreen({ guest, inviteCode, variant }: Props) {
           : 'radial-gradient(circle at 50% 25%, #FBF5EA 0%, #EFE1C6 65%, #E3CFAF 100%)',
       }}
     >
-      {/* Hidden high-res 1080x1350 canvas for instant crisp PNG export */}
-      <canvas ref={canvasRef} className="hidden" width={1080} height={1350} />
-
       {/* Luxury 4:5 Portrait Card Frame */}
       <div
         className="relative w-full max-w-[440px] aspect-[4/5] rounded-sm shadow-2xl overflow-hidden flex flex-col items-center justify-between text-center px-7 sm:px-10 py-9 sm:py-11"
@@ -269,24 +238,6 @@ export default function ThankYouScreen({ guest, inviteCode, variant }: Props) {
             {copy.signature}
           </p>
         </div>
-      </div>
-
-      {/* Subtle Download Keepsake Action Bar below the card */}
-      <div className="mt-5 flex items-center gap-3">
-        <button
-          onClick={handleDownloadCard}
-          disabled={downloading}
-          className="px-5 py-2.5 rounded-sm text-[11px] font-sans tracking-[0.2em] uppercase transition-all cursor-pointer"
-          style={{
-            background: isAttended ? 'rgba(213, 178, 105, 0.12)' : 'rgba(140, 101, 59, 0.12)',
-            border: isAttended
-              ? '1px solid rgba(213, 178, 105, 0.4)'
-              : '1px solid rgba(140, 101, 59, 0.4)',
-            color: isAttended ? '#F5E6C8' : '#3C2716',
-          }}
-        >
-          {downloading ? 'Saving Keepsake…' : '↓ Save Keepsake Card'}
-        </button>
       </div>
     </div>
   )
