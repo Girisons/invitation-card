@@ -17,7 +17,9 @@ import {
   resolveGuestAndPartnerNames,
   renderThankYouCardToCanvas,
   getThankYouCardFilename,
+  resolveGuestThankYouTheme,
   ThankYouVariant,
+  ThankYouTheme,
 } from '@/lib/thankYouCard'
 
 export function getEffectiveInviteDetails(g: Guest, allGuests: Guest[]): GuestInviteDetails {
@@ -78,6 +80,10 @@ export function getEffectiveInviteDetails(g: Guest, allGuests: Guest[]): GuestIn
       : attendance_status === 'missed_partner_attended'
       ? 'missed_partner_attended'
       : '')
+  const thank_you_theme: ThankYouTheme =
+    own.thank_you_theme ||
+    (g.send_together && partnerDetails.thank_you_theme ? partnerDetails.thank_you_theme : undefined) ||
+    resolveGuestThankYouTheme(g)
   const thank_you_status: ThankYouDeliveryStatus = own.thank_you_status || 'pending'
   const thank_you_sent_at = own.thank_you_sent_at || ''
 
@@ -90,6 +96,7 @@ export function getEffectiveInviteDetails(g: Guest, allGuests: Guest[]): GuestIn
     insta_type,
     attendance_status,
     thank_you_type,
+    thank_you_theme,
     thank_you_status,
     thank_you_sent_at,
   }
@@ -119,6 +126,10 @@ export type MessageTemplateMode =
   | 'thankyou_missed'
   | 'thankyou_attended_partner_missed'
   | 'thankyou_missed_partner_attended'
+  | 'thankyou_soiree_attended'
+  | 'thankyou_soiree_missed'
+  | 'thankyou_soiree_attended_partner_missed'
+  | 'thankyou_soiree_missed_partner_attended'
 
 const DEFAULT_USERS: PortalUser[] = [
   { id: 'user-admin', username: 'admin', password: 'arpit40', name: 'Super Admin', role: 'super_admin', created_at: new Date().toISOString() },
@@ -982,13 +993,16 @@ export default function AdminPage() {
   const exportOrCopyThankYouCard = async (
     g: Guest,
     variant: ThankYouVariant,
-    action: 'copy' | 'download'
+    action: 'copy' | 'download',
+    themeOverride?: ThankYouTheme
   ) => {
     try {
+      const inviteDetails = getEffectiveInviteDetails(g, guests)
+      const activeTheme: ThankYouTheme = themeOverride || inviteDetails.thank_you_theme || '40_festive'
       const displayName = resolveGuestDisplayName(g, guests, variant)
       const { partnerInlineRef } = resolveGuestAndPartnerNames(g, guests)
       const canvas = document.createElement('canvas')
-      await renderThankYouCardToCanvas(canvas, variant, displayName, partnerInlineRef)
+      await renderThankYouCardToCanvas(canvas, variant, displayName, partnerInlineRef, activeTheme)
       const blob: Blob | null = await new Promise(resolve =>
         canvas.toBlob(b => resolve(b), 'image/png', 1.0)
       )
@@ -997,7 +1011,7 @@ export default function AdminPage() {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = getThankYouCardFilename(variant, g.invite_code || g.id)
+        a.download = getThankYouCardFilename(variant, g.invite_code || g.id, activeTheme)
         a.click()
         URL.revokeObjectURL(url)
       } else if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
@@ -1066,6 +1080,14 @@ export default function AdminPage() {
       ? `${BASE_URL}/i/${code}?type=thankyou_attended_partner_missed&v=2`
       : messageTemplate === 'thankyou_missed_partner_attended'
       ? `${BASE_URL}/i/${code}?type=thankyou_missed_partner_attended&v=2`
+      : messageTemplate === 'thankyou_soiree_attended'
+      ? `${BASE_URL}/i/${code}?type=thankyou_soiree_attended&v=2`
+      : messageTemplate === 'thankyou_soiree_missed'
+      ? `${BASE_URL}/i/${code}?type=thankyou_soiree_missed&v=2`
+      : messageTemplate === 'thankyou_soiree_attended_partner_missed'
+      ? `${BASE_URL}/i/${code}?type=thankyou_soiree_attended_partner_missed&v=2`
+      : messageTemplate === 'thankyou_soiree_missed_partner_attended'
+      ? `${BASE_URL}/i/${code}?type=thankyou_soiree_missed_partner_attended&v=2`
       : `${BASE_URL}/i/${code}?type=main`
     navigator.clipboard.writeText(linkUrl)
     setCopied(code); setTimeout(() => setCopied(null), 2000)
@@ -1093,6 +1115,10 @@ export default function AdminPage() {
     const thankYouMissedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_missed&v=2`
     const thankYouAttendedPartnerMissedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_attended_partner_missed&v=2`
     const thankYouMissedPartnerAttendedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_missed_partner_attended&v=2`
+    const thankYouSoireeAttendedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_soiree_attended&v=2`
+    const thankYouSoireeMissedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_soiree_missed&v=2`
+    const thankYouSoireeAttendedPartnerMissedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_soiree_attended_partner_missed&v=2`
+    const thankYouSoireeMissedPartnerAttendedLink = `${BASE_URL}/i/${g.invite_code}?type=thankyou_soiree_missed_partner_attended&v=2`
 
     // Pre-warm the invite route & OG image on Vercel edge/lambda immediately (before DB calls)
     const warmLink = activeMode === 'save_date_diwali'
@@ -1113,6 +1139,14 @@ export default function AdminPage() {
       ? thankYouAttendedPartnerMissedLink
       : activeMode === 'thankyou_missed_partner_attended'
       ? thankYouMissedPartnerAttendedLink
+      : activeMode === 'thankyou_soiree_attended'
+      ? thankYouSoireeAttendedLink
+      : activeMode === 'thankyou_soiree_missed'
+      ? thankYouSoireeMissedLink
+      : activeMode === 'thankyou_soiree_attended_partner_missed'
+      ? thankYouSoireeAttendedPartnerMissedLink
+      : activeMode === 'thankyou_soiree_missed_partner_attended'
+      ? thankYouSoireeMissedPartnerAttendedLink
       : mainInviteLink
     fetch(warmLink, { mode: 'no-cors' }).catch(() => {})
 
@@ -1146,21 +1180,49 @@ export default function AdminPage() {
     } else if (activeMode === 'thankyou_attended') {
       inviteUpdates.attendance_status = 'attended'
       inviteUpdates.thank_you_type = 'attended'
+      inviteUpdates.thank_you_theme = '40_festive'
       inviteUpdates.thank_you_status = 'sent'
       inviteUpdates.thank_you_sent_at = new Date().toISOString()
     } else if (activeMode === 'thankyou_missed') {
       inviteUpdates.attendance_status = 'did_not_attend'
       inviteUpdates.thank_you_type = 'missed'
+      inviteUpdates.thank_you_theme = '40_festive'
       inviteUpdates.thank_you_status = 'sent'
       inviteUpdates.thank_you_sent_at = new Date().toISOString()
     } else if (activeMode === 'thankyou_attended_partner_missed') {
       inviteUpdates.attendance_status = 'attended_partner_missed'
       inviteUpdates.thank_you_type = 'attended_partner_missed'
+      inviteUpdates.thank_you_theme = '40_festive'
       inviteUpdates.thank_you_status = 'sent'
       inviteUpdates.thank_you_sent_at = new Date().toISOString()
     } else if (activeMode === 'thankyou_missed_partner_attended') {
       inviteUpdates.attendance_status = 'missed_partner_attended'
       inviteUpdates.thank_you_type = 'missed_partner_attended'
+      inviteUpdates.thank_you_theme = '40_festive'
+      inviteUpdates.thank_you_status = 'sent'
+      inviteUpdates.thank_you_sent_at = new Date().toISOString()
+    } else if (activeMode === 'thankyou_soiree_attended') {
+      inviteUpdates.attendance_status = 'attended'
+      inviteUpdates.thank_you_type = 'attended'
+      inviteUpdates.thank_you_theme = 'soiree'
+      inviteUpdates.thank_you_status = 'sent'
+      inviteUpdates.thank_you_sent_at = new Date().toISOString()
+    } else if (activeMode === 'thankyou_soiree_missed') {
+      inviteUpdates.attendance_status = 'did_not_attend'
+      inviteUpdates.thank_you_type = 'missed'
+      inviteUpdates.thank_you_theme = 'soiree'
+      inviteUpdates.thank_you_status = 'sent'
+      inviteUpdates.thank_you_sent_at = new Date().toISOString()
+    } else if (activeMode === 'thankyou_soiree_attended_partner_missed') {
+      inviteUpdates.attendance_status = 'attended_partner_missed'
+      inviteUpdates.thank_you_type = 'attended_partner_missed'
+      inviteUpdates.thank_you_theme = 'soiree'
+      inviteUpdates.thank_you_status = 'sent'
+      inviteUpdates.thank_you_sent_at = new Date().toISOString()
+    } else if (activeMode === 'thankyou_soiree_missed_partner_attended') {
+      inviteUpdates.attendance_status = 'missed_partner_attended'
+      inviteUpdates.thank_you_type = 'missed_partner_attended'
+      inviteUpdates.thank_you_theme = 'soiree'
       inviteUpdates.thank_you_status = 'sent'
       inviteUpdates.thank_you_sent_at = new Date().toISOString()
     }
@@ -1260,6 +1322,14 @@ export default function AdminPage() {
       msg = thankYouAttendedPartnerMissedLink
     } else if (activeMode === 'thankyou_missed_partner_attended') {
       msg = thankYouMissedPartnerAttendedLink
+    } else if (activeMode === 'thankyou_soiree_attended') {
+      msg = thankYouSoireeAttendedLink
+    } else if (activeMode === 'thankyou_soiree_missed') {
+      msg = thankYouSoireeMissedLink
+    } else if (activeMode === 'thankyou_soiree_attended_partner_missed') {
+      msg = thankYouSoireeAttendedPartnerMissedLink
+    } else if (activeMode === 'thankyou_soiree_missed_partner_attended') {
+      msg = thankYouSoireeMissedPartnerAttendedLink
     } else {
       // Default 'invite' (40 & Festive - Main Invite sent by Tanvi; adapts to RSVP status)
       if (isYes) {
@@ -1854,10 +1924,14 @@ export default function AdminPage() {
             {messageTemplate === 'invite_diwali' && '🎉 Diwali Party — Main Invite (Sender: Khandelwal Family • Auto RSVP)'}
             {messageTemplate === 'insta' && '🎂 Instagram — 40 & Festive (@40andfestive)'}
             {messageTemplate === 'insta_soiree' && '🪔 Instagram — The Festive Soirée (@40andfestive)'}
-            {messageTemplate === 'thankyou_attended' && '🟫 Post-Event Thank You — Card A (Attended · Dark Walnut)'}
-            {messageTemplate === 'thankyou_missed' && '🥂 Post-Event Thank You — Card B (Missed · Champagne)'}
-            {messageTemplate === 'thankyou_attended_partner_missed' && '🟫🥂 Post-Event Thank You — Card C (Guest Came, Partner Missed)'}
-            {messageTemplate === 'thankyou_missed_partner_attended' && '🥂🟫 Post-Event Thank You — Card D (Guest Missed, Partner Came)'}
+            {messageTemplate === 'thankyou_attended' && '🎂🟫 Thank You (40 & Festive) — Card A (Attended · Dark Walnut)'}
+            {messageTemplate === 'thankyou_missed' && '🎂🥂 Thank You (40 & Festive) — Card B (Missed · Champagne)'}
+            {messageTemplate === 'thankyou_attended_partner_missed' && '🎂🟫🥂 Thank You (40 & Festive) — Card C (Guest Came, Partner Missed)'}
+            {messageTemplate === 'thankyou_missed_partner_attended' && '🎂🥂🟫 Thank You (40 & Festive) — Card D (Guest Missed, Partner Came)'}
+            {messageTemplate === 'thankyou_soiree_attended' && '🪔🟫 Thank You (The Festive Soirée) — Card A (Attended · Dark Walnut)'}
+            {messageTemplate === 'thankyou_soiree_missed' && '🪔🥂 Thank You (The Festive Soirée) — Card B (Missed · Champagne)'}
+            {messageTemplate === 'thankyou_soiree_attended_partner_missed' && '🪔🟫🥂 Thank You (The Festive Soirée) — Card C (Guest Came, Partner Missed)'}
+            {messageTemplate === 'thankyou_soiree_missed_partner_attended' && '🪔🥂🟫 Thank You (The Festive Soirée) — Card D (Guest Missed, Partner Came)'}
           </span>
         </div>
 
@@ -1949,10 +2023,10 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {/* Post-Event Thank-You Campaign */}
+          {/* Post-Event Thank-You Campaign (40 & Festive) */}
           <div className="flex items-center bg-[#050D1A] rounded p-1 border border-[#C9A84C]/45 gap-1 flex-wrap">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#E8D5A3] px-1.5">
-              ✨ Thank You:
+              🎂✨ Thank You (40 &amp; Festive):
             </span>
             <button
               onClick={() => setMessageTemplate('thankyou_attended')}
@@ -1961,7 +2035,7 @@ export default function AdminPage() {
                   ? 'bg-[#2C1B11] text-[#FFF5E0] font-bold shadow-md ring-1 ring-[#C9A84C]'
                   : 'text-[#E8D5A3]/75 hover:text-white hover:bg-white/5'
               }`}
-              title="Card A — Both/Guest Attended (Dark Walnut Edition)"
+              title="40 & FESTIVE · Card A — Both/Guest Attended (Dark Walnut Edition)"
             >
               🟫 Attended
             </button>
@@ -1972,7 +2046,7 @@ export default function AdminPage() {
                   ? 'bg-[#F4E8D1] text-[#2E1C0E] font-bold shadow-md ring-1 ring-[#FFF8E1]'
                   : 'text-[#F4E8D1]/75 hover:text-white hover:bg-white/5'
               }`}
-              title="Card B — Could Not Attend (Champagne Edition)"
+              title="40 & FESTIVE · Card B — Could Not Attend (Champagne Edition)"
             >
               🥂 Missed
             </button>
@@ -1983,7 +2057,7 @@ export default function AdminPage() {
                   ? 'bg-[#2C1B11] text-[#FFF5E0] font-bold shadow-md ring-1 ring-emerald-400'
                   : 'text-emerald-200/80 hover:text-white hover:bg-white/5'
               }`}
-              title="Card C — Guest Attended, Partner Missed ('Thank you for coming, we missed your partner')"
+              title="40 & FESTIVE · Card C — Guest Attended, Partner Missed"
             >
               🟫🥂 Came (Partner Missed)
             </button>
@@ -1994,14 +2068,65 @@ export default function AdminPage() {
                   ? 'bg-[#F4E8D1] text-[#2E1C0E] font-bold shadow-md ring-1 ring-amber-400'
                   : 'text-amber-200/80 hover:text-white hover:bg-white/5'
               }`}
-              title="Card D — Guest Missed, Partner Attended ('We missed you, so glad your partner could join')"
+              title="40 & FESTIVE · Card D — Guest Missed, Partner Attended"
+            >
+              🥂🟫 Missed (Partner Came)
+            </button>
+          </div>
+
+          {/* Post-Event Thank-You Campaign (The Festive Soirée) */}
+          <div className="flex items-center bg-[#050D1A] rounded p-1 border border-orange-500/45 gap-1 flex-wrap">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-orange-300 px-1.5">
+              🪔✨ Thank You (Festive Soirée):
+            </span>
+            <button
+              onClick={() => setMessageTemplate('thankyou_soiree_attended')}
+              className={`px-2 py-1 text-xs font-semibold rounded transition-all ${
+                messageTemplate === 'thankyou_soiree_attended'
+                  ? 'bg-[#2C1B11] text-[#FFF5E0] font-bold shadow-md ring-1 ring-orange-400'
+                  : 'text-orange-200/75 hover:text-white hover:bg-white/5'
+              }`}
+              title="THE FESTIVE SOIRÉE · Card A — Both/Guest Attended (Dark Walnut Edition)"
+            >
+              🟫 Attended
+            </button>
+            <button
+              onClick={() => setMessageTemplate('thankyou_soiree_missed')}
+              className={`px-2 py-1 text-xs font-semibold rounded transition-all ${
+                messageTemplate === 'thankyou_soiree_missed'
+                  ? 'bg-[#F4E8D1] text-[#2E1C0E] font-bold shadow-md ring-1 ring-orange-300'
+                  : 'text-[#F4E8D1]/75 hover:text-white hover:bg-white/5'
+              }`}
+              title="THE FESTIVE SOIRÉE · Card B — Could Not Attend (Champagne Edition)"
+            >
+              🥂 Missed
+            </button>
+            <button
+              onClick={() => setMessageTemplate('thankyou_soiree_attended_partner_missed')}
+              className={`px-2 py-1 text-xs font-semibold rounded transition-all ${
+                messageTemplate === 'thankyou_soiree_attended_partner_missed'
+                  ? 'bg-[#2C1B11] text-[#FFF5E0] font-bold shadow-md ring-1 ring-emerald-400'
+                  : 'text-emerald-200/80 hover:text-white hover:bg-white/5'
+              }`}
+              title="THE FESTIVE SOIRÉE · Card C — Guest Attended, Partner Missed"
+            >
+              🟫🥂 Came (Partner Missed)
+            </button>
+            <button
+              onClick={() => setMessageTemplate('thankyou_soiree_missed_partner_attended')}
+              className={`px-2 py-1 text-xs font-semibold rounded transition-all ${
+                messageTemplate === 'thankyou_soiree_missed_partner_attended'
+                  ? 'bg-[#F4E8D1] text-[#2E1C0E] font-bold shadow-md ring-1 ring-amber-400'
+                  : 'text-amber-200/80 hover:text-white hover:bg-white/5'
+              }`}
+              title="THE FESTIVE SOIRÉE · Card D — Guest Missed, Partner Attended"
             >
               🥂🟫 Missed (Partner Came)
             </button>
             <button
               onClick={() => setDashboardView(dashboardView === 'thank_you' ? 'guests' : 'thank_you')}
               className="px-2.5 py-1 text-xs font-bold rounded bg-[#C9A84C]/20 text-[#E8D5A3] border border-[#C9A84C]/40 hover:bg-[#C9A84C]/30 transition-all cursor-pointer"
-              title="Open the full 40 & FESTIVE Thank-You Campaign Studio"
+              title="Open the full 40 & FESTIVE + THE FESTIVE SOIRÉE Thank-You Campaign Studio"
             >
               {dashboardView === 'thank_you' ? '← Back to Table' : '🎨 Open Studio'}
             </button>
@@ -2308,11 +2433,24 @@ export default function AdminPage() {
                     </div>
                   </td>
 
-                  {/* ── THANK YOU COLUMN (ATTENDED / MISSED / SPLIT PARTNER + WA + PNG + STATUS) ── */}
+                  {/* ── THANK YOU COLUMN (THEME + ATTENDED / MISSED / SPLIT PARTNER + WA + PNG + STATUS) ── */}
                   <td className="px-3 py-2 whitespace-nowrap bg-[#C9A84C]/5 border-l border-[#C9A84C]/30">
-                    <div className="flex flex-col gap-1 min-w-[185px]">
-                      {/* Row 1: Attended/Missed/Split-Partner selector + Quick WA + Download PNG */}
+                    <div className="flex flex-col gap-1 min-w-[205px]">
+                      {/* Row 1: Theme selector + Card Variant selector */}
                       <div className="flex items-center gap-1">
+                        <select
+                          value={inviteDetails.thank_you_theme || '40_festive'}
+                          onChange={(e) =>
+                            handleUpdateThankYouDetails(g, {
+                              thank_you_theme: e.target.value as ThankYouTheme,
+                            })
+                          }
+                          className="bg-[#0A1931] border border-[#C9A84C]/40 text-[#E8D5A3] text-[10px] font-semibold px-1.5 py-0.5 rounded outline-none cursor-pointer hover:border-[#C9A84C]"
+                          title="Select Thank-You Card Theme (40 & Festive vs The Festive Soirée)"
+                        >
+                          <option value="40_festive" className="bg-[#0A1931] text-[#E8D5A3]">🎂 40 &amp; Festive</option>
+                          <option value="soiree" className="bg-[#0A1931] text-amber-300">🪔 Festive Soirée</option>
+                        </select>
                         <select
                           value={inviteDetails.attendance_status || 'unknown'}
                           onChange={(e) => {
@@ -2355,21 +2493,55 @@ export default function AdminPage() {
                           <option value="attended_partner_missed" className="bg-[#0A1931] text-emerald-200 font-semibold">🟫🥂 Came · Partner Missed</option>
                           <option value="missed_partner_attended" className="bg-[#0A1931] text-amber-300 font-semibold">🥂🟫 Missed · Partner Came</option>
                         </select>
+                      </div>
+
+                      {/* Row 2: Status dropdown + Quick WA + Download PNG */}
+                      <div className="flex items-center gap-1">
+                        <select
+                          value={inviteDetails.thank_you_status || 'pending'}
+                          onChange={(e) =>
+                            handleUpdateThankYouDetails(g, {
+                              thank_you_status: e.target.value as 'pending' | 'ready' | 'sent' | 'delivered' | 'seen' | 'failed',
+                            })
+                          }
+                          className={`flex-1 text-[9px] font-semibold px-2 py-0.5 border rounded outline-none cursor-pointer tracking-wider ${
+                            inviteDetails.thank_you_status === 'seen' || inviteDetails.thank_you_status === 'delivered'
+                              ? 'text-yellow-400 bg-yellow-500/10 border-yellow-500/40'
+                              : inviteDetails.thank_you_status === 'sent'
+                              ? 'text-blue-400 bg-blue-500/10 border-blue-500/40'
+                              : inviteDetails.thank_you_status === 'ready'
+                              ? 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30'
+                              : 'text-white/40 bg-white/5 border-white/10'
+                          }`}
+                        >
+                          <option value="pending" className="bg-[#0A1931] text-white/50">⏳ PENDING</option>
+                          <option value="ready" className="bg-[#0A1931] text-emerald-300 font-semibold">✅ READY</option>
+                          <option value="sent" className="bg-[#0A1931] text-blue-400 font-semibold">📨 SENT</option>
+                          <option value="seen" className="bg-[#0A1931] text-yellow-400 font-semibold">👁️ SEEN</option>
+                        </select>
                         <button
                           type="button"
-                          onClick={() =>
-                            sendWhatsApp(
-                              g,
+                          onClick={() => {
+                            const isSoiree = inviteDetails.thank_you_theme === 'soiree'
+                            const mode: MessageTemplateMode =
                               inviteDetails.attendance_status === 'attended_partner_missed'
-                                ? 'thankyou_attended_partner_missed'
+                                ? isSoiree
+                                  ? 'thankyou_soiree_attended_partner_missed'
+                                  : 'thankyou_attended_partner_missed'
                                 : inviteDetails.attendance_status === 'missed_partner_attended'
-                                ? 'thankyou_missed_partner_attended'
+                                ? isSoiree
+                                  ? 'thankyou_soiree_missed_partner_attended'
+                                  : 'thankyou_missed_partner_attended'
                                 : inviteDetails.attendance_status === 'did_not_attend'
-                                ? 'thankyou_missed'
+                                ? isSoiree
+                                  ? 'thankyou_soiree_missed'
+                                  : 'thankyou_missed'
+                                : isSoiree
+                                ? 'thankyou_soiree_attended'
                                 : 'thankyou_attended'
-                            )
-                          }
-                          title="Send selected Thank-You Note via WhatsApp (auto-copies 1080×1350 card PNG to clipboard)"
+                            sendWhatsApp(g, mode)
+                          }}
+                          title={`Send ${inviteDetails.thank_you_theme === 'soiree' ? 'The Festive Soirée' : '40 & Festive'} Thank-You Note via WhatsApp`}
                           className="px-1.5 py-0.5 border border-green-500/40 text-green-400 hover:bg-green-500/20 rounded text-[9px] font-bold transition-all whitespace-nowrap cursor-pointer"
                         >
                           💬 WA
@@ -2386,39 +2558,16 @@ export default function AdminPage() {
                                 : inviteDetails.attendance_status === 'did_not_attend'
                                 ? 'missed'
                                 : 'attended',
-                              'download'
+                              'download',
+                              inviteDetails.thank_you_theme || '40_festive'
                             )
                           }
-                          title="Download 1080×1350 Thank-You Card PNG"
+                          title={`Download 1080×1350 ${inviteDetails.thank_you_theme === 'soiree' ? 'The Festive Soirée' : '40 & Festive'} Thank-You Card PNG`}
                           className="px-1.5 py-0.5 border border-[#C9A84C]/40 text-[#E8D5A3] hover:bg-[#C9A84C]/20 rounded text-[9px] font-bold transition-all whitespace-nowrap cursor-pointer"
                         >
                           ⬇️
                         </button>
                       </div>
-
-                      {/* Row 2: Thank-You Delivery Status dropdown */}
-                      <select
-                        value={inviteDetails.thank_you_status || 'pending'}
-                        onChange={(e) =>
-                          handleUpdateThankYouDetails(g, {
-                            thank_you_status: e.target.value as 'pending' | 'ready' | 'sent' | 'delivered' | 'seen' | 'failed',
-                          })
-                        }
-                        className={`text-[9px] font-semibold px-2 py-0.5 border rounded outline-none cursor-pointer tracking-wider ${
-                          inviteDetails.thank_you_status === 'seen' || inviteDetails.thank_you_status === 'delivered'
-                            ? 'text-yellow-400 bg-yellow-500/10 border-yellow-500/40'
-                            : inviteDetails.thank_you_status === 'sent'
-                            ? 'text-blue-400 bg-blue-500/10 border-blue-500/40'
-                            : inviteDetails.thank_you_status === 'ready'
-                            ? 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30'
-                            : 'text-white/40 bg-white/5 border-white/10'
-                        }`}
-                      >
-                        <option value="pending" className="bg-[#0A1931] text-white/50">⏳ PENDING</option>
-                        <option value="ready" className="bg-[#0A1931] text-emerald-300 font-semibold">✅ READY</option>
-                        <option value="sent" className="bg-[#0A1931] text-blue-400 font-semibold">📨 SENT</option>
-                        <option value="seen" className="bg-[#0A1931] text-yellow-400 font-semibold">👁️ SEEN</option>
-                      </select>
                     </div>
                   </td>
 
@@ -2468,11 +2617,17 @@ export default function AdminPage() {
                           <option value="insta">🎂 40 &amp; Festive Instagram</option>
                           <option value="insta_soiree">🪔 The Festive Soirée Instagram</option>
                         </optgroup>
-                        <optgroup label="✨ Post-Event Thank You">
-                          <option value="thankyou_attended">🟫 Card A — Attended (Both/Solo)</option>
-                          <option value="thankyou_missed">🥂 Card B — Missed (Both/Solo)</option>
-                          <option value="thankyou_attended_partner_missed">🟫🥂 Card C — Came, Partner Missed</option>
-                          <option value="thankyou_missed_partner_attended">🥂🟫 Card D — Missed, Partner Came</option>
+                        <optgroup label="🎂✨ Thank You — 40 &amp; Festive">
+                          <option value="thankyou_attended">🟫 Card A — Attended (40 &amp; Festive)</option>
+                          <option value="thankyou_missed">🥂 Card B — Missed (40 &amp; Festive)</option>
+                          <option value="thankyou_attended_partner_missed">🟫🥂 Card C — Came, Partner Missed (40 &amp; Festive)</option>
+                          <option value="thankyou_missed_partner_attended">🥂🟫 Card D — Missed, Partner Came (40 &amp; Festive)</option>
+                        </optgroup>
+                        <optgroup label="🪔✨ Thank You — The Festive Soirée">
+                          <option value="thankyou_soiree_attended">🟫 Card A — Attended (Festive Soirée)</option>
+                          <option value="thankyou_soiree_missed">🥂 Card B — Missed (Festive Soirée)</option>
+                          <option value="thankyou_soiree_attended_partner_missed">🟫🥂 Card C — Came, Partner Missed (Festive Soirée)</option>
+                          <option value="thankyou_soiree_missed_partner_attended">🥂🟫 Card D — Missed, Partner Came (Festive Soirée)</option>
                         </optgroup>
                       </select>
                       <button onClick={() => {
@@ -2494,6 +2649,14 @@ export default function AdminPage() {
                           ? `${BASE_URL}/i/${g.invite_code}?type=thankyou_attended_partner_missed`
                           : messageTemplate === 'thankyou_missed_partner_attended'
                           ? `${BASE_URL}/i/${g.invite_code}?type=thankyou_missed_partner_attended`
+                          : messageTemplate === 'thankyou_soiree_attended'
+                          ? `${BASE_URL}/i/${g.invite_code}?type=thankyou_soiree_attended`
+                          : messageTemplate === 'thankyou_soiree_missed'
+                          ? `${BASE_URL}/i/${g.invite_code}?type=thankyou_soiree_missed`
+                          : messageTemplate === 'thankyou_soiree_attended_partner_missed'
+                          ? `${BASE_URL}/i/${g.invite_code}?type=thankyou_soiree_attended_partner_missed`
+                          : messageTemplate === 'thankyou_soiree_missed_partner_attended'
+                          ? `${BASE_URL}/i/${g.invite_code}?type=thankyou_soiree_missed_partner_attended`
                           : `${BASE_URL}/i/${g.invite_code}`
                         window.open(previewUrl, '_blank')
                       }} title="Preview Active Card / Page"

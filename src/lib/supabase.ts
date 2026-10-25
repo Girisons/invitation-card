@@ -64,6 +64,7 @@ export interface GuestInviteDetails {
   // Post-Event Thank-You Campaign fields (kept separate from rsvp_status / invitation_status)
   attendance_status?: ActualAttendanceStatus
   thank_you_type?: ThankYouCardType
+  thank_you_theme?: '40_festive' | 'soiree' | ''
   thank_you_status?: ThankYouDeliveryStatus
   thank_you_sent_at?: string
   card_asset_url?: string

@@ -7,6 +7,7 @@ import VideoScreen from '@/components/VideoScreen'
 import ConfirmationScreen from '@/components/ConfirmationScreen'
 import InstaScreen from '@/components/InstaScreen'
 import ThankYouScreen from '@/components/ThankYouScreen'
+import { resolveGuestThankYouTheme } from '@/lib/thankYouCard'
 
 type Screen = 'opening' | 'video' | 'confirmation'
 
@@ -14,18 +15,38 @@ interface Props {
   guest: Guest
   inviteCode: string
   inviteType?: string
+  inviteTheme?: string
 }
 
-export default function InvitationClient({ guest, inviteCode, inviteType }: Props) {
-  const isThankYouAttended = inviteType === 'thankyou_attended' || inviteType === 'thank_you_attended' || inviteType === 'attended'
-  const isThankYouMissed = inviteType === 'thankyou_missed' || inviteType === 'thank_you_missed' || inviteType === 'missed'
+export default function InvitationClient({ guest, inviteCode, inviteType, inviteTheme }: Props) {
+  const normType = (inviteType || '').toLowerCase()
   const isThankYouAttendedPartnerMissed =
-    inviteType === 'thankyou_attended_partner_missed' ||
-    inviteType === 'attended_partner_missed'
+    normType === 'thankyou_attended_partner_missed' ||
+    normType === 'thankyou_soiree_attended_partner_missed' ||
+    normType === 'attended_partner_missed'
   const isThankYouMissedPartnerAttended =
-    inviteType === 'thankyou_missed_partner_attended' ||
-    inviteType === 'missed_partner_attended'
-  const isThankYouAuto = inviteType === 'thankyou' || inviteType === 'thank_you' || inviteType === 'thank-you'
+    normType === 'thankyou_missed_partner_attended' ||
+    normType === 'thankyou_soiree_missed_partner_attended' ||
+    normType === 'missed_partner_attended'
+  const isThankYouAttended =
+    !isThankYouAttendedPartnerMissed &&
+    !isThankYouMissedPartnerAttended &&
+    (normType === 'thankyou_attended' ||
+      normType === 'thank_you_attended' ||
+      normType === 'thankyou_soiree_attended' ||
+      normType === 'attended')
+  const isThankYouMissed =
+    !isThankYouAttendedPartnerMissed &&
+    !isThankYouMissedPartnerAttended &&
+    (normType === 'thankyou_missed' ||
+      normType === 'thank_you_missed' ||
+      normType === 'thankyou_soiree_missed' ||
+      normType === 'missed')
+  const isThankYouAuto =
+    normType === 'thankyou' ||
+    normType === 'thank_you' ||
+    normType === 'thank-you' ||
+    normType === 'thankyou_soiree'
   if (
     isThankYouAttended ||
     isThankYouMissed ||
@@ -51,7 +72,18 @@ export default function InvitationClient({ guest, inviteCode, inviteType }: Prop
       : notes.thank_you_type === 'missed' || notes.attendance_status === 'did_not_attend'
       ? 'missed'
       : 'attended'
-    return <ThankYouScreen guest={guest} inviteCode={inviteCode} variant={variant} />
+    const resolvedTheme = resolveGuestThankYouTheme(
+      guest,
+      inviteTheme || (normType.includes('soiree') ? 'soiree' : '')
+    )
+    return (
+      <ThankYouScreen
+        guest={guest}
+        inviteCode={inviteCode}
+        variant={variant}
+        theme={resolvedTheme}
+      />
+    )
   }
 
   const isInstaSoiree = inviteType === 'insta_soiree' || inviteType === 'soiree_insta' || inviteType === 'insta_diwali'

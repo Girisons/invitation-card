@@ -1,7 +1,11 @@
 import { headers } from 'next/headers'
 import InvitationClient from './InvitationClient'
 import { getGuestByCode, Guest } from '@/lib/supabase'
-import { resolveGuestDisplayName, resolveGuestAndPartnerNames } from '@/lib/thankYouCard'
+import {
+  resolveGuestDisplayName,
+  resolveGuestAndPartnerNames,
+  resolveGuestThankYouTheme,
+} from '@/lib/thankYouCard'
 
 interface Props {
   params: Promise<{ code: string }>
@@ -15,7 +19,9 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   const sParams = searchParams ? await searchParams : {}
   const rawType = Array.isArray(sParams.type) ? sParams.type[0] : sParams.type
   const rawMode = Array.isArray(sParams.mode) ? sParams.mode[0] : sParams.mode
+  const rawTheme = Array.isArray(sParams.theme) ? sParams.theme[0] : sParams.theme
   const inviteType = (rawType || rawMode || '').toLowerCase()
+  const inviteTheme = (rawTheme || '').toLowerCase()
 
   const reqHeaders = await headers()
   const ua = reqHeaders.get('user-agent') || ''
@@ -39,7 +45,14 @@ export default async function InvitationPage({ params, searchParams }: Props) {
     invitation_status: 'pending',
   }
 
-  return <InvitationClient guest={activeGuest} inviteCode={code.toUpperCase()} inviteType={inviteType} />
+  return (
+    <InvitationClient
+      guest={activeGuest}
+      inviteCode={code.toUpperCase()}
+      inviteType={inviteType}
+      inviteTheme={inviteTheme}
+    />
+  )
 }
 
 export async function generateMetadata({ params, searchParams }: Props) {
@@ -47,8 +60,10 @@ export async function generateMetadata({ params, searchParams }: Props) {
   const sParams = searchParams ? await searchParams : {}
   const rawType = Array.isArray(sParams.type) ? sParams.type[0] : sParams.type
   const rawMode = Array.isArray(sParams.mode) ? sParams.mode[0] : sParams.mode
+  const rawTheme = Array.isArray(sParams.theme) ? sParams.theme[0] : sParams.theme
   const rawV = Array.isArray(sParams.v) ? sParams.v[0] : sParams.v
   const inviteType = (rawType || rawMode || '').toLowerCase()
+  const inviteTheme = (rawTheme || '').toLowerCase()
 
   let guest: Guest | null = null
   if (code) {
@@ -66,15 +81,33 @@ export async function generateMetadata({ params, searchParams }: Props) {
     ? rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase()
     : ''
 
-  const isThankYouAttended = inviteType === 'thankyou_attended' || inviteType === 'thank_you_attended' || inviteType === 'attended'
-  const isThankYouMissed = inviteType === 'thankyou_missed' || inviteType === 'thank_you_missed' || inviteType === 'missed'
   const isThankYouAttendedPartnerMissed =
     inviteType === 'thankyou_attended_partner_missed' ||
+    inviteType === 'thankyou_soiree_attended_partner_missed' ||
     inviteType === 'attended_partner_missed'
   const isThankYouMissedPartnerAttended =
     inviteType === 'thankyou_missed_partner_attended' ||
+    inviteType === 'thankyou_soiree_missed_partner_attended' ||
     inviteType === 'missed_partner_attended'
-  const isThankYouAuto = inviteType === 'thankyou' || inviteType === 'thank_you' || inviteType === 'thank-you'
+  const isThankYouAttended =
+    !isThankYouAttendedPartnerMissed &&
+    !isThankYouMissedPartnerAttended &&
+    (inviteType === 'thankyou_attended' ||
+      inviteType === 'thank_you_attended' ||
+      inviteType === 'thankyou_soiree_attended' ||
+      inviteType === 'attended')
+  const isThankYouMissed =
+    !isThankYouAttendedPartnerMissed &&
+    !isThankYouMissedPartnerAttended &&
+    (inviteType === 'thankyou_missed' ||
+      inviteType === 'thank_you_missed' ||
+      inviteType === 'thankyou_soiree_missed' ||
+      inviteType === 'missed')
+  const isThankYouAuto =
+    inviteType === 'thankyou' ||
+    inviteType === 'thank_you' ||
+    inviteType === 'thank-you' ||
+    inviteType === 'thankyou_soiree'
   const isThankYou =
     isThankYouAttended ||
     isThankYouMissed ||
@@ -101,41 +134,54 @@ export async function generateMetadata({ params, searchParams }: Props) {
       : isThankYouMissed
       ? 'missed'
       : 'attended'
+    const tyTheme = resolveGuestThankYouTheme(
+      guest,
+      inviteTheme || (inviteType.includes('soiree') ? 'soiree' : '')
+    )
+    const isSoireeTheme = tyTheme === 'soiree'
     const isAttendedTheme = tyVariant === 'attended' || tyVariant === 'attended_partner_missed'
     const resolvedCardName = guest ? resolveGuestDisplayName(guest, undefined, tyVariant) : ''
     const resolvedPartnerRef = guest ? resolveGuestAndPartnerNames(guest).partnerInlineRef : ''
 
+    const titlePrefix = isSoireeTheme ? 'The Festive Soirée ✨' : '40 & Festive ✨'
+    const eventRefName = isSoireeTheme ? 'The Festive Soirée' : 'Arpit’s 40 & Festive'
+    const signOffName = isSoireeTheme ? 'The Khandelwal Family' : 'Tanvi, Arpit & Family'
+
     if (tyVariant === 'attended_partner_missed') {
       title = resolvedCardName
-        ? `40 & Festive ✨ • Dear ${resolvedCardName}, The Night Was Better With You!`
-        : '40 & Festive ✨ • The Night Was Better With You!'
+        ? `${titlePrefix} • Dear ${resolvedCardName}, The Night Was Better With You!`
+        : `${titlePrefix} • The Night Was Better With You!`
       description = resolvedCardName
-        ? `Dear ${resolvedCardName} ❤️ Thank you for being part of Arpit’s 40 & Festive — we truly missed having ${resolvedPartnerRef || 'your partner'} with us! Tap here to open & read your personal thank-you card ➔ Tanvi, Arpit & Family`
-        : '❤️ Thank you for being part of Arpit’s 40 & Festive! Tap here to open & read your personal thank-you card ➔ Tanvi, Arpit & Family'
+        ? `Dear ${resolvedCardName} ❤️ Thank you for being part of ${eventRefName} — we truly missed having ${resolvedPartnerRef || 'your partner'} with us! Tap here to open & read your personal thank-you card ➔ ${signOffName}`
+        : `❤️ Thank you for being part of ${eventRefName}! Tap here to open & read your personal thank-you card ➔ ${signOffName}`
     } else if (tyVariant === 'missed_partner_attended') {
       title = resolvedCardName
-        ? `40 & Festive ✨ • Dear ${resolvedCardName}, You Were Missed!`
-        : '40 & Festive ✨ • You Were Missed!'
+        ? `${titlePrefix} • Dear ${resolvedCardName}, You Were Missed!`
+        : `${titlePrefix} • You Were Missed!`
       description = resolvedCardName
-        ? `Dear ${resolvedCardName} ❤️ We missed having you at Arpit’s 40 & Festive, though it was wonderful having ${resolvedPartnerRef || 'your partner'} join us! Tap here to open & read your personal note ➔ Tanvi, Arpit & Family`
-        : '❤️ We missed having you with us at Arpit’s 40 & Festive! Tap here to open & read your personal note ➔ Tanvi, Arpit & Family'
+        ? `Dear ${resolvedCardName} ❤️ We missed having you at ${eventRefName}, though it was wonderful having ${resolvedPartnerRef || 'your partner'} join us! Tap here to open & read your personal note ➔ ${signOffName}`
+        : `❤️ We missed having you with us at ${eventRefName}! Tap here to open & read your personal note ➔ ${signOffName}`
     } else if (tyVariant === 'missed') {
       title = resolvedCardName
-        ? `40 & Festive ✨ • Dear ${resolvedCardName}, You Were Missed!`
-        : '40 & Festive ✨ • You Were Missed!'
+        ? `${titlePrefix} • Dear ${resolvedCardName}, You Were Missed!`
+        : `${titlePrefix} • You Were Missed!`
       description = resolvedCardName
-        ? `Dear ${resolvedCardName} ❤️ We missed having you with us at Arpit’s 40 & Festive — you were remembered with warmth & affection. Tap here to open & read your personal note ➔ Tanvi, Arpit & Family`
-        : '❤️ We missed having you with us at Arpit’s 40 & Festive — you were remembered with warmth & affection. Tap here to open & read your personal note ➔ Tanvi, Arpit & Family'
+        ? `Dear ${resolvedCardName} ❤️ We missed having you with us at ${eventRefName} — you were remembered with warmth & affection. Tap here to open & read your personal note ➔ ${signOffName}`
+        : `❤️ We missed having you with us at ${eventRefName} — you were remembered with warmth & affection. Tap here to open & read your personal note ➔ ${signOffName}`
     } else {
       title = resolvedCardName
-        ? `40 & Festive ✨ • Dear ${resolvedCardName}, The Night Was Better With You!`
-        : '40 & Festive ✨ • The Night Was Better With You!'
+        ? `${titlePrefix} • Dear ${resolvedCardName}, The Night Was Better With You!`
+        : `${titlePrefix} • The Night Was Better With You!`
       description = resolvedCardName
-        ? `Dear ${resolvedCardName} ❤️ Thank you for being part of Arpit’s 40 & Festive and making our evening so special. Tap here to open & read your personal thank-you card ➔ Tanvi, Arpit & Family`
-        : '❤️ Thank you for being part of Arpit’s 40 & Festive and making our evening so special. Tap here to open & read your personal thank-you card ➔ Tanvi, Arpit & Family'
+        ? `Dear ${resolvedCardName} ❤️ Thank you for being part of ${eventRefName} and making our evening so special. Tap here to open & read your personal thank-you card ➔ ${signOffName}`
+        : `❤️ Thank you for being part of ${eventRefName} and making our evening so special. Tap here to open & read your personal thank-you card ➔ ${signOffName}`
     }
 
-    ogImageUrl = isAttendedTheme
+    ogImageUrl = isSoireeTheme
+      ? isAttendedTheme
+        ? 'https://khandelwalinvite.vercel.app/og-thankyou-soiree-attended.jpg?v=2'
+        : 'https://khandelwalinvite.vercel.app/og-thankyou-soiree-missed.jpg?v=2'
+      : isAttendedTheme
       ? 'https://khandelwalinvite.vercel.app/og-thankyou-attended.jpg?v=2'
       : 'https://khandelwalinvite.vercel.app/og-thankyou-missed.jpg?v=2'
   } else if (isInstaSoiree) {
@@ -180,6 +226,7 @@ export async function generateMetadata({ params, searchParams }: Props) {
   const qsParts: string[] = []
   if (rawType) qsParts.push(`type=${encodeURIComponent(rawType)}`)
   else if (rawMode) qsParts.push(`mode=${encodeURIComponent(rawMode)}`)
+  if (rawTheme) qsParts.push(`theme=${encodeURIComponent(rawTheme)}`)
   if (rawV) qsParts.push(`v=${encodeURIComponent(rawV)}`)
   const queryParam = qsParts.length > 0 ? `?${qsParts.join('&')}` : ''
   const pageUrl = `https://khandelwalinvite.vercel.app/i/${code}${queryParam}`

@@ -11,8 +11,10 @@ import {
 } from '@/lib/supabase'
 import {
   ThankYouVariant,
+  ThankYouTheme,
   resolveGuestDisplayName,
   resolveGuestAndPartnerNames,
+  resolveGuestThankYouTheme,
   renderThankYouCardToCanvas,
   buildThankYouWhatsAppMessage,
   getThankYouCardFilename,
@@ -80,6 +82,7 @@ export default function ThankYouCampaignStudio({
   const [selectedGuestId, setSelectedGuestId] = useState<string>('')
   const [customPreviewName, setCustomPreviewName] = useState<string>('Mansi & Roshan')
   const [useCustomName, setUseCustomName] = useState<boolean>(false)
+  const [studioTheme, setStudioTheme] = useState<ThankYouTheme>('40_festive')
   const [splitCouplePreviewMode, setSplitCouplePreviewMode] = useState<boolean>(false)
   const [mobilePreviewMode, setMobilePreviewMode] = useState<boolean>(false)
   const [includeCardLinkInWA, setIncludeCardLinkInWA] = useState<boolean>(true)
@@ -92,7 +95,11 @@ export default function ThankYouCampaignStudio({
     'all' | 'attended' | 'missed' | 'unknown' | 'ready_unsent' | 'sent'
   >('all')
   const [tableSearch, setTableSearch] = useState<string>('')
-  const [modalGuest, setModalGuest] = useState<{ guest: Guest; variant: ThankYouVariant } | null>(null)
+  const [modalGuest, setModalGuest] = useState<{
+    guest: Guest
+    variant: ThankYouVariant
+    theme: ThankYouTheme
+  } | null>(null)
   const [batchExporting, setBatchExporting] = useState<boolean>(false)
 
   // Canvases for side-by-side Card A/C (Attended) & Card B/D (Missed) + Modal
@@ -146,6 +153,10 @@ export default function ThankYouCampaignStudio({
         : ''
 
     const thank_you_type = own.thank_you_type || derivedType
+    const thank_you_theme: ThankYouTheme = resolveGuestThankYouTheme(
+      g,
+      own.thank_you_theme || (g.send_together ? partnerNotes.thank_you_theme : '')
+    )
     const thank_you_status: ThankYouDeliveryStatus = own.thank_you_status || 'pending'
     const thank_you_sent_at = own.thank_you_sent_at || ''
 
@@ -173,7 +184,7 @@ export default function ThankYouCampaignStudio({
     const routing = chooseThankYou({ whatsapp_number, attendance_status })
     const card_asset_url =
       thank_you_type
-        ? `${baseUrl}/api/thank-you-card?code=${encodeURIComponent(g.invite_code)}&type=${thank_you_type}`
+        ? `${baseUrl}/api/thank-you-card?code=${encodeURIComponent(g.invite_code)}&type=${thank_you_type}&theme=${thank_you_theme}`
         : ''
 
     return {
@@ -186,6 +197,7 @@ export default function ThankYouCampaignStudio({
       rsvp_status,
       attendance_status,
       thank_you_type,
+      thank_you_theme,
       thank_you_status,
       thank_you_sent_at,
       card_asset_url,
@@ -222,14 +234,15 @@ export default function ThankYouCampaignStudio({
     return undefined
   }, [useCustomName, activePreviewGuest, allGuests])
 
-  // Render both Left (Card A / C) & Right (Card B / D) whenever preview name or mode changes
+  // Render both Left (Card A / C) & Right (Card B / D) whenever preview name, mode, or theme changes
   useEffect(() => {
     if (canvasAttendedRef.current) {
       renderThankYouCardToCanvas(
         canvasAttendedRef.current,
         leftPreviewVariant,
         activePreviewName,
-        activePreviewPartnerRef
+        activePreviewPartnerRef,
+        studioTheme
       )
     }
     if (canvasMissedRef.current) {
@@ -237,10 +250,11 @@ export default function ThankYouCampaignStudio({
         canvasMissedRef.current,
         rightPreviewVariant,
         activePreviewName,
-        activePreviewPartnerRef
+        activePreviewPartnerRef,
+        studioTheme
       )
     }
-  }, [activePreviewName, activePreviewPartnerRef, leftPreviewVariant, rightPreviewVariant])
+  }, [activePreviewName, activePreviewPartnerRef, leftPreviewVariant, rightPreviewVariant, studioTheme])
 
   // Render modal canvas when modal opens
   useEffect(() => {
@@ -251,7 +265,8 @@ export default function ThankYouCampaignStudio({
         canvasModalRef.current,
         modalGuest.variant,
         name,
-        partnerInlineRef
+        partnerInlineRef,
+        modalGuest.theme
       )
     }
   }, [modalGuest, allGuests])
@@ -360,13 +375,14 @@ export default function ThankYouCampaignStudio({
   const generateCardBlob = async (
     variant: ThankYouVariant,
     displayName: string,
-    partnerInlineRef?: string
+    partnerInlineRef?: string,
+    theme: ThankYouTheme = studioTheme
   ): Promise<Blob | null> => {
     if (!offscreenCanvasRef.current) {
       offscreenCanvasRef.current = document.createElement('canvas')
     }
     const canvas = offscreenCanvasRef.current
-    await renderThankYouCardToCanvas(canvas, variant, displayName, partnerInlineRef)
+    await renderThankYouCardToCanvas(canvas, variant, displayName, partnerInlineRef, theme)
     return new Promise(resolve => {
       canvas.toBlob(blob => resolve(blob), 'image/png', 1.0)
     })
@@ -377,27 +393,29 @@ export default function ThankYouCampaignStudio({
     variant: ThankYouVariant,
     displayName: string,
     guestIdOrCode: string,
-    partnerInlineRef?: string
+    partnerInlineRef?: string,
+    theme: ThankYouTheme = studioTheme
   ) => {
-    const blob = await generateCardBlob(variant, displayName, partnerInlineRef)
+    const blob = await generateCardBlob(variant, displayName, partnerInlineRef, theme)
     if (!blob) return
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = getThankYouCardFilename(variant, guestIdOrCode)
+    a.download = getThankYouCardFilename(variant, guestIdOrCode, theme)
     a.click()
     URL.revokeObjectURL(url)
-    showToast(`✅ Downloaded ${getThankYouCardFilename(variant, guestIdOrCode)} (1080×1350 px)`)
+    showToast(`✅ Downloaded ${getThankYouCardFilename(variant, guestIdOrCode, theme)} (1080×1350 px)`)
   }
 
   // ── COPY CARD IMAGE TO CLIPBOARD ──
   const handleCopyCardImage = async (
     variant: ThankYouVariant,
     displayName: string,
-    partnerInlineRef?: string
+    partnerInlineRef?: string,
+    theme: ThankYouTheme = studioTheme
   ): Promise<boolean> => {
     try {
-      const blob = await generateCardBlob(variant, displayName, partnerInlineRef)
+      const blob = await generateCardBlob(variant, displayName, partnerInlineRef, theme)
       if (!blob || !navigator.clipboard || typeof ClipboardItem === 'undefined') {
         showToast('⚠️ Clipboard image copy not supported in this browser; use Download PNG.')
         return false
@@ -414,9 +432,11 @@ export default function ThankYouCampaignStudio({
   // ── SEND WHATSAPP THANK-YOU FOR A GUEST ──
   const handleSendThankYouWhatsApp = async (
     g: Guest,
-    variantOverride?: ThankYouVariant
+    variantOverride?: ThankYouVariant,
+    themeOverride?: ThankYouTheme
   ) => {
     const d = getGuestThankYouDetails(g)
+    const activeTheme: ThankYouTheme = themeOverride || d.thank_you_theme
     const variant: ThankYouVariant | '' =
       variantOverride ||
       (d.attendance_status === 'attended'
@@ -439,10 +459,12 @@ export default function ThankYouCampaignStudio({
     const resolvedName = resolveGuestDisplayName(g, allGuests, variant)
 
     if (autoCopyImageOnWA) {
-      await handleCopyCardImage(variant, resolvedName, d.partner_inline_ref)
+      await handleCopyCardImage(variant, resolvedName, d.partner_inline_ref, activeTheme)
     }
 
-    const cardLink = `${baseUrl}/i/${g.invite_code}?type=thankyou_${variant}&v=2`
+    const typeParam =
+      activeTheme === 'soiree' ? `thankyou_soiree_${variant}` : `thankyou_${variant}`
+    const cardLink = `${baseUrl}/i/${g.invite_code}?type=${typeParam}&v=2`
     const msg = cardLink
 
     // Record status & timestamp in DB
@@ -451,9 +473,10 @@ export default function ThankYouCampaignStudio({
       g,
       {
         thank_you_type: variant,
+        thank_you_theme: activeTheme,
         thank_you_status: 'sent',
         thank_you_sent_at: nowIso,
-        card_asset_url: `${baseUrl}/api/thank-you-card?code=${encodeURIComponent(g.invite_code)}&type=${variant}`,
+        card_asset_url: `${baseUrl}/api/thank-you-card?code=${encodeURIComponent(g.invite_code)}&type=${variant}&theme=${activeTheme}`,
       },
       false
     )
@@ -481,10 +504,12 @@ export default function ThankYouCampaignStudio({
       return
     }
     if (autoCopyImageOnWA) {
-      await handleCopyCardImage(variant, activePreviewName, activePreviewPartnerRef)
+      await handleCopyCardImage(variant, activePreviewName, activePreviewPartnerRef, studioTheme)
     }
     const sampleCode = activePreviewGuest?.invite_code || 'TEST40'
-    const cardLink = `${baseUrl}/i/${sampleCode}?type=thankyou_${variant}&v=2`
+    const typeParam =
+      studioTheme === 'soiree' ? `thankyou_soiree_${variant}` : `thankyou_${variant}`
+    const cardLink = `${baseUrl}/i/${sampleCode}?type=${typeParam}&v=2`
     const msg = cardLink
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
       navigator.userAgent
@@ -568,7 +593,8 @@ export default function ThankYouCampaignStudio({
           variant,
           d.guest_display_name,
           g.invite_code || g.id,
-          d.partner_inline_ref
+          d.partner_inline_ref,
+          d.thank_you_theme
         )
         await new Promise(r => setTimeout(r, 280))
       }
@@ -580,14 +606,16 @@ export default function ThankYouCampaignStudio({
 
   const copyAttendedMsg = buildThankYouWhatsAppMessage(leftPreviewVariant, activePreviewName, {
     includeCardLink: includeCardLinkInWA,
-    cardUrl: `${baseUrl}/i/${activePreviewGuest?.invite_code || 'CODE'}?type=thankyou_${leftPreviewVariant}`,
+    cardUrl: `${baseUrl}/i/${activePreviewGuest?.invite_code || 'CODE'}?type=${studioTheme === 'soiree' ? `thankyou_soiree_${leftPreviewVariant}` : `thankyou_${leftPreviewVariant}`}`,
     partnerName: activePreviewPartnerRef,
+    theme: studioTheme,
   })
 
   const copyMissedMsg = buildThankYouWhatsAppMessage(rightPreviewVariant, activePreviewName, {
     includeCardLink: includeCardLinkInWA,
-    cardUrl: `${baseUrl}/i/${activePreviewGuest?.invite_code || 'CODE'}?type=thankyou_${rightPreviewVariant}`,
+    cardUrl: `${baseUrl}/i/${activePreviewGuest?.invite_code || 'CODE'}?type=${studioTheme === 'soiree' ? `thankyou_soiree_${rightPreviewVariant}` : `thankyou_${rightPreviewVariant}`}`,
     partnerName: activePreviewPartnerRef,
+    theme: studioTheme,
   })
 
   return (
@@ -607,17 +635,46 @@ export default function ThankYouCampaignStudio({
               <span>✨ Post-Event Thank-You Campaign</span>
             </div>
             <h2 className="font-serif text-2xl sm:text-3xl text-[#F5ECD7] tracking-wide">
-              40 &amp; FESTIVE — Personalised Luxury Thank-You Suite
+              {studioTheme === 'soiree'
+                ? 'THE FESTIVE SOIRÉE — Personalised Luxury Thank-You Suite'
+                : '40 & FESTIVE — Personalised Luxury Thank-You Suite'}
             </h2>
             <p className="text-xs text-white/60 mt-1 max-w-3xl">
-              Two bespoke 1080 × 1350 px (4:5 portrait) cards sharing one luxury visual identity:
+              Two bespoke 1080 × 1350 px (4:5 portrait) cards sharing one luxury visual identity across both{' '}
+              <strong className="text-[#E8D5A3]">40 &amp; FESTIVE</strong> and{' '}
+              <strong className="text-amber-300">THE FESTIVE SOIRÉE</strong>:
               <strong className="text-[#E8D5A3]"> Card A (Dark Walnut Edition)</strong> for guests who attended, and
               <strong className="text-[#F4E8D1]"> Card B (Champagne Edition)</strong> for guests who couldn&apos;t make it.
-              Attendance is tracked separately from RSVP status, and unverified records are held until reviewed.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Theme Switcher: 40 & Festive vs The Festive Soirée */}
+            <div className="flex items-center bg-[#050D1A] border border-[#C9A84C]/45 rounded-sm p-1 gap-1">
+              <button
+                type="button"
+                onClick={() => setStudioTheme('40_festive')}
+                className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-all cursor-pointer ${
+                  studioTheme === '40_festive'
+                    ? 'bg-[#C9A84C] text-[#050D1A] font-bold shadow'
+                    : 'text-[#E8D5A3]/75 hover:text-white'
+                }`}
+              >
+                🎂 40 &amp; Festive
+              </button>
+              <button
+                type="button"
+                onClick={() => setStudioTheme('soiree')}
+                className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-all cursor-pointer ${
+                  studioTheme === 'soiree'
+                    ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-[#050D1A] font-bold shadow'
+                    : 'text-amber-200/75 hover:text-white'
+                }`}
+              >
+                🪔 The Festive Soirée
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={handleBatchDownloadVerified}
@@ -746,6 +803,10 @@ export default function ThankYouCampaignStudio({
                 } else {
                   setUseCustomName(false)
                   setSelectedGuestId(e.target.value)
+                  const picked = guests.find(x => x.id === e.target.value)
+                  if (picked) {
+                    setStudioTheme(getGuestThankYouDetails(picked).thank_you_theme)
+                  }
                 }
               }}
               className="w-full bg-[#0A1931] border border-[#C9A84C]/40 rounded-sm px-3 py-2 text-xs text-[#F5ECD7] outline-none"
@@ -1250,33 +1311,58 @@ export default function ThankYouCampaignStudio({
                         </select>
                       </td>
 
-                      {/* thank_you_type / chooseThankYou decision */}
+                      {/* thank_you_type / chooseThankYou decision + Theme selector */}
                       <td className="px-3 py-2.5 whitespace-nowrap">
-                        {d.routing.action === 'skip' ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-red-500/10 text-red-300 border border-red-500/25">
-                            ⏭️ Skip: Missing Phone
-                          </span>
-                        ) : d.routing.action === 'review' ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/25">
-                            ⚠️ Hold: Verify Attendance
-                          </span>
-                        ) : d.routing.type === 'attended' ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-[#2C1B11] text-[#E8D5A3] border border-[#C9A84C]/50 font-medium">
-                            🟫 Card A · Attended (Walnut)
-                          </span>
-                        ) : d.routing.type === 'attended_partner_missed' ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-[#2C1B11] text-emerald-300 border border-emerald-500/50 font-medium">
-                            🟫🥂 Card C · Came, Partner Missed
-                          </span>
-                        ) : d.routing.type === 'missed_partner_attended' ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-[#F4E8D1]/15 text-amber-200 border border-amber-400/50 font-medium">
-                            🥂🟫 Card D · Missed, Partner Came
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-[#F4E8D1]/15 text-[#F4E8D1] border border-[#F4E8D1]/40 font-medium">
-                            🥂 Card B · Missed (Champagne)
-                          </span>
-                        )}
+                        <div className="flex flex-col gap-1">
+                          <select
+                            value={d.thank_you_theme}
+                            onChange={e =>
+                              onUpdateGuestDetails(
+                                g,
+                                { thank_you_theme: e.target.value as ThankYouTheme },
+                                true
+                              )
+                            }
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded outline-none cursor-pointer border ${
+                              d.thank_you_theme === 'soiree'
+                                ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
+                                : 'bg-[#C9A84C]/15 text-[#E8D5A3] border-[#C9A84C]/40'
+                            }`}
+                            title="Select Event Theme for Thank-You Card"
+                          >
+                            <option value="40_festive" className="bg-[#0A1931] text-[#E8D5A3]">
+                              🎂 40 &amp; Festive
+                            </option>
+                            <option value="soiree" className="bg-[#0A1931] text-amber-300">
+                              🪔 The Festive Soirée
+                            </option>
+                          </select>
+                          {d.routing.action === 'skip' ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-red-500/10 text-red-300 border border-red-500/25">
+                              ⏭️ Skip: Missing Phone
+                            </span>
+                          ) : d.routing.action === 'review' ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/25">
+                              ⚠️ Hold: Verify Attendance
+                            </span>
+                          ) : d.routing.type === 'attended' ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-[#2C1B11] text-[#E8D5A3] border border-[#C9A84C]/50 font-medium">
+                              🟫 Card A · Attended (Walnut)
+                            </span>
+                          ) : d.routing.type === 'attended_partner_missed' ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-[#2C1B11] text-emerald-300 border border-emerald-500/50 font-medium">
+                              🟫🥂 Card C · Came, Partner Missed
+                            </span>
+                          ) : d.routing.type === 'missed_partner_attended' ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-[#F4E8D1]/15 text-amber-200 border border-amber-400/50 font-medium">
+                              🥂🟫 Card D · Missed, Partner Came
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-[#F4E8D1]/15 text-[#F4E8D1] border border-[#F4E8D1]/40 font-medium">
+                              🥂 Card B · Missed (Champagne)
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* thank_you_status */}
@@ -1343,7 +1429,12 @@ export default function ThankYouCampaignStudio({
                             onClick={() => {
                               setUseCustomName(false)
                               setSelectedGuestId(g.id)
-                              setModalGuest({ guest: g, variant: activeVariant })
+                              setStudioTheme(d.thank_you_theme)
+                              setModalGuest({
+                                guest: g,
+                                variant: activeVariant,
+                                theme: d.thank_you_theme,
+                              })
                             }}
                             className="px-2 py-1 rounded-sm border border-[#C9A84C]/40 text-[#E8D5A3] hover:bg-[#C9A84C]/15 text-[10px] cursor-pointer"
                             title="Preview 1080×1350 Card for this guest"
@@ -1358,11 +1449,12 @@ export default function ThankYouCampaignStudio({
                                 activeVariant,
                                 d.guest_display_name,
                                 g.invite_code || g.id,
-                                d.partner_inline_ref
+                                d.partner_inline_ref,
+                                d.thank_you_theme
                               )
                             }
                             className="px-2 py-1 rounded-sm border border-white/20 text-white/80 hover:bg-white/10 text-[10px] cursor-pointer"
-                            title={`Download ${getThankYouCardFilename(activeVariant, g.invite_code || g.id)}`}
+                            title={`Download ${getThankYouCardFilename(activeVariant, g.invite_code || g.id, d.thank_you_theme)}`}
                           >
                             ⬇️ PNG
                           </button>
@@ -1472,15 +1564,21 @@ export default function ThankYouCampaignStudio({
               const copy = getThankYouCardCopy(
                 modalGuest.variant,
                 resolvedModalName,
-                d.partner_inline_ref
+                d.partner_inline_ref,
+                modalGuest.theme
               )
+              const modalTypeParam =
+                modalGuest.theme === 'soiree'
+                  ? `thankyou_soiree_${modalGuest.variant}`
+                  : `thankyou_${modalGuest.variant}`
               const waMsg = buildThankYouWhatsAppMessage(
                 modalGuest.variant,
                 resolvedModalName,
                 {
                   includeCardLink: includeCardLinkInWA,
-                  cardUrl: `${baseUrl}/i/${modalGuest.guest.invite_code}?type=thankyou_${modalGuest.variant}`,
+                  cardUrl: `${baseUrl}/i/${modalGuest.guest.invite_code}?type=${modalTypeParam}`,
                   partnerName: d.partner_inline_ref,
+                  theme: modalGuest.theme,
                 }
               )
 
@@ -1492,15 +1590,28 @@ export default function ThankYouCampaignStudio({
                         Preview — {resolvedModalName}
                       </h3>
                       <p className="text-xs text-white/50">
-                        File: `{getThankYouCardFilename(modalGuest.variant, modalGuest.guest.invite_code)}` · 1080 × 1350 px (Portrait 4:5)
+                        File: `{getThankYouCardFilename(modalGuest.variant, modalGuest.guest.invite_code, modalGuest.theme)}` · 1080 × 1350 px (Portrait 4:5)
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <select
+                        value={modalGuest.theme}
+                        onChange={e =>
+                          setModalGuest({
+                            ...modalGuest,
+                            theme: e.target.value as ThankYouTheme,
+                          })
+                        }
+                        className="bg-[#0A1931] px-3 py-1 rounded border border-amber-500/40 text-xs text-amber-300 outline-none cursor-pointer"
+                      >
+                        <option value="40_festive">🎂 40 &amp; Festive</option>
+                        <option value="soiree">🪔 The Festive Soirée</option>
+                      </select>
                       <select
                         value={modalGuest.variant}
                         onChange={e =>
                           setModalGuest({
-                            guest: modalGuest.guest,
+                            ...modalGuest,
                             variant: e.target.value as ThankYouVariant,
                           })
                         }
@@ -1537,6 +1648,9 @@ export default function ThankYouCampaignStudio({
                           Card Headline &amp; Copy
                         </span>
                         <div className="p-3 rounded bg-black/40 border border-white/10 text-xs text-white/80 space-y-1">
+                          <p className="text-[10px] uppercase tracking-wider text-amber-300">
+                            {copy.eventTitle} — {copy.eventSubtitle}
+                          </p>
                           <p className="text-[#E8D5A3] font-semibold">{copy.guestDisplayName}</p>
                           <p className="italic">{copy.headline}</p>
                           {copy.bodyParagraphs.map((p, idx) => (
@@ -1544,6 +1658,9 @@ export default function ThankYouCampaignStudio({
                               {renderFormattedParagraph(p, copy.partnerHighlight, true)}
                             </p>
                           ))}
+                          <p className="text-[10px] uppercase tracking-wider text-[#C9A84C] pt-1">
+                            {copy.signOffLabel} {copy.signature}
+                          </p>
                         </div>
                       </div>
 
@@ -1564,7 +1681,8 @@ export default function ThankYouCampaignStudio({
                               modalGuest.variant,
                               resolvedModalName,
                               modalGuest.guest.invite_code,
-                              d.partner_inline_ref
+                              d.partner_inline_ref,
+                              modalGuest.theme
                             )
                           }
                           className="btn-primary py-2.5 px-4 text-xs uppercase tracking-widest"
@@ -1577,7 +1695,8 @@ export default function ThankYouCampaignStudio({
                             handleCopyCardImage(
                               modalGuest.variant,
                               resolvedModalName,
-                              d.partner_inline_ref
+                              d.partner_inline_ref,
+                              modalGuest.theme
                             )
                           }
                           className="btn-outline py-2 px-4 text-xs uppercase tracking-widest"
@@ -1587,7 +1706,11 @@ export default function ThankYouCampaignStudio({
                         <button
                           type="button"
                           onClick={() => {
-                            handleSendThankYouWhatsApp(modalGuest.guest, modalGuest.variant)
+                            handleSendThankYouWhatsApp(
+                              modalGuest.guest,
+                              modalGuest.variant,
+                              modalGuest.theme
+                            )
                             setModalGuest(null)
                           }}
                           className="py-2.5 px-4 rounded-sm bg-green-600 hover:bg-green-500 text-white font-semibold text-xs uppercase tracking-widest transition-all cursor-pointer"

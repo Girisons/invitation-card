@@ -5,7 +5,9 @@ import {
   getThankYouCardCopy,
   resolveGuestDisplayName,
   resolveGuestAndPartnerNames,
+  resolveGuestThankYouTheme,
   ThankYouVariant,
+  ThankYouTheme,
 } from '@/lib/thankYouCard'
 
 export async function GET(req: NextRequest) {
@@ -14,15 +16,20 @@ export async function GET(req: NextRequest) {
   const rawName = (searchParams.get('name') || '').trim()
   const rawPartner = (searchParams.get('partner') || '').trim()
   const rawType = (searchParams.get('type') || '').trim().toLowerCase()
+  const rawTheme = (searchParams.get('theme') || '').trim().toLowerCase()
 
   let displayName = rawName
   let partnerInlineRef = rawPartner
+  let resolvedTheme: ThankYouTheme = resolveGuestThankYouTheme(
+    null,
+    rawTheme || (rawType.includes('soiree') || rawType.includes('diwali') ? 'soiree' : '')
+  )
   let resolvedVariant: ThankYouVariant =
-    rawType === 'attended_partner_missed' || rawType === 'thankyou_attended_partner_missed'
+    rawType.includes('attended_partner_missed')
       ? 'attended_partner_missed'
-      : rawType === 'missed_partner_attended' || rawType === 'thankyou_missed_partner_attended'
+      : rawType.includes('missed_partner_attended')
       ? 'missed_partner_attended'
-      : rawType === 'missed' || rawType === 'did_not_attend' || rawType === 'thankyou_missed'
+      : rawType.includes('missed') || rawType === 'did_not_attend'
       ? 'missed'
       : 'attended'
 
@@ -31,6 +38,9 @@ export async function GET(req: NextRequest) {
       const guest = await getGuestByCode(rawCode)
       if (guest) {
         const notes = parseGuestNotes(guest.notes)
+        if (!rawTheme && !rawType.includes('soiree') && !rawType.includes('diwali')) {
+          resolvedTheme = resolveGuestThankYouTheme(guest)
+        }
         if (!rawType) {
           if (
             notes.thank_you_type === 'attended_partner_missed' ||
@@ -65,7 +75,12 @@ export async function GET(req: NextRequest) {
     displayName = 'Mansi & Roshan'
   }
 
-  const copy = getThankYouCardCopy(resolvedVariant, displayName, partnerInlineRef || undefined)
+  const copy = getThankYouCardCopy(
+    resolvedVariant,
+    displayName,
+    partnerInlineRef || undefined,
+    resolvedTheme
+  )
   const isAttended =
     resolvedVariant === 'attended' || resolvedVariant === 'attended_partner_missed'
 
@@ -169,9 +184,9 @@ export async function GET(req: NextRequest) {
           {/* 2. Event Title */}
           <div
             style={{
-              fontSize: '64px',
+              fontSize: copy.eventTitle.length > 14 ? '50px' : '64px',
               fontWeight: 700,
-              letterSpacing: '0.12em',
+              letterSpacing: copy.eventTitle.length > 14 ? '0.09em' : '0.12em',
               color: titleColor,
               marginBottom: '16px',
             }}

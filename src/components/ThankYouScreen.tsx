@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import { Guest, trackEvent, updateGuestInviteDetails } from '@/lib/supabase'
 import {
   ThankYouVariant,
+  ThankYouTheme,
   resolveGuestDisplayName,
   resolveGuestAndPartnerNames,
+  resolveGuestThankYouTheme,
   getThankYouCardCopy,
 } from '@/lib/thankYouCard'
 
@@ -13,6 +15,7 @@ interface Props {
   guest: Guest
   inviteCode: string
   variant: ThankYouVariant
+  theme?: ThankYouTheme
 }
 
 function renderFormattedParagraph(
@@ -47,25 +50,27 @@ function renderFormattedParagraph(
   })
 }
 
-export default function ThankYouScreen({ guest, inviteCode, variant }: Props) {
+export default function ThankYouScreen({ guest, inviteCode, variant, theme }: Props) {
   const [visible, setVisible] = useState(false)
 
+  const activeTheme = resolveGuestThankYouTheme(guest, theme)
   const displayName = resolveGuestDisplayName(guest, undefined, variant)
   const { partnerInlineRef } = resolveGuestAndPartnerNames(guest)
-  const copy = getThankYouCardCopy(variant, displayName, partnerInlineRef)
+  const copy = getThankYouCardCopy(variant, displayName, partnerInlineRef, activeTheme)
   const isAttended = variant === 'attended' || variant === 'attended_partner_missed'
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80)
     if (guest?.id && !guest.id.startsWith('guest-')) {
-      trackEvent(guest.id, inviteCode, `thankyou_${variant}_opened`)
+      trackEvent(guest.id, inviteCode, `thankyou_${activeTheme}_${variant}_opened`)
       updateGuestInviteDetails(guest.id, {
         thank_you_status: 'seen',
         thank_you_type: variant,
+        thank_you_theme: activeTheme,
       })
     }
     return () => clearTimeout(t)
-  }, [guest?.id, inviteCode, variant])
+  }, [guest?.id, inviteCode, variant, activeTheme])
 
   return (
     <div
@@ -140,7 +145,11 @@ export default function ThankYouScreen({ guest, inviteCode, variant }: Props) {
           </p>
 
           <h1
-            className="font-cinzel font-semibold text-2xl sm:text-3xl tracking-[0.14em] uppercase mb-1"
+            className={`font-cinzel font-semibold uppercase mb-1 ${
+              copy.eventTitle.length > 14
+                ? 'text-xl sm:text-2xl tracking-[0.11em]'
+                : 'text-2xl sm:text-3xl tracking-[0.14em]'
+            }`}
             style={{ color: isAttended ? '#F7EBD2' : '#3C2716' }}
           >
             {copy.eventTitle}

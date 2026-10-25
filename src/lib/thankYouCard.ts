@@ -6,12 +6,15 @@ export type ThankYouVariant =
   | 'attended_partner_missed'
   | 'missed_partner_attended'
 
+export type ThankYouTheme = '40_festive' | 'soiree'
+
 export const CARD_WIDTH = 1080
 export const CARD_HEIGHT = 1350
 export const SAFE_MARGIN = 96 // > 70px strict safe area requirement
 
 export interface ThankYouCardCopy {
   variant: ThankYouVariant
+  theme: ThankYouTheme
   topIntro: string
   eventTitle: string
   eventSubtitle: string
@@ -22,6 +25,55 @@ export interface ThankYouCardCopy {
   partnerHighlight?: string
   signOffLabel: string
   signature: string
+}
+
+/**
+ * Resolves whether a guest should receive the '40_festive' ("40 & FESTIVE") or
+ * 'soiree' ("THE FESTIVE SOIRÉE") Thank-You Card based on explicit override,
+ * saved guest notes, or host assignment (Vipul / Jitu default to 'soiree').
+ */
+export function resolveGuestThankYouTheme(
+  guest?: Guest | null,
+  explicitTheme?: string | null
+): ThankYouTheme {
+  const cleanExplicit = (explicitTheme || '').trim().toLowerCase()
+  if (
+    cleanExplicit === 'soiree' ||
+    cleanExplicit === 'diwali' ||
+    cleanExplicit.includes('soiree') ||
+    cleanExplicit.includes('diwali')
+  ) {
+    return 'soiree'
+  }
+  if (cleanExplicit === '40_festive' || cleanExplicit === '40' || cleanExplicit === '40andfestive') {
+    return '40_festive'
+  }
+
+  if (guest) {
+    const notes = parseGuestNotes(guest.notes)
+    if (notes.thank_you_theme === 'soiree') return 'soiree'
+    if (notes.thank_you_theme === '40_festive') return '40_festive'
+    if (
+      notes.insta_type === 'soiree' ||
+      notes.main_type === 'diwali' ||
+      notes.std_type === 'diwali'
+    ) {
+      return 'soiree'
+    }
+    if (
+      notes.insta_type === '40_festive' ||
+      notes.main_type === '40_festive' ||
+      notes.std_type === '40_festive'
+    ) {
+      return '40_festive'
+    }
+    const host = (guest.guest_of || '').toLowerCase().trim()
+    if (host === 'vipul' || host === 'jitu') {
+      return 'soiree'
+    }
+  }
+
+  return '40_festive'
 }
 
 function formatProperName(raw?: string): string {
@@ -217,20 +269,29 @@ function resolveSplitNamesFromDisplay(
  * - Card B (`missed`): Both / Guest Could Not Attend
  * - Card C (`attended_partner_missed`): Guest Attended, Partner Could Not Attend
  * - Card D (`missed_partner_attended`): Guest Could Not Attend, Partner Attended
+ * Supports both '40_festive' ("40 & FESTIVE") and 'soiree' ("THE FESTIVE SOIRÉE").
  */
 export function getThankYouCardCopy(
   variant: ThankYouVariant,
   guestDisplayName: string,
-  partnerInlineRef?: string
+  partnerInlineRef?: string,
+  theme: ThankYouTheme = '40_festive'
 ): ThankYouCardCopy {
   const cleanName = (guestDisplayName || 'Mansi & Roshan').trim().toUpperCase()
+  const isSoiree = theme === 'soiree'
+  const eventTitle = isSoiree ? 'THE FESTIVE SOIRÉE' : '40 & FESTIVE'
+  const eventSubtitle = isSoiree
+    ? 'KHANDELWAL DIWALI CELEBRATION'
+    : "ARPIT'S 40TH BIRTHDAY & DIWALI BASH"
+  const signature = isSoiree ? 'THE KHANDELWAL FAMILY' : 'TANVI, ARPIT & FAMILY'
 
   if (variant === 'attended') {
     return {
       variant: 'attended',
+      theme,
       topIntro: 'A NIGHT TO REMEMBER',
-      eventTitle: '40 & FESTIVE',
-      eventSubtitle: "ARPIT'S 40TH BIRTHDAY & DIWALI BASH",
+      eventTitle,
+      eventSubtitle,
       salutation: 'DEAR',
       guestDisplayName: cleanName,
       headline: 'The night was better with you.',
@@ -238,7 +299,7 @@ export function getThankYouCardCopy(
         'Thank you for being part of our special evening and making it even more memorable with your presence.',
       ],
       signOffLabel: 'WITH LOVE,',
-      signature: 'TANVI, ARPIT & FAMILY',
+      signature,
     }
   }
 
@@ -250,9 +311,10 @@ export function getThankYouCardCopy(
     )
     return {
       variant: 'attended_partner_missed',
+      theme,
       topIntro: 'A NIGHT TO REMEMBER',
-      eventTitle: '40 & FESTIVE',
-      eventSubtitle: "ARPIT'S 40TH BIRTHDAY & DIWALI BASH",
+      eventTitle,
+      eventSubtitle,
       salutation: 'DEAR',
       guestDisplayName: addresseeName.toUpperCase(),
       headline: 'The night was better with you.',
@@ -262,7 +324,7 @@ export function getThankYouCardCopy(
       ],
       partnerHighlight: partnerRef,
       signOffLabel: 'WITH LOVE,',
-      signature: 'TANVI, ARPIT & FAMILY',
+      signature,
     }
   }
 
@@ -274,9 +336,10 @@ export function getThankYouCardCopy(
     )
     return {
       variant: 'missed_partner_attended',
+      theme,
       topIntro: 'WITH WARMTH & AFFECTION',
-      eventTitle: '40 & FESTIVE',
-      eventSubtitle: "ARPIT'S 40TH BIRTHDAY & DIWALI BASH",
+      eventTitle,
+      eventSubtitle,
       salutation: 'DEAR',
       guestDisplayName: addresseeName.toUpperCase(),
       headline: 'YOU WERE MISSED.',
@@ -286,15 +349,16 @@ export function getThankYouCardCopy(
       ],
       partnerHighlight: partnerRef,
       signOffLabel: 'WITH LOVE,',
-      signature: 'TANVI, ARPIT & FAMILY',
+      signature,
     }
   }
 
   return {
     variant: 'missed',
+    theme,
     topIntro: 'WITH WARMTH & AFFECTION',
-    eventTitle: '40 & FESTIVE',
-    eventSubtitle: "ARPIT'S 40TH BIRTHDAY & DIWALI BASH",
+    eventTitle,
+    eventSubtitle,
     salutation: 'DEAR',
     guestDisplayName: cleanName,
     headline: 'YOU WERE MISSED.',
@@ -303,42 +367,50 @@ export function getThankYouCardCopy(
       "Here's to making more beautiful memories together soon.",
     ],
     signOffLabel: 'WITH LOVE,',
-    signature: 'TANVI, ARPIT & FAMILY',
+    signature,
   }
 }
 
 /**
- * Returns the exact WhatsApp message for all 4 thank-you scenarios.
+ * Returns the exact WhatsApp message for all 4 thank-you scenarios across both themes.
  */
 export function buildThankYouWhatsAppMessage(
   variant: ThankYouVariant,
   guestDisplayName: string,
-  options?: { includeCardLink?: boolean; cardUrl?: string; partnerName?: string }
+  options?: {
+    includeCardLink?: boolean
+    cardUrl?: string
+    partnerName?: string
+    theme?: ThankYouTheme
+  }
 ): string {
   const cleanName = (guestDisplayName || 'Mansi & Roshan').trim()
   const heart = String.fromCodePoint(0x2764, 0xFE0F)
   const sparkles = String.fromCodePoint(0x2728)
   const loveLetter = String.fromCodePoint(0x1F48C)
+  const isSoiree = options?.theme === 'soiree'
+  const eventLabel = isSoiree ? 'The Festive Soirée' : "Arpit's 40 & FESTIVE"
+  const signOff = isSoiree ? 'The Khandelwal Family' : 'Tanvi, Arpit & Family'
 
   let msg = ''
   if (variant === 'attended') {
-    msg = `Dear ${cleanName} ${heart}\n\nThank you for being part of Arpit's 40 & FESTIVE. Your presence made the evening even more special, and we're so glad we could share these wonderful moments with you.\n\nA little note of gratitude, sent with lots of love. ${sparkles}\n\nTanvi, Arpit & Family`
+    msg = `Dear ${cleanName} ${heart}\n\nThank you for being part of ${eventLabel}. Your presence made the evening even more special, and we're so glad we could share these wonderful moments with you.\n\nA little note of gratitude, sent with lots of love. ${sparkles}\n\n${signOff}`
   } else if (variant === 'attended_partner_missed') {
     const { addresseeName, partnerRef } = resolveSplitNamesFromDisplay(
       cleanName,
       variant,
       options?.partnerName
     )
-    msg = `Dear ${addresseeName} ${heart}\n\nThank you for being part of Arpit's 40 & FESTIVE. Your presence made the evening so special, though we truly missed having *${partnerRef}* with us!\n\nSending our warmest love to you both, and hoping we celebrate together very soon. ${sparkles}\n\nTanvi, Arpit & Family`
+    msg = `Dear ${addresseeName} ${heart}\n\nThank you for being part of ${eventLabel}. Your presence made the evening so special, though we truly missed having *${partnerRef}* with us!\n\nSending our warmest love to you both, and hoping we celebrate together very soon. ${sparkles}\n\n${signOff}`
   } else if (variant === 'missed_partner_attended') {
     const { addresseeName, partnerRef } = resolveSplitNamesFromDisplay(
       cleanName,
       variant,
       options?.partnerName
     )
-    msg = `Dear ${addresseeName} ${heart}\n\nWe missed having you with us at Arpit's 40 & FESTIVE, though we're so glad *${partnerRef}* could join us and be part of the celebration!\n\nYou were remembered with lots of warmth, and we hope we get to share another special moment with the two of you soon. ${sparkles}\n\nTanvi, Arpit & Family`
+    msg = `Dear ${addresseeName} ${heart}\n\nWe missed having you with us at ${eventLabel}, though we're so glad *${partnerRef}* could join us and be part of the celebration!\n\nYou were remembered with lots of warmth, and we hope we get to share another special moment with the two of you soon. ${sparkles}\n\n${signOff}`
   } else {
-    msg = `Dear ${cleanName} ${heart}\n\nWe missed having you with us at Arpit's 40 & FESTIVE. You were remembered with lots of warmth, and we hope we get to share another special moment together soon.\n\nSending you all our love and warm wishes. ${sparkles}\n\nTanvi, Arpit & Family`
+    msg = `Dear ${cleanName} ${heart}\n\nWe missed having you with us at ${eventLabel}. You were remembered with lots of warmth, and we hope we get to share another special moment together soon.\n\nSending you all our love and warm wishes. ${sparkles}\n\n${signOff}`
   }
 
   if (options?.cardUrl && options?.includeCardLink !== false) {
@@ -350,18 +422,23 @@ export function buildThankYouWhatsAppMessage(
 
 /**
  * Standardised file naming convention per production specs:
- * `thankyou_ATTENDED_guestid.png`, `thankyou_MISSED_guestid.png`, etc.
+ * `thankyou_ATTENDED_guestid.png`, `thankyou_SOIREE_ATTENDED_guestid.png`, etc.
  */
-export function getThankYouCardFilename(variant: ThankYouVariant, guestIdOrCode: string): string {
+export function getThankYouCardFilename(
+  variant: ThankYouVariant,
+  guestIdOrCode: string,
+  theme: ThankYouTheme = '40_festive'
+): string {
   const safeId = (guestIdOrCode || 'guest').replace(/[^a-zA-Z0-9_-]/g, '')
+  const themeTag = theme === 'soiree' ? '_SOIREE' : ''
   const prefix =
     variant === 'attended'
-      ? 'thankyou_ATTENDED'
+      ? `thankyou${themeTag}_ATTENDED`
       : variant === 'attended_partner_missed'
-      ? 'thankyou_ATTENDED_PARTNER_MISSED'
+      ? `thankyou${themeTag}_ATTENDED_PARTNER_MISSED`
       : variant === 'missed_partner_attended'
-      ? 'thankyou_MISSED_PARTNER_ATTENDED'
-      : 'thankyou_MISSED'
+      ? `thankyou${themeTag}_MISSED_PARTNER_ATTENDED`
+      : `thankyou${themeTag}_MISSED`
   return `${prefix}_${safeId}.png`
 }
 
@@ -578,7 +655,8 @@ export async function renderThankYouCardToCanvas(
   canvas: HTMLCanvasElement,
   variant: ThankYouVariant,
   guestDisplayName: string,
-  partnerInlineRef?: string
+  partnerInlineRef?: string,
+  theme: ThankYouTheme = '40_festive'
 ): Promise<void> {
   if (typeof document !== 'undefined' && 'fonts' in document) {
     try {
@@ -591,7 +669,7 @@ export async function renderThankYouCardToCanvas(
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
-  const copy = getThankYouCardCopy(variant, guestDisplayName, partnerInlineRef)
+  const copy = getThankYouCardCopy(variant, guestDisplayName, partnerInlineRef, theme)
   const cx = CARD_WIDTH / 2
   const maxContentWidth = CARD_WIDTH - SAFE_MARGIN * 2 // 888px safe width
 
@@ -720,12 +798,13 @@ export async function renderThankYouCardToCanvas(
   ctx.fillStyle = introColor
   drawTrackedText(ctx, copy.topIntro, cx, 212, 7.5)
 
-  // 2. Event title: "40 & FESTIVE"
-  ctx.font = '600 66px Cinzel, Georgia, serif'
+  // 2. Event title: "40 & FESTIVE" or "THE FESTIVE SOIRÉE"
+  const isLongTitle = copy.eventTitle.length > 14
+  ctx.font = `600 ${isLongTitle ? 50 : 66}px Cinzel, Georgia, serif`
   ctx.fillStyle = titleColor
-  drawTrackedText(ctx, copy.eventTitle, cx, 290, 6)
+  drawTrackedText(ctx, copy.eventTitle, cx, 290, isLongTitle ? 4.5 : 6)
 
-  // 3. Subtitle: "ARPIT'S 40TH BIRTHDAY & DIWALI BASH"
+  // 3. Subtitle: "ARPIT'S 40TH BIRTHDAY & DIWALI BASH" or "KHANDELWAL DIWALI CELEBRATION"
   ctx.font = '500 18px Inter, system-ui, sans-serif'
   ctx.fillStyle = subtitleColor
   drawTrackedText(ctx, copy.eventSubtitle, cx, 352, 5.5)
