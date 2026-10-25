@@ -292,7 +292,7 @@ export function getThankYouCardCopy(
   partnerInlineRef?: string,
   theme: ThankYouTheme = '40_festive'
 ): ThankYouCardCopy {
-  const cleanName = (guestDisplayName || 'Mansi & Roshan').trim().toUpperCase()
+  const cleanName = stripHonorifics(guestDisplayName || 'Mansi & Roshan').toUpperCase()
   const isSoiree = theme === 'soiree'
   const eventTitle = isSoiree ? 'THE FESTIVE SOIRÉE' : '40 & FESTIVE'
   const eventSubtitle = isSoiree
