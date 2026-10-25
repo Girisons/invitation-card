@@ -76,8 +76,15 @@ export function resolveGuestThankYouTheme(
   return '40_festive'
 }
 
+function stripHonorifics(raw?: string): string {
+  return (raw || '')
+    .replace(/\b(mr|mrs|ms|miss|shri|smt)\.?\s+/gi, '')
+    .replace(/^(mr|mrs|ms|miss|shri|smt)\.?$/gi, '')
+    .trim()
+}
+
 function formatProperName(raw?: string): string {
-  const cleaned = (raw || '').trim()
+  const cleaned = stripHonorifics(raw)
   if (!cleaned) return ''
   return cleaned
     .split(/\s+/)
@@ -158,18 +165,19 @@ export function resolveGuestAndPartnerNames(
     }
   }
 
-  const formattedPartner = formatProperName(partnerRaw)
-  let individualName = formatProperName(primaryRaw) || 'Honored Guest'
+  const primaryIsPlaceholder = isPlaceholderPartnerLabel(primaryRaw)
+  const partnerIsPlaceholder = isPlaceholderPartnerLabel(partnerRaw)
 
-  // If this guest row is literally named "YOUR WIFE" and partner is e.g. "Anirudh",
-  // address her gracefully as "Mrs. Anirudh" on individual cards.
-  if (isPlaceholderPartnerLabel(primaryRaw) && formattedPartner && !isPlaceholderPartnerLabel(partnerRaw)) {
-    const upperPrimary = primaryRaw.trim().toUpperCase()
-    if (upperPrimary.includes('WIFE')) {
-      individualName = `Mrs. ${formattedPartner}`
-    } else {
-      individualName = formattedPartner
-    }
+  const formattedPartner = partnerIsPlaceholder ? '' : formatProperName(partnerRaw)
+  let individualName = primaryIsPlaceholder ? '' : formatProperName(primaryRaw)
+
+  // If this guest row is a placeholder like "YOUR WIFE" and partner is e.g. "Anirudh",
+  // use the real partner name directly (never "Mrs. Anirudh").
+  if (!individualName && formattedPartner) {
+    individualName = formattedPartner
+  }
+  if (!individualName) {
+    individualName = 'Honored Guest'
   }
 
   // Inline partner reference for sentences like "We missed having [partnerInlineRef] with us"
@@ -180,8 +188,15 @@ export function resolveGuestAndPartnerNames(
       partnerInlineRef = 'your wife'
     } else if (upperPart === 'YOUR HUSBAND' || upperPart === 'HUSBAND') {
       partnerInlineRef = 'your husband'
-    } else if (isPlaceholderPartnerLabel(partnerRaw)) {
+    } else if (partnerIsPlaceholder) {
       partnerInlineRef = 'your partner'
+    } else if (primaryIsPlaceholder) {
+      const upperPri = primaryRaw.trim().toUpperCase()
+      partnerInlineRef = upperPri.includes('WIFE')
+        ? 'your wife'
+        : upperPri.includes('HUSBAND')
+        ? 'your husband'
+        : 'your partner'
     } else {
       partnerInlineRef = formattedPartner
     }
@@ -190,11 +205,11 @@ export function resolveGuestAndPartnerNames(
   const coupleName =
     guest.send_together &&
     formattedPartner &&
-    !isPlaceholderPartnerLabel(partnerRaw) &&
+    !primaryIsPlaceholder &&
+    !partnerIsPlaceholder &&
+    individualName.toLowerCase() !== formattedPartner.toLowerCase() &&
     !individualName.includes('&')
       ? `${individualName} & ${formattedPartner}`
-      : guest.send_together && isPlaceholderPartnerLabel(partnerRaw) && !individualName.includes('&')
-      ? `${individualName} & Family`
       : individualName
 
   return {
@@ -218,7 +233,7 @@ export function resolveGuestDisplayName(
 ): string {
   const notes = parseGuestNotes(guest.notes)
   if (notes.custom_card_name && notes.custom_card_name.trim()) {
-    return notes.custom_card_name.trim()
+    return stripHonorifics(notes.custom_card_name.trim())
   }
 
   const { individualName, coupleName } = resolveGuestAndPartnerNames(guest, allGuests)
@@ -283,7 +298,7 @@ export function getThankYouCardCopy(
   const eventSubtitle = isSoiree
     ? 'KHANDELWAL DIWALI CELEBRATION'
     : "ARPIT'S 40TH BIRTHDAY & DIWALI BASH"
-  const signature = isSoiree ? 'THE KHANDELWAL FAMILY' : 'TANVI, ARPIT & FAMILY'
+  const signature = isSoiree ? 'KHANDELWAL FAMILY' : 'TANVI, ARPIT & FAMILY'
 
   if (variant === 'attended') {
     return {
@@ -390,7 +405,7 @@ export function buildThankYouWhatsAppMessage(
   const loveLetter = String.fromCodePoint(0x1F48C)
   const isSoiree = options?.theme === 'soiree'
   const eventLabel = isSoiree ? 'The Festive Soirée' : "Arpit's 40 & FESTIVE"
-  const signOff = isSoiree ? 'The Khandelwal Family' : 'Tanvi, Arpit & Family'
+  const signOff = isSoiree ? 'Khandelwal Family' : 'Tanvi, Arpit & Family'
 
   let msg = ''
   if (variant === 'attended') {

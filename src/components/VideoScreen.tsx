@@ -1506,7 +1506,7 @@ export default function VideoScreen({
                     {/* 2. SIGNOFF + ADD TO CALENDAR ROW (Compact side-by-side in landscape, stacked in portrait) */}
                     <div className="w-full flex flex-col landscape:flex-row items-center justify-center gap-1.5 landscape:gap-4 mt-0.5">
                       <p className="font-serif italic text-xs sm:text-sm landscape:text-xs text-[#FFE89E] font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
-                        {isDiwali ? 'Warmly, The Khandelwal Family' : 'Warmly, Tanvi'}
+                        {isDiwali ? 'Warmly, Khandelwal Family' : 'Warmly, Tanvi'}
                       </p>
 
                       <button

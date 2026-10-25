@@ -1290,7 +1290,7 @@ export default function AdminPage() {
     if (activeMode === 'save_date_diwali') {
       const headphones = String.fromCodePoint(0x1F3A7)
       const pointRight = String.fromCodePoint(0x1F449)
-      msg = `${EMOJI.sparkles} *SAVE THE DATE* ${EMOJI.sparkles}\n\nDear *${name}*,\n\nGet ready for an unforgettable night of music, lights, and celebration! Mark your calendar for the *Khandelwal Diwali Bash*.\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur, Rajasthan*\n${headphones} *Drinks · Dance · Celebration*\n\n${pointRight} ${saveDateDiwaliLink}\n\nWarmly,\n*The Khandelwal Family*`
+      msg = `${EMOJI.sparkles} *SAVE THE DATE* ${EMOJI.sparkles}\n\nDear *${name}*,\n\nGet ready for an unforgettable night of music, lights, and celebration! Mark your calendar for the *Khandelwal Diwali Bash*.\n\n${EMOJI.calendar} *Friday, 23rd October 2026*\n${EMOJI.pin} *Jaipur, Rajasthan*\n${headphones} *Drinks · Dance · Celebration*\n\n${pointRight} ${saveDateDiwaliLink}\n\nWarmly,\n*Khandelwal Family*`
     } else if (activeMode === 'invite_diwali') {
       // Diwali Main Invite: Sender is Khandelwal Family; adapts to RSVP status
       if (isYes) {
